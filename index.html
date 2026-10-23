@@ -955,7 +955,7 @@
   // ============================================================================
   function renderAll() {
     const container = document.getElementById('main-content-scroll');
-    if (!container) return;
+    if (!container || !state.user) return;
 
     if (state.activeExam) {
       document.getElementById('topbar-title').textContent = 'Ruang Pengerjaan Ujian CBT';
@@ -1006,7 +1006,8 @@
   // MODUL 1: DASHBOARD
   // ============================================================================
   function renderDashboardModule() {
-    const isAdmin = state.user.role === 'admin';
+    if (!state.user) return '';
+    const isAdmin = state.user?.role === 'admin';
     const totalKelas = state.kelas.length;
     const totalSiswa = state.siswa.length;
     const totalJadwal = state.mapel_jadwal.length;
@@ -1024,7 +1025,7 @@
             <span class="px-3 py-1 rounded-full bg-white/80 text-blue-700 text-xs font-extrabold uppercase tracking-wide">
               Selamat Datang ✨
             </span>
-            <h2 class="text-2xl sm:text-3xl font-extrabold text-slate-900">${state.user.nama}!</h2>
+            <h2 class="text-2xl sm:text-3xl font-extrabold text-slate-900">${state.user?.nama || 'Pengguna'}!</h2>
             <p class="text-xs sm:text-sm text-slate-700 max-w-lg">
               ${isAdmin ? 'Database tersimpan di Google Spreadsheet. Kelola bank soal, pantau aktivitas pengerjaan CBT siswa, dan unduh rekap nilai instan.' : 'Pilih jadwal mata pelajaran yang aktif untuk memulai evaluasi belajar mandiri Anda hari ini.'}
             </p>
