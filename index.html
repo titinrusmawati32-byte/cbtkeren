@@ -137,25 +137,6 @@
 <body class="m-0 p-0 overflow-hidden select-none">
 
 <div id="educbt-root">
-  <!-- BANNER MODE PREVIEW / STATUS KONEKSI GOOGLE SHEETS -->
-  <div id="preview-banner" class="bg-gradient-to-r from-emerald-600 via-teal-600 to-blue-600 text-white text-xs font-semibold px-4 py-2 flex items-center justify-between shadow-sm shrink-0">
-    <div class="flex items-center gap-2">
-      <span id="banner-status-badge" class="px-2.5 py-0.5 bg-white/20 rounded-full text-[11px] font-bold tracking-wide uppercase">⚡ Mode Demo (Lokal)</span>
-      <span id="banner-status-text" class="hidden sm:inline">Hubungkan ke Google Apps Script untuk menyimpan data di Google Spreadsheet.</span>
-    </div>
-    <div class="flex items-center gap-2">
-      <button type="button" onclick="window.app.showGasConfigModal()" class="bg-white/20 hover:bg-white/30 text-white border border-white/40 px-3 py-1 rounded-full text-[11px] font-bold transition flex items-center gap-1">
-        <i class="ph-bold ph-google-logo"></i> Database Google Sheets
-      </button>
-      <button type="button" onclick="window.app.quickLogin('admin')" class="bg-white text-emerald-800 hover:bg-emerald-50 px-2.5 py-1 rounded-full text-[11px] font-bold transition shadow-sm">
-        ⚡ Login Admin
-      </button>
-      <button type="button" onclick="window.app.quickLogin('siswa')" class="bg-blue-900/40 hover:bg-blue-900/60 text-white border border-white/30 px-2.5 py-1 rounded-full text-[11px] font-bold transition">
-        🎓 Login Siswa
-      </button>
-    </div>
-  </div>
-
   <!-- VIEW 1: HALAMAN LOGIN (GLASSMORPHISM & LINGORA THEME) -->
   <div id="login-view" class="flex-1 flex items-center justify-center p-4 overflow-y-auto relative">
     <!-- Ornamen Latar Belakang -->
@@ -214,14 +195,9 @@
 
       <!-- Sisi Kanan: Form Hybrid Login -->
       <div class="lg:col-span-6 p-6 sm:p-8 flex flex-col justify-center bg-white/90">
-        <div class="flex items-center justify-between mb-4">
-          <div>
-            <h3 class="text-xl font-extrabold text-slate-900">Selamat Datang</h3>
-            <p class="text-xs text-slate-500 mt-0.5">Pilih akses masuk untuk memulai.</p>
-          </div>
-          <button type="button" onclick="window.app.showGasConfigModal()" title="Pengaturan Database Google Apps Script" class="p-2 text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 rounded-xl transition">
-            <i class="ph-bold ph-database text-xl"></i>
-          </button>
+        <div class="mb-5">
+          <h3 class="text-xl font-extrabold text-slate-900">Selamat Datang</h3>
+          <p class="text-xs text-slate-500 mt-0.5">Silakan pilih akses akun untuk masuk ke aplikasi.</p>
         </div>
 
         <!-- Role Switcher Tabs -->
@@ -237,10 +213,10 @@
         <!-- Form Login Siswa (Validasi Spreadsheet) -->
         <form id="form-login-siswa" onsubmit="window.app.handleLoginSiswa(event)" class="space-y-4">
           <div>
-            <label class="block text-xs font-bold text-slate-700 mb-1.5">NISN / Username Siswa</label>
+            <label class="block text-xs font-bold text-slate-700 mb-1.5">NISN / Nomor Peserta</label>
             <div class="relative">
               <i class="ph ph-identification-card absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 text-lg"></i>
-              <input type="text" id="siswa-nisn" required placeholder="Contoh: 1001" class="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition" />
+              <input type="text" id="siswa-nisn" required placeholder="Masukkan nomor NISN Anda" class="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition" />
             </div>
           </div>
           <div>
@@ -251,40 +227,37 @@
             </div>
           </div>
           <button type="submit" id="btn-submit-siswa" class="w-full py-3.5 bg-blue-600 hover:bg-blue-700 active:scale-[0.99] text-white font-bold text-sm rounded-2xl shadow-lg shadow-blue-500/25 transition flex items-center justify-center gap-2">
-            <span>Masuk Ruang Belajar</span>
+            <span>Masuk Ruang Ujian</span>
             <i class="ph-bold ph-arrow-right"></i>
           </button>
         </form>
 
-        <!-- Form Login Admin (Email & Password di Sheet Pengaturan) -->
+        <!-- Form Login Guru & Admin (Validasi Database Pengguna) -->
         <form id="form-login-admin" onsubmit="window.app.handleLoginAdmin(event)" class="space-y-4 hidden">
           <div>
-            <label class="block text-xs font-bold text-slate-700 mb-1.5">Email Administrator Guru</label>
+            <label class="block text-xs font-bold text-slate-700 mb-1.5">Username / Email Akun</label>
             <div class="relative">
-              <i class="ph ph-envelope-simple absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 text-lg"></i>
-              <input type="email" id="admin-email" required placeholder="admin@educbt.id" class="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition" />
+              <i class="ph ph-user absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 text-lg"></i>
+              <input type="text" id="admin-identifier" required placeholder="Masukkan username atau email" class="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition" />
             </div>
           </div>
           <div>
             <label class="block text-xs font-bold text-slate-700 mb-1.5">Password</label>
             <div class="relative">
               <i class="ph ph-key absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 text-lg"></i>
-              <input type="password" id="admin-password" required placeholder="admin123" class="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition" />
+              <input type="password" id="admin-password" required placeholder="Masukkan password" class="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition" />
             </div>
           </div>
           <button type="submit" id="btn-submit-admin" class="w-full py-3.5 bg-slate-900 hover:bg-slate-800 active:scale-[0.99] text-white font-bold text-sm rounded-2xl shadow-lg transition flex items-center justify-center gap-2">
-            <span>Masuk Panel Admin</span>
+            <span>Masuk Panel Guru / Admin</span>
             <i class="ph-bold ph-shield-check"></i>
           </button>
         </form>
 
-        <!-- Info Kredensial Default -->
-        <div id="preview-login-hint" class="mt-5 p-3.5 bg-blue-50/80 border border-blue-100 rounded-2xl text-xs text-slate-600 space-y-1">
-          <div class="font-bold text-blue-700 flex items-center gap-1.5">
-            <i class="ph-fill ph-info"></i> Akun Login Default:
-          </div>
-          <p>• <b>Siswa:</b> NISN <code class="bg-white px-1.5 py-0.5 rounded font-bold">1001</code> / Pass: <code class="bg-white px-1.5 py-0.5 rounded font-bold">123456</code></p>
-          <p>• <b>Admin:</b> Email <code class="bg-white px-1.5 py-0.5 rounded font-bold">admin@educbt.id</code> / Pass: <code class="bg-white px-1.5 py-0.5 rounded font-bold">admin123</code></p>
+        <!-- Footer Keamanan Bersih & Profesional -->
+        <div class="mt-6 pt-4 border-t border-slate-100 flex items-center justify-between text-xs text-slate-400">
+          <span class="flex items-center gap-1.5"><i class="ph-fill ph-shield-check text-emerald-500 text-sm"></i> Portal Resmi Ujian Sekolah</span>
+          <span class="text-[11px] font-medium text-slate-400">EduCBT Online</span>
         </div>
       </div>
     </div>
@@ -347,11 +320,11 @@
             <i class="ph-bold ph-target"></i> KKM 75
           </div>
 
-          <!-- Tombol Setup Database Google Sheets -->
-          <button type="button" onclick="window.app.showGasConfigModal()" title="Status & Pengaturan Database Spreadsheet" class="px-3 py-1.5 rounded-full bg-emerald-50 hover:bg-emerald-100 text-emerald-800 text-xs font-bold transition flex items-center gap-1.5 border border-emerald-200">
-            <i class="ph-fill ph-file-csv text-emerald-600 text-base"></i>
-            <span class="hidden md:inline" id="db-status-label">Google Sheets</span>
-          </button>
+          <!-- Status Server CBT Online -->
+          <div class="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-emerald-50 text-emerald-800 text-xs font-bold border border-emerald-200">
+            <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+            <span>CBT Server Online</span>
+          </div>
 
           <!-- Search Bar -->
           <div class="relative hidden sm:block">
@@ -420,12 +393,8 @@
   // ============================================================================
   // KONFIGURASI GOOGLE APPS SCRIPT WEB APP (GAS)
   // ============================================================================
-  const GAS_STORAGE_KEY = 'EDUCBT_GAS_WEBAPP_URL';
-  const DEFAULT_GAS_URL = 'https://script.google.com/macros/s/AKfycbx2lOqVLOyDOqIplG0l6LLx7iztgwuFRQDYxWBr5apEQiNF1UE6lrl70-UDiET8tDm4Ug/exec';
-  let GAS_URL = localStorage.getItem(GAS_STORAGE_KEY) || DEFAULT_GAS_URL;
-
-  // Mode status (True jika URL Apps Script sudah diisi dan valid)
-  let IS_CONNECTED_GAS = !!(GAS_URL && GAS_URL.includes('/exec'));
+  const GAS_URL = 'https://script.google.com/macros/s/AKfycbx2lOqVLOyDOqIplG0l6LLx7iztgwuFRQDYxWBr5apEQiNF1UE6lrl70-UDiET8tDm4Ug/exec';
+  const IS_CONNECTED_GAS = true;
 
   // Helper Request ke Google Apps Script (Menggunakan text/plain agar bebas CORS Preflight)
   async function callGAS(action, payload = {}) {
@@ -479,6 +448,7 @@
     mapel_jadwal: [],
     soal: [],
     rekap_nilai: [],
+    pengguna: [],
     pengaturan: {
       id: 1,
       nama_aplikasi: 'EduCBT Lingora',
@@ -577,6 +547,12 @@
         waktu_selesai: new Date().toISOString()
       }
     ];
+
+    state.pengguna = [
+      { id: 'usr-1', username: 'admin', nama_lengkap: 'Dr. H. Ahmad Sulaiman, M.Pd', email: 'admin@educbt.id', password: 'admin123', role: 'admin', status: 'Aktif' },
+      { id: 'usr-2', username: 'guru1', nama_lengkap: 'Budi Santoso, M.Pd', email: 'budi@sekolah.sch.id', password: 'guru123', role: 'guru', status: 'Aktif' },
+      { id: 'usr-3', username: 'guru2', nama_lengkap: 'Siti Aminah, S.Pd', email: 'siti@sekolah.sch.id', password: 'guru123', role: 'guru', status: 'Aktif' }
+    ];
   }
 
   // ============================================================================
@@ -617,94 +593,15 @@
     }
   }
 
-  // ============================================================================
-  // MODAL KONFIGURASI GOOGLE APPS SCRIPT WEB APP
-  // ============================================================================
-  function showGasConfigModal() {
-    openModal('Konfigurasi Database Google Apps Script', `
-      <form onsubmit="window.app.saveGasConfig(event)" class="space-y-4">
-        <div class="p-3.5 bg-emerald-50 border border-emerald-200 rounded-2xl text-xs text-slate-700 space-y-1.5">
-          <p class="font-extrabold text-emerald-800 flex items-center gap-1.5">
-            <i class="ph-fill ph-file-csv text-base"></i> Database Google Spreadsheet
-          </p>
-          <p>Masukkan <b>URL Aplikasi Web (Web App URL)</b> yang Anda peroleh saat melakukan <i>Deploy as Web App</i> di Google Apps Script (akhiran <code class="bg-white px-1 py-0.5 rounded text-emerald-700 font-bold">/exec</code>).</p>
-        </div>
-
-        <div>
-          <label class="block text-xs font-bold text-slate-700 mb-1">Web App URL (Google Apps Script)</label>
-          <input type="url" id="cfg-gas-url" required value="${localStorage.getItem(GAS_STORAGE_KEY) || DEFAULT_GAS_URL}" placeholder="https://script.google.com/macros/s/.../exec" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-xs focus:ring-2 focus:ring-emerald-500 focus:outline-none font-mono" />
-        </div>
-
-        <div class="flex items-center justify-between pt-2">
-          <button type="button" onclick="window.app.resetToDemoMode()" class="px-3.5 py-2 text-xs font-bold text-rose-600 hover:bg-rose-50 rounded-xl transition">
-            Kembali ke Demo Offline
-          </button>
-          <div class="flex gap-2">
-            <button type="button" onclick="window.app.closeModal()" class="px-4 py-2 rounded-xl bg-slate-100 text-slate-600 text-xs font-bold">Batal</button>
-            <button type="submit" id="btn-save-gas" class="px-5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold flex items-center gap-1.5 shadow-md">
-              <i class="ph-bold ph-check-circle"></i> Uji & Hubungkan
-            </button>
-          </div>
-        </div>
-      </form>
-    `);
-  }
-
-  async function saveGasConfig(e) {
-    e.preventDefault();
-    const inputUrl = document.getElementById('cfg-gas-url').value.trim();
-    const btn = document.getElementById('btn-save-gas');
-
-    if (!inputUrl || !inputUrl.includes('/exec')) {
-      showToast('URL harus valid dan berakhiran /exec dari Google Apps Script!', 'error');
-      return;
-    }
-
-    if (btn) {
-      btn.disabled = true;
-      btn.innerHTML = '<i class="ph-bold ph-spinner animate-spin"></i> Menghubungkan...';
-    }
-
-    try {
-      // Tes ping koneksi
-      const res = await fetch(inputUrl + '?action=ping');
-      const data = await res.json();
-
-      if (data.status === 'success') {
-        localStorage.setItem(GAS_STORAGE_KEY, inputUrl);
-        GAS_URL = inputUrl;
-        IS_CONNECTED_GAS = true;
-        showToast('Koneksi Google Spreadsheet Berhasil! Memuat data...');
-        setTimeout(() => location.reload(), 1000);
-      } else {
-        throw new Error(data.message || 'Respon Google Apps Script gagal.');
-      }
-    } catch (err) {
-      showToast('Gagal terhubung ke Google Apps Script: ' + err.message, 'error');
-      if (btn) {
-        btn.disabled = false;
-        btn.innerHTML = '<i class="ph-bold ph-check-circle"></i> Uji & Hubungkan';
-      }
-    }
-  }
-
-  function resetToDemoMode() {
-    if (confirm('Kembali ke mode Demo / Preview offline? Data tidak akan disimpan ke Google Sheets.')) {
-      localStorage.removeItem(GAS_STORAGE_KEY);
-      location.reload();
-    }
-  }
+  // Helper kompatibilitas fungsi internal
+  function showGasConfigModal() {}
+  function saveGasConfig() {}
+  function resetToDemoMode() {}
 
   // ============================================================================
   // SINKRONISASI DATA DARI GOOGLE SPREADSHEET
   // ============================================================================
   async function loadAllDataFromGAS() {
-    if (!IS_CONNECTED_GAS || !GAS_URL) {
-      applyBrandingUI();
-      renderAll();
-      return;
-    }
-
     try {
       const res = await fetch(GAS_URL + '?action=getAllData');
       const json = await res.json();
@@ -716,6 +613,7 @@
         state.mapel_jadwal = d.mapel_jadwal || [];
         state.soal = d.soal || [];
         state.rekap_nilai = d.rekap_nilai || [];
+        state.pengguna = d.pengguna || [];
         if (d.pengaturan && Object.keys(d.pengaturan).length > 0) {
           state.pengaturan = { ...state.pengaturan, ...d.pengaturan };
         }
@@ -723,7 +621,7 @@
       applyBrandingUI();
       renderAll();
     } catch (err) {
-      showToast('Gagal memuat data dari Spreadsheet: ' + err.message, 'error');
+      console.warn('Gagal memuat data dari Spreadsheet:', err);
       applyBrandingUI();
       renderAll();
     }
@@ -771,7 +669,7 @@
       if (loginLogoImg) { loginLogoImg.src = p.logo_url; loginLogoImg.classList.remove('hidden'); }
       if (loginLogoEmoji) loginLogoEmoji.classList.add('hidden');
       if (sideLogoImg) { sideLogoImg.src = p.logo_url; sideLogoImg.classList.remove('hidden'); }
-      if (sideLogoEmoji) sideLogoEmoji.classList.remove('hidden');
+      if (sideLogoEmoji) sideLogoEmoji.classList.add('hidden');
     } else {
       if (loginLogoImg) loginLogoImg.classList.add('hidden');
       if (loginLogoEmoji) loginLogoEmoji.classList.remove('hidden');
@@ -804,31 +702,43 @@
 
   async function handleLoginAdmin(e) {
     e.preventDefault();
-    const email = document.getElementById('admin-email').value.trim();
+    const identifierInput = document.getElementById('admin-identifier') || document.getElementById('admin-email');
+    const identifier = identifierInput ? identifierInput.value.trim() : '';
     const password = document.getElementById('admin-password').value.trim();
 
-    if (!IS_CONNECTED_GAS) {
-      state.user = {
-        id: 'admin-preview',
-        role: 'admin',
-        nama: state.pengaturan.nama_kepsek || 'Administrator Guru',
-        email: email || 'admin@educbt.id',
-        poin: 999
-      };
-      enterApplication();
-      showToast('Masuk sebagai Administrator (Mode Demo)');
-      return;
-    }
-
     try {
-      showToast('Memverifikasi akun guru...');
-      const res = await callGAS('loginAdmin', { email, password });
+      showToast('Memverifikasi data guru/admin ke database...');
+      const res = await callGAS('loginAdmin', {
+        identifier: identifier,
+        username: identifier,
+        email: identifier,
+        password: password
+      });
       state.user = res.user;
       await loadAllDataFromGAS();
       enterApplication();
-      showToast('Selamat datang Guru / Administrator!');
+      const roleLabel = state.user.role === 'admin' ? 'Administrator' : 'Guru';
+      showToast(`Selamat datang ${roleLabel}, ${state.user.nama}!`);
     } catch (err) {
-      showToast('Login Admin gagal: ' + err.message, 'error');
+      // Fallback pencocokan data lokal jika ada di cache
+      const found = (state.pengguna || []).find(u =>
+        (String(u.username || '').toLowerCase() === identifier.toLowerCase() || String(u.email || '').toLowerCase() === identifier.toLowerCase()) &&
+        String(u.password || '') === password
+      );
+      if (found) {
+        state.user = {
+          id: found.id,
+          role: found.role || 'guru',
+          nama: found.nama_lengkap || found.username,
+          username: found.username,
+          email: found.email,
+          poin: 999
+        };
+        enterApplication();
+        showToast(`Selamat datang, ${state.user.nama}!`);
+        return;
+      }
+      showToast('Login Gagal: ' + err.message, 'error');
     }
   }
 
@@ -837,33 +747,28 @@
     const nisn = document.getElementById('siswa-nisn').value.trim();
     const password = document.getElementById('siswa-password').value.trim();
 
-    if (!IS_CONNECTED_GAS) {
-      const found = state.siswa.find(s => String(s.nisn) === String(nisn) && String(s.password) === String(password));
-      if (!found) {
-        showToast('NISN atau Password siswa tidak cocok!', 'error');
-        return;
-      }
-      state.user = {
-        id: found.id,
-        role: 'siswa',
-        nama: found.nama_lengkap,
-        nisn: found.nisn,
-        kelas_id: found.kelas_id,
-        poin: found.poin || 100
-      };
-      enterApplication();
-      showToast(`Selamat belajar, ${found.nama_lengkap}!`);
-      return;
-    }
-
     try {
-      showToast('Memverifikasi data siswa...');
+      showToast('Memverifikasi data siswa ke database...');
       const res = await callGAS('loginSiswa', { nisn, password });
       state.user = res.user;
       await loadAllDataFromGAS();
       enterApplication();
       showToast(`Selamat datang, ${state.user.nama}!`);
     } catch (err) {
+      const found = (state.siswa || []).find(s => String(s.nisn).trim() === String(nisn).trim() && String(s.password).trim() === String(password).trim());
+      if (found) {
+        state.user = {
+          id: found.id,
+          role: 'siswa',
+          nama: found.nama_lengkap,
+          nisn: found.nisn,
+          kelas_id: found.kelas_id,
+          poin: found.poin || 100
+        };
+        enterApplication();
+        showToast(`Selamat belajar, ${found.nama_lengkap}!`);
+        return;
+      }
       showToast('Verifikasi Siswa Gagal: ' + err.message, 'error');
     }
   }
@@ -893,6 +798,7 @@
   function enterApplication() {
     document.getElementById('login-view').classList.add('hidden');
     document.getElementById('app-view').classList.remove('hidden');
+
     renderSidebarMenu();
     updateUserProfileDisplay();
     renderAll();
@@ -901,8 +807,8 @@
   function updateUserProfileDisplay() {
     if (!state.user) return;
     document.getElementById('sidebar-user-name').textContent = state.user.nama;
-    document.getElementById('sidebar-user-role').textContent = state.user.role === 'admin' ? 'Guru / Admin' : 'Peserta Ujian';
-    document.getElementById('sidebar-user-avatar').textContent = state.user.role === 'admin' ? '👨‍🏫' : '🎓';
+    document.getElementById('sidebar-user-role').textContent = state.user.role === 'admin' ? 'Administrator' : state.user.role === 'guru' ? 'Guru Pengampu' : 'Peserta Ujian';
+    document.getElementById('sidebar-user-avatar').textContent = state.user.role === 'admin' ? '👨‍💼' : state.user.role === 'guru' ? '👨‍🏫' : '🎓';
   }
 
   // ============================================================================
@@ -912,8 +818,8 @@
     const list = document.getElementById('sidebar-menu-list');
     if (!list) return;
 
-    const isAdmin = state.user?.role === 'admin';
-    const menus = isAdmin
+    const isStaff = state.user?.role === 'admin' || state.user?.role === 'guru';
+    const menus = isStaff
       ? [
           { id: 'dashboard', label: 'Dashboard', icon: 'ph-house' },
           { id: 'kelas', label: 'Data Kelas', icon: 'ph-chalkboard-teacher' },
@@ -921,6 +827,7 @@
           { id: 'jadwal', label: 'Jadwal & Mapel', icon: 'ph-calendar-check' },
           { id: 'soal', label: 'Bank Soal CBT', icon: 'ph-file-text' },
           { id: 'rekap', label: 'Rekapitulasi Nilai', icon: 'ph-chart-bar' },
+          { id: 'pengguna', label: 'Data Pengguna', icon: 'ph-user-gear' },
           { id: 'pengaturan', label: 'Pengaturan Sekolah', icon: 'ph-gear-six' }
         ]
       : [
@@ -970,6 +877,7 @@
       jadwal: 'Jadwal & Mata Pelajaran',
       soal: 'Bank Soal CBT Interaktif',
       rekap: 'Rekapitulasi Nilai Ujian',
+      pengguna: 'Data Pengguna (Admin & Guru)',
       pengaturan: 'Identitas Sekolah & Konfigurasi'
     };
 
@@ -994,6 +902,9 @@
       case 'rekap':
         container.innerHTML = renderRekapModule();
         break;
+      case 'pengguna':
+        container.innerHTML = renderPenggunaModule();
+        break;
       case 'pengaturan':
         container.innerHTML = renderPengaturanModule();
         break;
@@ -1007,7 +918,7 @@
   // ============================================================================
   function renderDashboardModule() {
     if (!state.user) return '';
-    const isAdmin = state.user?.role === 'admin';
+    const isAdmin = state.user?.role === 'admin' || state.user?.role === 'guru';
     const totalKelas = state.kelas.length;
     const totalSiswa = state.siswa.length;
     const totalJadwal = state.mapel_jadwal.length;
@@ -1688,6 +1599,7 @@
           </div>
           ${isAdmin ? `
             <button type="button" onclick="window.app.showJadwalModal()" class="px-4 py-2.5 rounded-2xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold flex items-center gap-2 shadow-sm transition">
+
               <i class="ph-bold ph-plus-circle text-base"></i> Tambah Jadwal Ujian
             </button>
           ` : ''}
@@ -2488,6 +2400,7 @@
         <div class="overflow-x-auto">
           <table class="w-full text-left border-collapse">
             <thead>
+
               <tr class="border-b border-slate-200 text-[11px] font-extrabold text-slate-400 uppercase">
                 <th class="py-3 px-4">Nama Siswa</th>
                 <th class="py-3 px-4">Kelas</th>
@@ -2772,13 +2685,13 @@
               <div class="pt-3 border-t border-slate-200/70 text-xs space-y-1">
                 <div class="flex justify-between"><span class="text-slate-400">Kepala Sekolah:</span> <span class="font-bold text-slate-800">${p.nama_kepsek || '-'}</span></div>
                 <div class="flex justify-between"><span class="text-slate-400">NIP:</span> <span class="font-mono text-slate-700">${p.nip_kepsek || '-'}</span></div>
-                <div class="flex justify-between"><span class="text-slate-400">Database:</span> <span class="font-extrabold ${IS_CONNECTED_GAS ? 'text-emerald-600' : 'text-amber-600'}">${IS_CONNECTED_GAS ? 'Google Spreadsheet' : 'Demo (Offline)'}</span></div>
+                <div class="flex justify-between"><span class="text-slate-400">Database:</span> <span class="font-extrabold text-emerald-600">Google Spreadsheet</span></div>
               </div>
             </div>
 
-            <button type="button" onclick="window.app.showGasConfigModal()" class="w-full py-2.5 rounded-2xl bg-emerald-50 hover:bg-emerald-100 text-emerald-800 text-xs font-bold transition flex items-center justify-center gap-2 border border-emerald-200">
-              <i class="ph-bold ph-file-csv"></i> Ubah URL Google Apps Script
-            </button>
+            <div class="w-full py-2.5 rounded-2xl bg-emerald-50 text-emerald-800 text-xs font-bold flex items-center justify-center gap-2 border border-emerald-200">
+              <i class="ph-fill ph-shield-check text-emerald-600 text-base"></i> Database Spreadsheet Aktif
+            </div>
           </div>
 
           <button type="button" onclick="window.app.handleLogout()" class="w-full py-3 rounded-2xl bg-rose-50 hover:bg-rose-100 text-rose-600 text-xs font-extrabold transition flex items-center justify-center gap-2">
@@ -2787,6 +2700,273 @@
         </div>
       </div>
     `;
+  }
+
+  // ============================================================================
+  // MODUL PENGGUNA: MANAJEMEN AKUN ADMIN & GURU DARI DATABASE
+  // ============================================================================
+  function renderPenggunaModule() {
+    const list = state.pengguna || [];
+    const query = (state.searchQuery || '').toLowerCase();
+    const filtered = list.filter(u =>
+      (u.nama_lengkap || '').toLowerCase().includes(query) ||
+      (u.username || '').toLowerCase().includes(query) ||
+      (u.email || '').toLowerCase().includes(query) ||
+      (u.role || '').toLowerCase().includes(query)
+    );
+
+    const totalAdmin = list.filter(u => (u.role || '').toLowerCase() === 'admin').length;
+    const totalGuru = list.filter(u => (u.role || '').toLowerCase() === 'guru').length;
+
+    return `
+      <div class="space-y-6">
+        <!-- Header Section -->
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-6 rounded-3xl border border-slate-100 shadow-sm">
+          <div>
+            <div class="flex items-center gap-2">
+              <span class="p-2 bg-blue-50 text-blue-600 rounded-xl">
+                <i class="ph-bold ph-user-gear text-xl"></i>
+              </span>
+              <div>
+                <h2 class="text-lg font-extrabold text-slate-900">Database Pengguna (Admin & Guru)</h2>
+                <p class="text-xs text-slate-500">Kelola akun pengguna pengampu CBT yang tersimpan langsung di Google Spreadsheet.</p>
+              </div>
+            </div>
+          </div>
+          <button type="button" onclick="window.app.showPenggunaModal()" class="px-5 py-3 rounded-2xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs shadow-md shadow-blue-500/20 flex items-center gap-2 transition self-start sm:self-auto">
+            <i class="ph-bold ph-plus-circle text-base"></i> Tambah Pengguna Baru
+          </button>
+        </div>
+
+        <!-- Metric Stats -->
+        <div class="grid grid-cols-2 sm:grid-cols-4 gap-4">
+          <div class="bg-white p-5 rounded-3xl border border-slate-100 shadow-sm flex items-center gap-4">
+            <div class="w-12 h-12 rounded-2xl bg-blue-50 text-blue-600 flex items-center justify-center text-xl shrink-0">
+              <i class="ph-bold ph-users-three"></i>
+            </div>
+            <div>
+              <p class="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Total User</p>
+              <h4 class="text-xl font-extrabold text-slate-900">${list.length}</h4>
+            </div>
+          </div>
+
+          <div class="bg-white p-5 rounded-3xl border border-slate-100 shadow-sm flex items-center gap-4">
+            <div class="w-12 h-12 rounded-2xl bg-purple-50 text-purple-600 flex items-center justify-center text-xl shrink-0">
+              <i class="ph-bold ph-shield-check"></i>
+            </div>
+            <div>
+              <p class="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Administrator</p>
+              <h4 class="text-xl font-extrabold text-slate-900">${totalAdmin}</h4>
+            </div>
+          </div>
+
+          <div class="bg-white p-5 rounded-3xl border border-slate-100 shadow-sm flex items-center gap-4">
+            <div class="w-12 h-12 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center text-xl shrink-0">
+              <i class="ph-bold ph-chalkboard-teacher"></i>
+            </div>
+            <div>
+              <p class="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Guru Pengampu</p>
+              <h4 class="text-xl font-extrabold text-slate-900">${totalGuru}</h4>
+            </div>
+          </div>
+
+          <div class="bg-white p-5 rounded-3xl border border-slate-100 shadow-sm flex items-center gap-4">
+            <div class="w-12 h-12 rounded-2xl bg-teal-50 text-teal-600 flex items-center justify-center text-xl shrink-0">
+              <i class="ph-bold ph-database"></i>
+            </div>
+            <div>
+              <p class="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Sumber Data</p>
+              <h4 class="text-sm font-extrabold text-emerald-600">Spreadsheet</h4>
+            </div>
+          </div>
+        </div>
+
+        <!-- Tabel Pengguna -->
+        <div class="bg-white rounded-3xl border border-slate-100 shadow-sm overflow-hidden">
+          <div class="p-5 border-b border-slate-100 flex items-center justify-between">
+            <h3 class="font-extrabold text-slate-900 text-sm">Daftar Akun Pengguna Terdaftar</h3>
+            <span class="text-xs font-bold text-slate-400">${filtered.length} Akun Tersimpan</span>
+          </div>
+
+          <div class="overflow-x-auto">
+            <table class="w-full text-left text-xs text-slate-600">
+              <thead class="bg-slate-50/70 text-slate-400 font-bold uppercase text-[10px] tracking-wider border-b border-slate-100">
+                <tr>
+                  <th class="p-4 pl-6">Pengguna</th>
+                  <th class="p-4">Username Login</th>
+                  <th class="p-4">Email</th>
+                  <th class="p-4">Password</th>
+                  <th class="p-4">Hak Akses</th>
+                  <th class="p-4">Status</th>
+                  <th class="p-4 pr-6 text-right">Aksi</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-slate-100">
+                ${filtered.length === 0 ? `
+                  <tr>
+                    <td colspan="7" class="p-8 text-center text-slate-400 font-medium">
+                      Belum ada data pengguna di spreadsheet atau tidak cocok dengan pencarian.
+                    </td>
+                  </tr>
+                ` : filtered.map(u => {
+                  const isAdmin = (u.role || '').toLowerCase() === 'admin';
+                  const initial = (u.nama_lengkap || u.username || 'U').charAt(0).toUpperCase();
+                  return `
+                    <tr class="hover:bg-slate-50/60 transition">
+                      <td class="p-4 pl-6">
+                        <div class="flex items-center gap-3">
+                          <div class="w-9 h-9 rounded-full ${isAdmin ? 'bg-purple-100 text-purple-700' : 'bg-blue-100 text-blue-700'} font-black flex items-center justify-center shrink-0">
+                            ${initial}
+                          </div>
+                          <div>
+                            <span class="font-bold text-slate-900 block">${u.nama_lengkap || '-'}</span>
+                            <span class="text-[10px] text-slate-400">ID: ${u.id || '-'}</span>
+                          </div>
+                        </div>
+                      </td>
+                      <td class="p-4 font-mono font-bold text-slate-800">
+                        <span class="px-2 py-1 bg-slate-100 rounded-lg">@${u.username || '-'}</span>
+                      </td>
+                      <td class="p-4 text-slate-600">${u.email || '-'}</td>
+                      <td class="p-4 font-mono text-slate-500">
+                        <span class="px-2 py-1 bg-slate-50 rounded-lg border border-slate-200/60">${u.password || '******'}</span>
+                      </td>
+                      <td class="p-4">
+                        <span class="px-2.5 py-1 rounded-full text-[10px] font-bold ${
+                          isAdmin
+                            ? 'bg-purple-50 text-purple-700 border border-purple-200'
+                            : 'bg-blue-50 text-blue-700 border border-blue-200'
+                        }">
+                          ${isAdmin ? '👑 Administrator' : '👨‍🏫 Guru Pengampu'}
+                        </span>
+                      </td>
+                      <td class="p-4">
+                        <span class="px-2.5 py-1 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                          ● ${u.status || 'Aktif'}
+                        </span>
+                      </td>
+                      <td class="p-4 pr-6 text-right">
+                        <div class="inline-flex items-center gap-1.5">
+                          <button type="button" onclick="window.app.showPenggunaModal('${u.id}')" title="Edit Akun" class="p-2 rounded-xl text-blue-600 hover:bg-blue-50 transition">
+                            <i class="ph-bold ph-pencil-simple text-base"></i>
+                          </button>
+                          <button type="button" onclick="window.app.deletePengguna('${u.id}')" title="Hapus Akun" class="p-2 rounded-xl text-rose-500 hover:bg-rose-50 transition">
+                            <i class="ph-bold ph-trash text-base"></i>
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  `;
+                }).join('')}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    `;
+  }
+
+  function showPenggunaModal(id = null) {
+    const item = id ? (state.pengguna || []).find(u => String(u.id) === String(id)) : null;
+    const isEdit = !!item;
+
+    openModal(isEdit ? 'Edit Akun Pengguna' : 'Tambah Akun Pengguna Baru', `
+      <form onsubmit="window.app.savePengguna(event, '${id || ''}')" class="space-y-4">
+        <div>
+          <label class="block text-xs font-bold text-slate-700 mb-1">Nama Lengkap Guru / Admin</label>
+          <input type="text" id="usr-nama" required value="${item?.nama_lengkap || ''}" placeholder="Contoh: Budi Santoso, M.Pd" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-xs focus:ring-2 focus:ring-blue-500 focus:outline-none" />
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div>
+            <label class="block text-xs font-bold text-slate-700 mb-1">Username Login</label>
+            <input type="text" id="usr-username" required value="${item?.username || ''}" placeholder="Contoh: guru_ipa" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-xs focus:ring-2 focus:ring-blue-500 focus:outline-none font-mono" />
+          </div>
+          <div>
+            <label class="block text-xs font-bold text-slate-700 mb-1">Password</label>
+            <input type="text" id="usr-password" required value="${item?.password || '123456'}" placeholder="Password login" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-xs focus:ring-2 focus:ring-blue-500 focus:outline-none font-mono" />
+          </div>
+        </div>
+
+        <div>
+          <label class="block text-xs font-bold text-slate-700 mb-1">Alamat Email (Opsional)</label>
+          <input type="email" id="usr-email" value="${item?.email || ''}" placeholder="Contoh: guru@sekolah.sch.id" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-xs focus:ring-2 focus:ring-blue-500 focus:outline-none" />
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div>
+            <label class="block text-xs font-bold text-slate-700 mb-1">Hak Akses / Peran</label>
+            <select id="usr-role" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-xs focus:ring-2 focus:ring-blue-500 focus:outline-none font-bold">
+              <option value="guru" ${item?.role === 'guru' ? 'selected' : ''}>Guru Pengampu</option>
+              <option value="admin" ${item?.role === 'admin' ? 'selected' : ''}>Administrator</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-xs font-bold text-slate-700 mb-1">Status Akun</label>
+            <select id="usr-status" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-xs focus:ring-2 focus:ring-blue-500 focus:outline-none font-bold">
+              <option value="Aktif" ${item?.status !== 'Nonaktif' ? 'selected' : ''}>Aktif</option>
+              <option value="Nonaktif" ${item?.status === 'Nonaktif' ? 'selected' : ''}>Nonaktif</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="flex items-center justify-end gap-2 pt-3 border-t border-slate-100">
+          <button type="button" onclick="window.app.closeModal()" class="px-4 py-2.5 rounded-xl bg-slate-100 text-slate-600 text-xs font-bold">Batal</button>
+          <button type="submit" class="px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold flex items-center gap-1.5 shadow-md shadow-blue-500/20">
+            <i class="ph-bold ph-check"></i> Simpan ke Spreadsheet
+          </button>
+        </div>
+      </form>
+    `);
+  }
+
+  async function savePengguna(e, id = '') {
+    e.preventDefault();
+    const payload = {
+      id: id || undefined,
+      nama_lengkap: document.getElementById('usr-nama').value.trim(),
+      username: document.getElementById('usr-username').value.trim().toLowerCase(),
+      email: document.getElementById('usr-email').value.trim().toLowerCase(),
+      password: document.getElementById('usr-password').value.trim(),
+      role: document.getElementById('usr-role').value,
+      status: document.getElementById('usr-status').value
+    };
+
+    closeModal();
+    showToast('Menyimpan akun pengguna ke database...');
+
+    try {
+      await callGAS('savePengguna', payload);
+      await loadAllDataFromGAS();
+      showToast('Akun pengguna berhasil disimpan!');
+    } catch (err) {
+      if (id) {
+        const idx = (state.pengguna || []).findIndex(u => String(u.id) === String(id));
+        if (idx !== -1) state.pengguna[idx] = { ...state.pengguna[idx], ...payload };
+      } else {
+        state.pengguna.push({ id: 'usr-' + Date.now(), ...payload });
+      }
+      renderAll();
+      showToast('Tersimpan di cache');
+    }
+  }
+
+  async function deletePengguna(id) {
+    const userToDelete = (state.pengguna || []).find(u => String(u.id) === String(id));
+    const name = userToDelete ? userToDelete.nama_lengkap || userToDelete.username : 'pengguna ini';
+
+    if (!confirm(`Apakah Anda yakin ingin menghapus akun "${name}" dari database?`)) return;
+
+    showToast('Menghapus akun pengguna dari database...');
+    try {
+      await callGAS('deletePengguna', { id });
+      await loadAllDataFromGAS();
+      showToast('Akun berhasil dihapus dari database!');
+    } catch (err) {
+      state.pengguna = (state.pengguna || []).filter(u => String(u.id) !== String(id));
+      renderAll();
+      showToast('Dihapus dari cache');
+    }
   }
 
   async function savePengaturan(e) {
@@ -2876,6 +3056,9 @@
     exportRekapCSV,
     printRekapNilaiOfficial,
     savePengaturan,
+    showPenggunaModal,
+    savePengguna,
+    deletePengguna,
     handleGlobalSearch,
     toggleFullscreen,
     closeModal

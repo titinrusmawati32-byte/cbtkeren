@@ -28,7 +28,8 @@ const SHEETS = {
   JADWAL: 'mapel_jadwal',
   SOAL: 'soal',
   REKAP: 'rekap_nilai',
-  PENGATURAN: 'pengaturan'
+  PENGATURAN: 'pengaturan',
+  PENGGUNA: 'pengguna'
 };
 
 /**
@@ -75,27 +76,56 @@ function doPost(e) {
     const ss = SpreadsheetApp.getActiveSpreadsheet();
 
     switch (action) {
-      // 1. AUTENTIKASI ADMIN
+      // 1. AUTENTIKASI ADMIN & GURU DARI DATABASE
       case 'loginAdmin': {
+        const userSheet = ss.getSheetByName(SHEETS.PENGGUNA);
+        let found = null;
+        const inputId = String(payload.email || payload.username || payload.identifier || '').trim().toLowerCase();
+        const inputPass = String(payload.password || '').trim();
+
+        if (userSheet) {
+          const userList = sheetToObjects(userSheet);
+          found = userList.find(u => 
+            (String(u.username || '').toLowerCase() === inputId || String(u.email || '').toLowerCase() === inputId) &&
+            String(u.password || '').trim() === inputPass
+          );
+        }
+
+        if (found) {
+          return jsonResponse({
+            status: 'success',
+            user: {
+              id: found.id,
+              role: (found.role || 'admin').toLowerCase(),
+              nama: found.nama_lengkap || found.username,
+              username: found.username,
+              email: found.email,
+              poin: 999
+            }
+          });
+        }
+
+        // Fallback ke tabel pengaturan
         const setSheet = ss.getSheetByName(SHEETS.PENGATURAN);
         const setRows = sheetToObjects(setSheet);
         const config = setRows[0] || {};
         const adminEmail = (config.admin_email || 'admin@educbt.id').toLowerCase();
-        const adminPass = config.admin_password || 'admin123';
+        const adminPass = String(config.admin_password || 'admin123').trim();
 
-        if (payload.email.toLowerCase() === adminEmail && payload.password === adminPass) {
+        if ((inputId === adminEmail || inputId === 'admin') && inputPass === adminPass) {
           return jsonResponse({
             status: 'success',
             user: {
               id: 'admin-gas',
               role: 'admin',
-              nama: config.nama_kepsek || 'Administrator Guru',
-              email: payload.email,
+              nama: config.nama_kepsek || 'Administrator Utama',
+              email: config.admin_email || 'admin@educbt.id',
+              username: 'admin',
               poin: 999
             }
           });
         } else {
-          return jsonResponse({ status: 'error', message: 'Email atau Password Admin tidak cocok!' });
+          return jsonResponse({ status: 'error', message: 'Username/Email atau Password Guru/Admin tidak cocok dengan database!' });
         }
       }
 
@@ -285,6 +315,30 @@ function doPost(e) {
         return jsonResponse({ status: 'success', allData: fetchAllDatabase() });
       }
 
+      // 9. CRUD PENGGUNA (ADMIN & GURU)
+      case 'savePengguna': {
+        const sheet = ss.getSheetByName(SHEETS.PENGGUNA);
+        const id = payload.id || 'usr-' + Utilities.getUuid();
+        const row = [
+          id,
+          String(payload.username || '').trim().toLowerCase(),
+          payload.nama_lengkap || 'Pengguna',
+          String(payload.email || '').trim().toLowerCase(),
+          String(payload.password || '123456'),
+          payload.role || 'guru',
+          payload.status || 'Aktif',
+          new Date().toISOString()
+        ];
+        upsertRowById(sheet, id, row);
+        return jsonResponse({ status: 'success', id: id, allData: fetchAllDatabase() });
+      }
+
+      case 'deletePengguna': {
+        const sheet = ss.getSheetByName(SHEETS.PENGGUNA);
+        deleteRowById(sheet, payload.id);
+        return jsonResponse({ status: 'success', allData: fetchAllDatabase() });
+      }
+
       default:
         return jsonResponse({ status: 'error', message: 'Action POST tidak dikenal: ' + action });
     }
@@ -304,7 +358,8 @@ function fetchAllDatabase() {
     mapel_jadwal: sheetToObjects(ss.getSheetByName(SHEETS.JADWAL)),
     soal: sheetToObjects(ss.getSheetByName(SHEETS.SOAL)),
     rekap_nilai: sheetToObjects(ss.getSheetByName(SHEETS.REKAP)),
-    pengaturan: sheetToObjects(ss.getSheetByName(SHEETS.PENGATURAN))[0] || {}
+    pengaturan: sheetToObjects(ss.getSheetByName(SHEETS.PENGATURAN))[0] || {},
+    pengguna: sheetToObjects(ss.getSheetByName(SHEETS.PENGGUNA))
   };
 }
 
@@ -383,6 +438,15 @@ function initDatabaseSheets() {
           'admin123',
           new Date().toISOString()
         ]
+      ]
+    },
+    {
+      name: SHEETS.PENGGUNA,
+      headers: ['id', 'username', 'nama_lengkap', 'email', 'password', 'role', 'status', 'created_at'],
+      initial: [
+        ['usr-1', 'admin', 'Dr. H. Ahmad Sulaiman, M.Pd', 'admin@educbt.id', 'admin123', 'admin', 'Aktif', new Date().toISOString()],
+        ['usr-2', 'guru1', 'Budi Santoso, M.Pd', 'budi@sekolah.sch.id', 'guru123', 'guru', 'Aktif', new Date().toISOString()],
+        ['usr-3', 'guru2', 'Siti Aminah, S.Pd', 'siti@sekolah.sch.id', 'guru123', 'guru', 'Aktif', new Date().toISOString()]
       ]
     }
   ];
