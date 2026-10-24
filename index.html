@@ -23,6 +23,12 @@
   <!-- SheetJS (XLSX) untuk Import & Download Format Excel (.xlsx) -->
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 
+  <!-- Firebase 10 Modular/Compat SDK untuk Operasi Realtime CBT & Autosave Jawaban -->
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
+  <script src="firebase-adapter.js"></script>
+
   <script>
     // Inisialisasi Tema Instan Sebelum Halaman Dirender (Mencegah Layar Putih Berkedip)
     (function() {
@@ -1141,8 +1147,201 @@
     }
   }
 
-  // Helper kompatibilitas fungsi internal
-  function showGasConfigModal() {}
+  // ============================================================================
+  // PUSAT INTEGRASI DATABASE & FIREBASE CLOUD (HYBRID ARCHITECTURE)
+  // ============================================================================
+  function showGasConfigModal() {
+    const isFbActive = window.FirebaseAdapter && window.FirebaseAdapter.isConfigured();
+    const fbConf = (window.FirebaseAdapter && window.FirebaseAdapter.getConfig()) || {};
+
+    openModal('Pusat Integrasi Database & Firebase Cloud', `
+      <div class="space-y-5 text-xs text-slate-700">
+        <!-- Status Badges Dual-Engine -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <!-- Google Apps Script Status -->
+          <div class="p-3.5 rounded-2xl bg-blue-50 border border-blue-100 flex items-center justify-between">
+            <div class="flex items-center gap-2.5">
+              <i class="ph-fill ph-file-spreadsheet text-blue-600 text-2xl"></i>
+              <div>
+                <p class="font-extrabold text-slate-900">Google Spreadsheet</p>
+                <p class="text-[10px] text-blue-600 font-bold">Laporan & Backup (GAS)</p>
+              </div>
+            </div>
+            <span class="px-2.5 py-1 rounded-full bg-emerald-100 text-emerald-700 font-black text-[10px]">Terhubung</span>
+          </div>
+
+          <!-- Firebase Status -->
+          <div class="p-3.5 rounded-2xl ${isFbActive ? 'bg-emerald-50 border border-emerald-100' : 'bg-slate-50 border border-slate-200'} flex items-center justify-between">
+            <div class="flex items-center gap-2.5">
+              <i class="ph-fill ph-fire text-amber-500 text-2xl"></i>
+              <div>
+                <p class="font-extrabold text-slate-900">Cloud Firestore</p>
+                <p class="text-[10px] ${isFbActive ? 'text-emerald-600 font-bold' : 'text-slate-400'}">${isFbActive ? 'Realtime Engine Aktif' : 'Belum Dikonfigurasi'}</p>
+              </div>
+            </div>
+            <span class="px-2.5 py-1 rounded-full ${isFbActive ? 'bg-emerald-600 text-white' : 'bg-slate-200 text-slate-600'} font-black text-[10px]">${isFbActive ? 'Aktif' : 'Standby'}</span>
+          </div>
+        </div>
+
+        <!-- Form Konfigurasi Firebase Web Project -->
+        <div class="space-y-3 pt-2 border-t border-slate-100">
+          <div class="flex items-center justify-between">
+            <h4 class="font-black text-slate-900 text-xs flex items-center gap-1.5">
+              <i class="ph-bold ph-sliders"></i> Pengaturan Firebase Web SDK
+            </h4>
+            <a href="https://console.firebase.google.com" target="_blank" class="text-blue-600 font-bold text-[11px] hover:underline flex items-center gap-1">
+              Buka Firebase Console <i class="ph-bold ph-arrow-square-out"></i>
+            </a>
+          </div>
+          <p class="text-[11px] text-slate-500 leading-relaxed">
+            Dapatkan konfigurasi dari Firebase Console: <b>Project Settings &gt; General &gt; Your Apps &gt; Web App Config</b>.
+          </p>
+
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label class="block font-bold text-[11px] text-slate-600 mb-1">Project ID</label>
+              <input type="text" id="fb-project-id" value="${fbConf.projectId || ''}" placeholder="contoh: educbt-senapati-123" class="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs bg-slate-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500" />
+            </div>
+            <div>
+              <label class="block font-bold text-[11px] text-slate-600 mb-1">API Key</label>
+              <input type="password" id="fb-api-key" value="${fbConf.apiKey || ''}" placeholder="AIzaSy..." class="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs bg-slate-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500" />
+            </div>
+            <div>
+              <label class="block font-bold text-[11px] text-slate-600 mb-1">Auth Domain</label>
+              <input type="text" id="fb-auth-domain" value="${fbConf.authDomain || ''}" placeholder="project.firebaseapp.com" class="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs bg-slate-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500" />
+            </div>
+            <div>
+              <label class="block font-bold text-[11px] text-slate-600 mb-1">Storage Bucket</label>
+              <input type="text" id="fb-storage-bucket" value="${fbConf.storageBucket || ''}" placeholder="project.appspot.com" class="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs bg-slate-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500" />
+            </div>
+            <div>
+              <label class="block font-bold text-[11px] text-slate-600 mb-1">Messaging Sender ID</label>
+              <input type="text" id="fb-messaging-id" value="${fbConf.messagingSenderId || ''}" placeholder="1234567890" class="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs bg-slate-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500" />
+            </div>
+            <div>
+              <label class="block font-bold text-[11px] text-slate-600 mb-1">App ID</label>
+              <input type="text" id="fb-app-id" value="${fbConf.appId || ''}" placeholder="1:1234567890:web:abc" class="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs bg-slate-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500" />
+            </div>
+          </div>
+
+          <div class="flex flex-wrap items-center justify-between gap-2 pt-2">
+            <div class="flex items-center gap-2">
+              <button type="button" onclick="window.app.saveFirebaseConfigUI()" class="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 active:scale-95 text-white font-bold flex items-center gap-1.5 shadow-md shadow-blue-500/20 transition">
+                <i class="ph-bold ph-floppy-disk"></i> Simpan Konfigurasi
+              </button>
+              <button type="button" onclick="window.app.testFirebaseConnectionUI()" class="px-3.5 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 active:scale-95 text-slate-700 font-bold flex items-center gap-1.5 transition">
+                <i class="ph-bold ph-lightning"></i> Uji Koneksi
+              </button>
+            </div>
+            ${fbConf.projectId ? `
+              <button type="button" onclick="window.app.clearFirebaseConfigUI()" class="text-rose-500 font-bold hover:underline text-[11px]">
+                Reset / Nonaktifkan Firebase
+              </button>
+            ` : ''}
+          </div>
+        </div>
+
+        <!-- Panel Sinkronisasi & Migrasi Bertahap -->
+        <div class="p-4 rounded-2xl bg-amber-50/80 border border-amber-200 space-y-2.5">
+          <div class="flex items-center gap-2">
+            <i class="ph-fill ph-arrows-clockwise text-amber-600 text-lg"></i>
+            <h4 class="font-black text-amber-900 text-xs">Migrasi Data Idempoten (Sheets &rarr; Firestore)</h4>
+          </div>
+          <p class="text-[11px] text-amber-800 leading-relaxed">
+            Menyalin data Kelas, Siswa, Jadwal, dan Bank Soal dari Google Sheets ke Cloud Firestore. Proses ini <b>aman dan tidak menghapus</b> spreadsheet sumber.
+          </p>
+          <div id="migration-progress-box" class="hidden space-y-1.5 pt-1">
+            <div class="w-full bg-amber-200 rounded-full h-2 overflow-hidden">
+              <div id="migration-progress-bar" class="bg-amber-600 h-full rounded-full transition-all duration-300" style="width: 0%"></div>
+            </div>
+            <p id="migration-progress-text" class="text-[10px] font-bold text-amber-900">Menyiapkan migrasi...</p>
+          </div>
+          <button type="button" onclick="window.app.startFirestoreMigrationUI()" class="w-full py-2.5 rounded-xl bg-amber-600 hover:bg-amber-700 active:scale-95 text-white font-black flex items-center justify-center gap-1.5 shadow-sm transition">
+            <i class="ph-bold ph-cloud-arrow-up text-base"></i> Salin Data ke Cloud Firestore
+          </button>
+        </div>
+      </div>
+    `);
+  }
+
+  function saveFirebaseConfigUI() {
+    const configObj = {
+      projectId: document.getElementById('fb-project-id')?.value.trim(),
+      apiKey: document.getElementById('fb-api-key')?.value.trim(),
+      authDomain: document.getElementById('fb-auth-domain')?.value.trim(),
+      storageBucket: document.getElementById('fb-storage-bucket')?.value.trim(),
+      messagingSenderId: document.getElementById('fb-messaging-id')?.value.trim(),
+      appId: document.getElementById('fb-app-id')?.value.trim()
+    };
+
+    if (!configObj.projectId || !configObj.apiKey) {
+      showToast('Harap isi Project ID dan API Key Firebase!', 'warning');
+      return;
+    }
+
+    try {
+      if (window.FirebaseAdapter) {
+        window.FirebaseAdapter.saveConfig(configObj);
+        showToast('Konfigurasi Firebase berhasil disimpan!');
+        showGasConfigModal(); // Refresh modal view
+      }
+    } catch (err) {
+      showToast('Gagal menyimpan: ' + err.message, 'error');
+    }
+  }
+
+  async function testFirebaseConnectionUI() {
+    if (!window.FirebaseAdapter) {
+      showToast('Firebase Adapter belum siap.', 'error');
+      return;
+    }
+    showToast('Menguji koneksi ke Cloud Firestore...');
+    const res = await window.FirebaseAdapter.testConnection();
+    if (res.success) {
+      showToast(res.message, 'success');
+      showGasConfigModal();
+    } else {
+      showToast('Uji Gagal: ' + res.message, 'error');
+    }
+  }
+
+  function clearFirebaseConfigUI() {
+    if (!confirm('Apakah Anda yakin ingin menonaktifkan integrasi Firebase dan kembali ke mode Google Apps Script murni?')) return;
+    if (window.FirebaseAdapter) {
+      window.FirebaseAdapter.clearConfig();
+      showToast('Integrasi Firebase dinonaktifkan. Mode GAS aktif.');
+      showGasConfigModal();
+    }
+  }
+
+  async function startFirestoreMigrationUI() {
+    if (!window.FirebaseAdapter || !window.FirebaseAdapter.isConfigured()) {
+      showToast('Harap simpan konfigurasi Firebase dan uji koneksi terlebih dahulu!', 'warning');
+      return;
+    }
+
+    const pBox = document.getElementById('migration-progress-box');
+    const pBar = document.getElementById('migration-progress-bar');
+    const pText = document.getElementById('migration-progress-text');
+
+    if (pBox) pBox.classList.remove('hidden');
+
+    try {
+      const report = await window.FirebaseAdapter.migrateSheetsToFirestore(state, (msg, pct) => {
+        if (pBar) pBar.style.width = pct + '%';
+        if (pText) pText.textContent = `${msg} (${pct}%)`;
+      });
+
+      showToast(`Migrasi Sukses: ${report.kelasCount} Kelas, ${report.siswaCount} Siswa, ${report.jadwalCount} Jadwal, ${report.soalCount} Soal tersimpan di Firestore!`, 'success');
+      setTimeout(() => {
+        closeModal();
+      }, 1500);
+    } catch (err) {
+      if (pText) pText.textContent = 'Gagal: ' + err.message;
+      showToast('Migrasi Gagal: ' + err.message, 'error');
+    }
+  }
+
   function saveGasConfig() {}
   function resetToDemoMode() {}
 
@@ -5058,6 +5257,11 @@
     state.activeExam.answers[soalId] = optionKey;
     saveActiveExamLocal();
 
+    // Autosave ke Cloud Firestore secara instan (<150ms) jika Firebase aktif
+    if (window.FirebaseAdapter && window.FirebaseAdapter.isConfigured() && state.user) {
+      window.FirebaseAdapter.saveStudentAnswer(state.activeExam.jadwal.id, state.user.id, soalId, optionKey, !!state.activeExam.ragu[soalId]);
+    }
+
     // DOM Micro-updates: Update hanya tombol opsi dan peta navigasi tanpa full render
     const optKeys = ['A', 'B', 'C', 'D', 'E'];
     let domSuccess = false;
@@ -5101,6 +5305,9 @@
     clearTimeout(_essaySaveTimer);
     _essaySaveTimer = setTimeout(() => {
       saveActiveExamLocal();
+      if (window.FirebaseAdapter && window.FirebaseAdapter.isConfigured() && state.user && state.activeExam) {
+        window.FirebaseAdapter.saveStudentAnswer(state.activeExam.jadwal.id, state.user.id, soalId, val, !!state.activeExam.ragu[soalId]);
+      }
       const navBtn = document.getElementById('cbt-nav-btn-' + state.activeExam?.currentIndex);
       if (navBtn) {
         const isRagu = !!state.activeExam.ragu[soalId];
@@ -5248,13 +5455,20 @@
         if (sIdx > -1) state.siswa[sIdx].poin = state.user.poin;
       }
 
-      state.rekap_nilai.push({
+      const resultRecord = {
         id: (res && res.id) || ('rek-' + Date.now()),
         ...rekapPayload,
         nilai_akhir: finalNilai,
         benar: finalBenar,
         salah: finalSalah
-      });
+      };
+
+      state.rekap_nilai.push(resultRecord);
+
+      // Rekam hasil juga ke Cloud Firestore jika aktif
+      if (window.FirebaseAdapter && window.FirebaseAdapter.isConfigured()) {
+        window.FirebaseAdapter.recordExamResult(resultRecord).catch(() => {});
+      }
 
       saveLocalDataCache(state);
 
@@ -5981,6 +6195,10 @@
   // ============================================================================
   const appApi = {
     showGasConfigModal,
+    saveFirebaseConfigUI,
+    testFirebaseConnectionUI,
+    clearFirebaseConfigUI,
+    startFirestoreMigrationUI,
     saveGasConfig,
     resetToDemoMode,
     switchLoginTab,

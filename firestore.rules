@@ -1,0 +1,113 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Helper functions untuk validasi role & autentikasi
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isUser(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    function getUserData() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+    }
+
+    function isAdmin() {
+      return isAuthenticated() && (
+        request.auth.token.role == 'admin' ||
+        getUserData().role == 'admin'
+      );
+    }
+
+    function isGuru() {
+      return isAuthenticated() && (
+        request.auth.token.role == 'guru' ||
+        getUserData().role == 'guru' ||
+        isAdmin()
+      );
+    }
+
+    function isSiswa() {
+      return isAuthenticated() && (
+        request.auth.token.role == 'siswa' ||
+        getUserData().role == 'siswa'
+      );
+    }
+
+    // 1. Koleksi Pengguna (users)
+    // Siswa hanya boleh membaca profilnya sendiri. Guru dan Admin dapat melihat daftar pengguna.
+    match /users/{userId} {
+      allow read: if isUser(userId) || isGuru();
+      allow create, update, delete: if isAdmin();
+    }
+
+    // 2. Koleksi Rombongan Belajar / Kelas (classes)
+    // Semua pengguna terautentikasi dapat membaca data kelas. Hanya Admin yang dapat memodifikasi.
+    match /classes/{classId} {
+      allow read: if isAuthenticated();
+      allow write: if isAdmin();
+    }
+
+    // 3. Koleksi Siswa (students)
+    // Siswa hanya boleh membaca data dirinya sendiri. Guru & Admin dapat mengelola data siswa.
+    match /students/{studentId} {
+      allow read: if (isAuthenticated() && request.auth.uid == studentId) || isGuru();
+      allow write: if isGuru();
+    }
+
+    // 4. Koleksi Jadwal Ujian (examSchedules)
+    // Siswa hanya dapat membaca jadwal yang statusnya aktif. Guru & Admin dapat mengelola.
+    match /examSchedules/{scheduleId} {
+      allow read: if isAuthenticated();
+      allow write: if isGuru();
+    }
+
+    // 5. Koleksi Butir Soal (questions)
+    // ATURAN KEAMANAN TINGGI:
+    // Siswa TIDAK boleh membaca field kunci_jawaban dan pembahasan!
+    // Kunci jawaban dipisahkan atau hanya boleh dibaca oleh Guru/Admin.
+    match /questions/{questionId} {
+      allow read: if isGuru() || (
+        isAuthenticated() && 
+        !('kunci_jawaban' in resource.data) && 
+        !('pembahasan' in resource.data)
+      );
+      allow write: if isGuru();
+    }
+
+    // Sub-koleksi rahasia kunci jawaban untuk penilaian server-side tepercaya
+    match /questions/{questionId}/secureKeys/{keyId} {
+      allow read, write: if isGuru();
+    }
+
+    // 6. Koleksi Sesi Pengerjaan Siswa (examAttempts)
+    // Dokumen terisolasi per siswa & jadwal: {scheduleId}_{studentId}
+    // Siswa HANYA dapat membaca dan menulis sesi ujian miliknya sendiri.
+    match /examAttempts/{attemptId} {
+      allow read: if isGuru() || (isAuthenticated() && resource.data.studentId == request.auth.uid);
+      allow create: if isAuthenticated() && request.resource.data.studentId == request.auth.uid;
+      allow update: if isAuthenticated() && 
+        resource.data.studentId == request.auth.uid &&
+        resource.data.status == 'IN_PROGRESS';
+      allow delete: if isAdmin();
+    }
+
+    // 7. Koleksi Rekapitulasi Nilai & Hasil Ujian (examResults)
+    // Siswa hanya boleh membaca nilainya sendiri.
+    // SISWA TIDAK BOLEH MENULIS NILAI LANGSUNG (harus via backend tepercaya atau fungsi terverifikasi)!
+    match /examResults/{resultId} {
+      allow read: if isGuru() || (isAuthenticated() && resource.data.studentId == request.auth.uid);
+      allow create, update: if isGuru();
+      allow delete: if isAdmin();
+    }
+
+    // 8. Koleksi Pengaturan Aplikasi (settings)
+    match /settings/{settingId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+  }
+}
