@@ -34,6 +34,7 @@
   let _db = null;
   let _auth = null;
   let _isInitialized = false;
+  let _lastInitError = null;
 
   // Baca konfigurasi yang tersimpan di browser atau gunakan konfigurasi bawaan tertanam
   function getStoredConfig() {
@@ -41,28 +42,93 @@
       const raw = localStorage.getItem(STORAGE_KEY);
       if (raw) {
         const parsed = JSON.parse(raw);
-        if (parsed && parsed.projectId && parsed.apiKey) {
+        if (
+          parsed &&
+          typeof parsed.projectId === 'string' &&
+          parsed.projectId.trim().length >= 3 &&
+          typeof parsed.apiKey === 'string' &&
+          parsed.apiKey.trim().length >= 10
+        ) {
           return parsed;
+        } else {
+          // Bersihkan data lokal yang tidak lengkap agar kembali ke EMBEDDED_CONFIG
+          localStorage.removeItem(STORAGE_KEY);
         }
       }
     } catch (e) {
-      console.warn('[FirebaseAdapter] Gagal membaca konfigurasi lokal:', e);
+      localStorage.removeItem(STORAGE_KEY);
     }
     return EMBEDDED_CONFIG;
   }
 
-  // Inisialisasi Firebase App & Firestore
-  function initFirebase() {
-    if (_isInitialized) return true;
+  // Loader Script Dinamis dengan CDN Fallback jika gstatic lambat atau terblokir
+  function loadScript(src) {
+    return new Promise((resolve, reject) => {
+      if (document.querySelector(`script[src="${src}"]`)) {
+        return resolve();
+      }
+      const s = document.createElement('script');
+      s.src = src;
+      s.async = false;
+      s.onload = () => resolve();
+      s.onerror = (e) => reject(new Error('Gagal memuat script: ' + src));
+      document.head.appendChild(s);
+    });
+  }
 
-    const config = getStoredConfig();
-    if (!config) {
-      console.info('[FirebaseAdapter] Mode: Google Apps Script Murni (Firebase belum dikonfigurasi).');
+  async function ensureFirebaseSDK() {
+    if (typeof firebase !== 'undefined' && typeof firebase.firestore !== 'undefined') {
+      return true;
+    }
+
+    const cdnSources = [
+      {
+        app: 'https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js',
+        firestore: 'https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js',
+        auth: 'https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js'
+      },
+      {
+        app: 'https://cdnjs.cloudflare.com/ajax/libs/firebase/10.8.0/firebase-app-compat.js',
+        firestore: 'https://cdnjs.cloudflare.com/ajax/libs/firebase/10.8.0/firebase-firestore-compat.js',
+        auth: 'https://cdnjs.cloudflare.com/ajax/libs/firebase/10.8.0/firebase-auth-compat.js'
+      }
+    ];
+
+    for (const cdn of cdnSources) {
+      try {
+        if (typeof firebase === 'undefined') {
+          await loadScript(cdn.app);
+        }
+        if (typeof firebase !== 'undefined' && typeof firebase.firestore === 'undefined') {
+          await loadScript(cdn.firestore);
+        }
+        if (typeof firebase !== 'undefined' && typeof firebase.auth === 'undefined') {
+          loadScript(cdn.auth).catch(() => {});
+        }
+        if (typeof firebase !== 'undefined' && typeof firebase.firestore !== 'undefined') {
+          return true;
+        }
+      } catch (err) {
+        console.warn('[FirebaseAdapter] CDN fallback:', err.message);
+      }
+    }
+
+    return typeof firebase !== 'undefined' && typeof firebase.firestore !== 'undefined';
+  }
+
+  // Inisialisasi Firebase Asinkron
+  async function initFirebaseAsync() {
+    if (_isInitialized && _db) return true;
+
+    const sdkReady = await ensureFirebaseSDK();
+    if (!sdkReady) {
+      _lastInitError = 'SDK Firebase belum termuat. Periksa koneksi internet Anda atau nonaktifkan AdBlocker/Brave Shields jika aktif.';
       return false;
     }
 
-    if (typeof firebase === 'undefined') {
-      console.warn('[FirebaseAdapter] SDK Firebase belum dimuat oleh peramban.');
+    const config = getStoredConfig();
+    if (!config || !config.projectId) {
+      _lastInitError = 'Konfigurasi Firebase belum diisi.';
       return false;
     }
 
@@ -75,24 +141,52 @@
 
       _db = firebase.firestore();
 
-      // Aktifkan Offline Persistence agar tetap dapat mengerjakan ujian saat internet terputus sesaat
-      _db.enablePersistence({ synchronizeTabs: true }).catch(err => {
-        if (err.code === 'failed-precondition') {
-          console.warn('[FirebaseAdapter] Persistence gagal karena multiple tabs terbuka.');
-        } else if (err.code === 'unimplemented') {
-          console.warn('[FirebaseAdapter] Browser tidak mendukung offline persistence.');
-        }
-      });
+      // Aktifkan Offline Persistence
+      try {
+        _db.enablePersistence({ synchronizeTabs: true }).catch(err => {
+          console.warn('[FirebaseAdapter] Offline persistence not enabled:', err.message);
+        });
+      } catch (pErr) {}
 
       if (firebase.auth) {
         _auth = firebase.auth();
       }
 
       _isInitialized = true;
+      _lastInitError = null;
       console.log(`%c[FirebaseAdapter] Berhasil terhubung ke Cloud Firestore: ${config.projectId}`, 'color:#10B981;font-weight:bold;');
       return true;
     } catch (err) {
       console.error('[FirebaseAdapter] Gagal inisialisasi Firebase:', err);
+      _lastInitError = err.message || String(err);
+      _isInitialized = false;
+      return false;
+    }
+  }
+
+  // Inisialisasi Firebase Sinkron (Best Effort)
+  function initFirebase() {
+    if (_isInitialized && _db) return true;
+
+    if (typeof firebase === 'undefined' || typeof firebase.firestore === 'undefined') {
+      initFirebaseAsync();
+      return false;
+    }
+
+    const config = getStoredConfig();
+    try {
+      if (!firebase.apps.length) {
+        _app = firebase.initializeApp(config);
+      } else {
+        _app = firebase.app();
+      }
+
+      _db = firebase.firestore();
+      _isInitialized = true;
+      _lastInitError = null;
+      return true;
+    } catch (err) {
+      _lastInitError = err.message || String(err);
       _isInitialized = false;
       return false;
     }
@@ -124,8 +218,9 @@
 
   // Uji koneksi ke Firestore
   async function testConnection() {
-    if (!initFirebase()) {
-      return { success: false, message: 'Firebase belum dikonfigurasi atau SDK belum siap.' };
+    const ready = await initFirebaseAsync();
+    if (!ready || !_db) {
+      return { success: false, message: _lastInitError || 'Firebase belum dikonfigurasi atau SDK belum siap.' };
     }
     try {
       const pingRef = _db.collection('system_health').doc('ping');

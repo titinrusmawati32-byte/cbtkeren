@@ -930,6 +930,299 @@
 <!-- SCRIPT UTAMA APLIKASI (GOOGLE APPS SCRIPT CLIENT + ENGINE CBT) -->
 <script>
   // ============================================================================
+  // FIREBASE ADAPTER LAYER (EMBEDDED PROJECT cbtkeren-3da33)
+  // ============================================================================
+  const FIREBASE_STORAGE_KEY = 'educbt_firebase_config';
+
+  const EMBEDDED_FIREBASE_CONFIG = {
+    apiKey: "AIzaSyAa2rLTMeNVj6rwQUXPXEcglSWBDS-A_pg",
+    authDomain: "cbtkeren-3da33.firebaseapp.com",
+    projectId: "cbtkeren-3da33",
+    storageBucket: "cbtkeren-3da33.firebasestorage.app",
+    messagingSenderId: "520669859156",
+    appId: "1:520669859156:web:1436865a21df83ec410cc1"
+  };
+
+  let _fbApp = null;
+  let _fbDb = null;
+  let _fbAuth = null;
+  let _isFbInitialized = false;
+  let _lastFbError = null;
+
+  function getStoredFirebaseConfig() {
+    try {
+      const raw = localStorage.getItem(FIREBASE_STORAGE_KEY);
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (parsed && typeof parsed.projectId === 'string' && parsed.projectId.trim().length >= 3 && typeof parsed.apiKey === 'string' && parsed.apiKey.trim().length >= 10) {
+          return parsed;
+        } else {
+          localStorage.removeItem(FIREBASE_STORAGE_KEY);
+        }
+      }
+    } catch (e) {
+      localStorage.removeItem(FIREBASE_STORAGE_KEY);
+    }
+    return EMBEDDED_FIREBASE_CONFIG;
+  }
+
+  function loadExternalScript(src) {
+    return new Promise((resolve, reject) => {
+      if (document.querySelector(`script[src="${src}"]`)) {
+        return resolve();
+      }
+      const s = document.createElement('script');
+      s.src = src;
+      s.async = false;
+      s.onload = () => resolve();
+      s.onerror = (e) => reject(new Error('Gagal memuat: ' + src));
+      document.head.appendChild(s);
+    });
+  }
+
+  async function ensureFirebaseSDKReady() {
+    if (typeof firebase !== 'undefined' && typeof firebase.firestore !== 'undefined') {
+      return true;
+    }
+
+    const cdnSources = [
+      {
+        app: 'https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js',
+        firestore: 'https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js'
+      },
+      {
+        app: 'https://cdnjs.cloudflare.com/ajax/libs/firebase/10.8.0/firebase-app-compat.js',
+        firestore: 'https://cdnjs.cloudflare.com/ajax/libs/firebase/10.8.0/firebase-firestore-compat.js'
+      }
+    ];
+
+    for (const cdn of cdnSources) {
+      try {
+        if (typeof firebase === 'undefined') {
+          await loadExternalScript(cdn.app);
+        }
+        if (typeof firebase !== 'undefined' && typeof firebase.firestore === 'undefined') {
+          await loadExternalScript(cdn.firestore);
+        }
+        if (typeof firebase !== 'undefined' && typeof firebase.firestore !== 'undefined') {
+          return true;
+        }
+      } catch (err) {
+        console.warn('CDN fallback attempt:', err.message);
+      }
+    }
+    return typeof firebase !== 'undefined' && typeof firebase.firestore !== 'undefined';
+  }
+
+  async function initFirebaseEngine(force = false) {
+    if (_isFbInitialized && _fbDb && !force) return true;
+
+    const ready = await ensureFirebaseSDKReady();
+    if (!ready) {
+      _lastFbError = 'SDK Firebase belum termuat. Periksa koneksi internet Anda atau matikan AdBlock jika ada.';
+      return false;
+    }
+
+    const config = getStoredFirebaseConfig();
+    try {
+      if (!firebase.apps.length) {
+        _fbApp = firebase.initializeApp(config);
+      } else {
+        _fbApp = firebase.app();
+      }
+
+      _fbDb = firebase.firestore();
+
+      try {
+        _fbDb.enablePersistence({ synchronizeTabs: true }).catch(() => {});
+      } catch (e) {}
+
+      _isFbInitialized = true;
+      _lastFbError = null;
+      console.log(`%c[Firebase] Terhubung ke Cloud Firestore: ${config.projectId}`, 'color:#10B981;font-weight:bold;');
+      return true;
+    } catch (err) {
+      _lastFbError = err.message || String(err);
+      _isFbInitialized = false;
+      return false;
+    }
+  }
+
+  window.FirebaseAdapter = {
+    init: initFirebaseEngine,
+    isConfigured: () => _isFbInitialized && _fbDb !== null,
+    getConfig: getStoredFirebaseConfig,
+    saveConfig: (obj) => {
+      localStorage.setItem(FIREBASE_STORAGE_KEY, JSON.stringify(obj));
+      _isFbInitialized = false;
+      return initFirebaseEngine(true);
+    },
+    clearConfig: () => {
+      localStorage.removeItem(FIREBASE_STORAGE_KEY);
+      _isFbInitialized = false;
+      _fbDb = null;
+    },
+    testConnection: async () => {
+      const ok = await initFirebaseEngine();
+      if (!ok || !_fbDb) {
+        return { success: false, message: _lastFbError || 'Firebase belum siap.' };
+      }
+      try {
+        const pingRef = _fbDb.collection('system_health').doc('ping');
+        await pingRef.set({
+          lastPing: firebase.firestore.FieldValue.serverTimestamp(),
+          appName: 'EDU CBT SENAPATI',
+          version: '2.0.0-hybrid'
+        });
+        return { success: true, message: `Koneksi berhasil ke project: ${getStoredFirebaseConfig().projectId}` };
+      } catch (err) {
+        return { success: false, message: 'Gagal menulis ke Firestore: ' + err.message };
+      }
+    },
+    saveStudentAnswer: async (jadwalId, siswaId, soalId, ans, ragu = false) => {
+      if (!_isFbInitialized || !_fbDb) return false;
+      try {
+        const docRef = _fbDb.collection('examAttempts').doc(`${jadwalId}_${siswaId}`);
+        await docRef.set({
+          jadwalId: String(jadwalId),
+          studentId: String(siswaId),
+          [`answers.${soalId}`]: ans,
+          [`ragu.${soalId}`]: ragu,
+          updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+        }, { merge: true });
+        return true;
+      } catch (e) {
+        return false;
+      }
+    },
+    recordExamResult: async (res) => {
+      if (!_isFbInitialized || !_fbDb) return false;
+      try {
+        const docId = res.id || `rek_${res.jadwal_id}_${res.siswa_id}`;
+        await _fbDb.collection('examResults').doc(docId).set({
+          id: docId,
+          studentId: String(res.siswa_id),
+          scheduleId: String(res.jadwal_id),
+          score: Number(res.nilai_akhir || 0),
+          correctCount: Number(res.benar || 0),
+          incorrectCount: Number(res.salah || 0),
+          answers: res.jawaban_json || {},
+          completedAt: res.waktu_selesai || new Date().toISOString()
+        }, { merge: true });
+        return true;
+      } catch (e) {
+        return false;
+      }
+    },
+    migrateSheetsToFirestore: async (sheetData, onProgress) => {
+      const ok = await initFirebaseEngine();
+      if (!ok || !_fbDb) throw new Error(_lastFbError || 'Firebase belum siap.');
+
+      const report = { kelasCount: 0, siswaCount: 0, jadwalCount: 0, soalCount: 0 };
+      const batch = _fbDb.batch();
+      let opCount = 0;
+
+      async function commitIfNeeded() {
+        if (opCount >= 450) {
+          await batch.commit();
+          opCount = 0;
+        }
+      }
+
+      if (sheetData.kelas && Array.isArray(sheetData.kelas)) {
+        if (onProgress) onProgress('Memigrasikan Data Rombel...', 20);
+        for (const k of sheetData.kelas) {
+          batch.set(_fbDb.collection('classes').doc(String(k.id)), {
+            id: String(k.id),
+            nama_kelas: k.nama_kelas || '',
+            wali_kelas: k.wali_kelas || '',
+            migratedAt: firebase.firestore.FieldValue.serverTimestamp()
+          }, { merge: true });
+          opCount++;
+          report.kelasCount++;
+          await commitIfNeeded();
+        }
+      }
+
+      if (sheetData.siswa && Array.isArray(sheetData.siswa)) {
+        if (onProgress) onProgress('Memigrasikan Data Siswa...', 45);
+        for (const s of sheetData.siswa) {
+          batch.set(_fbDb.collection('students').doc(String(s.id)), {
+            id: String(s.id),
+            nisn: String(s.nisn || ''),
+            nama_lengkap: s.nama_lengkap || '',
+            kelas_id: s.kelas_id || '',
+            poin: Number(s.poin || 100),
+            migratedAt: firebase.firestore.FieldValue.serverTimestamp()
+          }, { merge: true });
+          opCount++;
+          report.siswaCount++;
+          await commitIfNeeded();
+        }
+      }
+
+      if (sheetData.mapel_jadwal && Array.isArray(sheetData.mapel_jadwal)) {
+        if (onProgress) onProgress('Memigrasikan Jadwal Ujian...', 70);
+        for (const j of sheetData.mapel_jadwal) {
+          batch.set(_fbDb.collection('examSchedules').doc(String(j.id)), {
+            id: String(j.id),
+            kode_mapel: j.kode_mapel || '',
+            nama_mapel: j.nama_mapel || '',
+            judul_ujian: j.judul_ujian || '',
+            kelas_id: j.kelas_id || '',
+            durasi_menit: Number(j.durasi_menit || 30),
+            token: j.token || '',
+            status_aktif: !!j.status_aktif,
+            warna_tema: j.warna_tema || 'purple',
+            migratedAt: firebase.firestore.FieldValue.serverTimestamp()
+          }, { merge: true });
+          opCount++;
+          report.jadwalCount++;
+          await commitIfNeeded();
+        }
+      }
+
+      if (sheetData.soal && Array.isArray(sheetData.soal)) {
+        if (onProgress) onProgress('Memigrasikan Bank Soal...', 90);
+        for (const q of sheetData.soal) {
+          batch.set(_fbDb.collection('questions').doc(String(q.id)), {
+            id: String(q.id),
+            jadwal_id: String(q.jadwal_id || ''),
+            pertanyaan: q.pertanyaan || '',
+            gambar_url: q.gambar_url || '',
+            opsi_a: q.opsi_a || '',
+            opsi_b: q.opsi_b || '',
+            opsi_c: q.opsi_c || '',
+            opsi_d: q.opsi_d || '',
+            opsi_e: q.opsi_e || '',
+            bobot: Number(q.bobot || 10),
+            jenis_soal: q.jenis_soal || 'PILIHAN_GANDA',
+            kode_soal: q.kode_soal || '',
+            kunci_jawaban: q.kunci_jawaban || '',
+            pembahasan: q.pembahasan || '',
+            migratedAt: firebase.firestore.FieldValue.serverTimestamp()
+          }, { merge: true });
+          opCount++;
+          report.soalCount++;
+          await commitIfNeeded();
+        }
+      }
+
+      if (opCount > 0) {
+        await batch.commit();
+      }
+
+      if (onProgress) onProgress('Migrasi selesai!', 100);
+      return report;
+    }
+  };
+
+  // Coba inisialisasi awal saat halaman dimuat
+  setTimeout(() => {
+    initFirebaseEngine().catch(() => {});
+  }, 100);
+
+  // ============================================================================
   // KONFIGURASI GOOGLE APPS SCRIPT WEB APP (GAS)
   // ============================================================================
   const GAS_URL = 'https://script.google.com/macros/s/AKfycbx2lOqVLOyDOqIplG0l6LLx7iztgwuFRQDYxWBr5apEQiNF1UE6lrl70-UDiET8tDm4Ug/exec';

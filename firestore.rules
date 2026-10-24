@@ -109,5 +109,10 @@ service cloud.firestore {
       allow read: if true;
       allow write: if isAdmin();
     }
+
+    // 9. Koleksi Tes Ping Konektivitas Sistem
+    match /system_health/{docId} {
+      allow read, write: if true;
+    }
   }
 }
