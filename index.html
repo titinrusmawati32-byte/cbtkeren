@@ -392,7 +392,12 @@
 
     /* Navigasi Mobile Bawah */
     [data-theme="dark"] .mobile-bottom-nav {
-      background-color: rgba(17, 24, 39, 0.96) !important;
+      background-color: rgba(23, 32, 51, 0.98) !important;
+      border-color: var(--border-color) !important;
+      box-shadow: 0 -4px 25px rgba(0, 0, 0, 0.5) !important;
+    }
+    [data-theme="dark"] #mobile-menu-drawer > div:last-child {
+      background-color: #172033 !important;
       border-color: var(--border-color) !important;
     }
 
@@ -423,28 +428,46 @@
       }
     }
 
-    /* Responsive Media Queries */
-    @media (min-width: 768px) {
+    /* Responsive Media Queries Sesuai Standar Layar HP (320px - 768px) & Desktop */
+    @media (min-width: 769px) {
       .desktop-sidebar {
         display: flex !important;
       }
       .mobile-bottom-nav {
         display: none !important;
       }
+      .mobile-header-bar {
+        display: none !important;
+      }
+      .desktop-header-bar {
+        display: flex !important;
+      }
       .main-scroll-area {
-        padding-bottom: 1.5rem !important;
+        padding-bottom: 2rem !important;
       }
     }
 
-    @media (max-width: 767px) {
+    @media (max-width: 768px) {
       .desktop-sidebar {
         display: none !important;
       }
       .mobile-bottom-nav {
         display: flex !important;
       }
+      .mobile-header-bar {
+        display: flex !important;
+      }
+      .desktop-header-bar {
+        display: none !important;
+      }
       .main-scroll-area {
-        padding-bottom: 5.5rem !important;
+        padding-bottom: calc(6rem + env(safe-area-inset-bottom, 0px)) !important;
+        -webkit-overflow-scrolling: touch;
+      }
+      /* Cegah horizontal scroll yang tidak disengaja di perangkat mobile */
+      html, body, #educbt-root, #app-view, main {
+        overflow-x: hidden !important;
+        max-width: 100vw !important;
       }
     }
 
@@ -721,94 +744,171 @@
 
     <!-- AREA KONTEN UTAMA -->
     <main class="flex-1 flex flex-col min-w-0 overflow-hidden bg-[var(--bg-primary)]">
-      <!-- Topbar Header (Persis Seperti Screenshot) -->
-      <header class="h-16 bg-white border-b border-slate-100 px-6 flex items-center justify-between shrink-0 z-20 shadow-sm">
-        <div class="flex items-center gap-3.5">
-          <!-- Tombol Hamburger Biru Kotak -->
-          <button type="button" class="w-9 h-9 rounded-xl bg-blue-600 hover:bg-blue-700 text-white flex items-center justify-center shadow-md shadow-blue-500/20 shrink-0 transition">
-            <i class="ph-bold ph-list text-lg"></i>
+      <!-- Topbar Header Adaptif (Mobile & Desktop) -->
+      <header class="h-16 bg-white border-b border-slate-100 px-4 sm:px-6 flex items-center justify-between shrink-0 z-20 shadow-sm relative">
+        <!-- MOBILE HEADER CONTENT (<= 768px - Persis Sesuai Gambar Referensi) -->
+        <div class="mobile-header-bar flex md:hidden items-center justify-between w-full">
+          <!-- Tombol Hamburger Mobile Kiri -->
+          <button type="button" onclick="window.app.toggleMobileMenuDrawer()" class="w-10 h-10 rounded-2xl bg-blue-50 hover:bg-blue-100 active:scale-95 text-blue-600 border border-blue-100 flex items-center justify-center shadow-sm shrink-0 transition" title="Buka Menu Tambahan" aria-label="Buka Menu">
+            <i class="ph-bold ph-list text-xl"></i>
           </button>
-          <h1 id="topbar-title" class="text-base sm:text-lg font-black text-slate-900 tracking-tight">Dashboard Utama</h1>
-          <span id="header-ta-badge" class="hidden sm:inline-block px-3 py-1 rounded-xl bg-blue-50 text-blue-600 text-[11px] font-extrabold border border-blue-100">
-            📅 TA 2026/2027
-          </span>
+
+          <!-- Identitas Aplikasi EduCBT Lingora Mobile Tengah -->
+          <div class="flex items-center gap-2.5">
+            <div class="w-10 h-10 rounded-2xl bg-blue-600 text-white flex items-center justify-center shadow-md shadow-blue-500/25 shrink-0">
+              <i class="ph-fill ph-student text-xl"></i>
+            </div>
+            <div class="flex flex-col text-left leading-tight">
+              <div class="font-black text-base text-slate-900 tracking-tight">
+                EduCBT <span class="text-blue-600">Lingora</span>
+              </div>
+              <span class="text-[8.5px] font-black tracking-wider text-slate-400 uppercase">
+                CBT CERDAS, PRESTASI NYATA
+              </span>
+            </div>
+          </div>
+
+          <!-- Kanan: Tombol Mode Tema & Notifikasi Mobile -->
+          <div class="flex items-center gap-1.5">
+            <button type="button" onclick="window.app.toggleTheme()" class="w-10 h-10 rounded-2xl bg-slate-100 hover:bg-slate-200 active:scale-95 text-slate-700 border border-slate-200 flex items-center justify-center shadow-sm shrink-0 transition" title="Ganti Mode Tema" aria-label="Ganti Tema">
+              <i class="ph-bold ph-sun text-amber-500 text-lg theme-icon-sync"></i>
+            </button>
+            <button type="button" onclick="window.app.showNotificationsModal()" class="w-10 h-10 rounded-2xl bg-blue-50 hover:bg-blue-100 active:scale-95 text-blue-600 border border-blue-100 flex items-center justify-center relative shadow-sm shrink-0 transition" title="Pusat Notifikasi" aria-label="Notifikasi">
+              <i class="ph-fill ph-bell text-xl"></i>
+              <span class="absolute top-2.5 right-2.5 w-2.5 h-2.5 bg-rose-500 rounded-full border-2 border-white"></span>
+            </button>
+          </div>
         </div>
 
-        <div class="flex items-center gap-2.5">
-          <!-- Standar KKM Pill Indicator -->
-          <div id="kkm-pill-indicator" class="hidden sm:flex items-center gap-1.5 px-3 py-1 bg-amber-50 text-amber-800 border border-amber-200/60 rounded-full text-xs font-bold">
-            <span class="w-3.5 h-3.5 rounded-full bg-amber-400 flex items-center justify-center text-[9px] text-white font-bold">●</span> KKM 75
-          </div>
-
-          <!-- Status Server CBT Online -->
-          <div class="hidden sm:flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-50 text-emerald-800 text-xs font-bold border border-emerald-200">
-            <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-            <span>CBT Server Online</span>
-          </div>
-
-          <!-- Search Bar Pill -->
-          <div class="relative hidden sm:block">
-            <i class="ph ph-magnifying-glass absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400"></i>
-            <input type="text" oninput="window.app.handleGlobalSearch(this.value)" placeholder="Cari data..." class="pl-9 pr-4 py-1.5 bg-blue-50/40 border border-blue-100 rounded-full text-xs focus:outline-none focus:ring-2 focus:ring-blue-500 w-44 lg:w-56" />
-          </div>
-
-          <!-- Tombol Switch Mode Siang & Mode Malam (Theme Toggle Pill) -->
-          <button type="button" id="theme-toggle-btn" onclick="window.app.toggleTheme()" class="theme-toggle-btn group relative flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-slate-200 bg-slate-100 hover:bg-slate-200 text-slate-700 transition shadow-sm cursor-pointer select-none shrink-0" title="Aktifkan Mode Malam" aria-label="Ganti Tema">
-            <span id="theme-icon-wrapper" class="flex items-center justify-center transition-transform duration-300">
-              <i id="theme-icon" class="ph-bold ph-sun text-amber-500 text-base"></i>
+        <!-- DESKTOP HEADER CONTENT (> 768px - Tata Letak Desktop Asli) -->
+        <div class="desktop-header-bar hidden md:flex items-center justify-between w-full">
+          <div class="flex items-center gap-3.5">
+            <button type="button" class="w-9 h-9 rounded-xl bg-blue-600 hover:bg-blue-700 text-white flex items-center justify-center shadow-md shadow-blue-500/20 shrink-0 transition">
+              <i class="ph-bold ph-list text-lg"></i>
+            </button>
+            <h1 id="topbar-title" class="text-base sm:text-lg font-black text-slate-900 tracking-tight">Dashboard Utama</h1>
+            <span id="header-ta-badge" class="inline-block px-3 py-1 rounded-xl bg-blue-50 text-blue-600 text-[11px] font-extrabold border border-blue-100">
+              📅 TA 2026/2027
             </span>
-            <span id="theme-text" class="hidden md:inline-block text-xs font-bold">Siang</span>
-            <!-- Floating Tooltip -->
-            <span id="theme-tooltip" class="pointer-events-none absolute -bottom-9 right-0 z-50 whitespace-nowrap rounded-lg bg-slate-900 px-2.5 py-1 text-[11px] font-semibold text-white shadow-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200">
-              Aktifkan Mode Malam
-            </span>
-          </button>
+          </div>
 
-          <!-- Notification Bell dengan Badge Merah 3 -->
-          <div class="relative cursor-pointer p-2 text-blue-600 hover:bg-blue-50 rounded-xl transition">
-            <i class="ph-fill ph-bell-simple text-xl"></i>
-            <span class="absolute top-1 right-1 w-4 h-4 bg-rose-500 text-white rounded-full text-[9px] font-black flex items-center justify-center shadow-sm">3</span>
+          <div class="flex items-center gap-2.5">
+            <!-- Standar KKM Pill Indicator -->
+            <div id="kkm-pill-indicator" class="flex items-center gap-1.5 px-3 py-1 bg-amber-50 text-amber-800 border border-amber-200/60 rounded-full text-xs font-bold">
+              <span class="w-3.5 h-3.5 rounded-full bg-amber-400 flex items-center justify-center text-[9px] text-white font-bold">●</span> KKM 75
+            </div>
+
+            <!-- Status Server CBT Online -->
+            <div class="flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-50 text-emerald-800 text-xs font-bold border border-emerald-200">
+              <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+              <span>CBT Server Online</span>
+            </div>
+
+            <!-- Search Bar Pill -->
+            <div class="relative">
+              <i class="ph ph-magnifying-glass absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400"></i>
+              <input type="text" oninput="window.app.handleGlobalSearch(this.value)" placeholder="Cari data..." class="pl-9 pr-4 py-1.5 bg-blue-50/40 border border-blue-100 rounded-full text-xs focus:outline-none focus:ring-2 focus:ring-blue-500 w-44 lg:w-56" />
+            </div>
+
+            <!-- Tombol Switch Mode Siang & Mode Malam Desktop -->
+            <button type="button" id="theme-toggle-btn" onclick="window.app.toggleTheme()" class="theme-toggle-btn group relative flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-slate-200 bg-slate-100 hover:bg-slate-200 text-slate-700 transition shadow-sm cursor-pointer select-none shrink-0" title="Aktifkan Mode Malam" aria-label="Ganti Tema">
+              <span id="theme-icon-wrapper" class="flex items-center justify-center transition-transform duration-300">
+                <i id="theme-icon" class="ph-bold ph-sun text-amber-500 text-base theme-icon-sync"></i>
+              </span>
+              <span id="theme-text" class="text-xs font-bold">Siang</span>
+              <span id="theme-tooltip" class="pointer-events-none absolute -bottom-9 right-0 z-50 whitespace-nowrap rounded-lg bg-slate-900 px-2.5 py-1 text-[11px] font-semibold text-white shadow-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+                Aktifkan Mode Malam
+              </span>
+            </button>
+
+            <!-- Notification Bell Desktop -->
+            <div onclick="window.app.showNotificationsModal()" class="relative cursor-pointer p-2 text-blue-600 hover:bg-blue-50 rounded-xl transition" title="Pusat Notifikasi">
+              <i class="ph-fill ph-bell-simple text-xl"></i>
+              <span class="absolute top-1 right-1 w-4 h-4 bg-rose-500 text-white rounded-full text-[9px] font-black flex items-center justify-center shadow-sm">3</span>
+            </div>
           </div>
         </div>
       </header>
 
       <!-- Scrollable Content View -->
-      <div id="main-content-scroll" class="main-scroll-area flex-1 overflow-y-auto p-4 sm:p-6">
+      <div id="main-content-scroll" class="main-scroll-area flex-1 overflow-y-auto p-3.5 sm:p-6">
         <!-- Render View Dinamis Berdasarkan Menu Aktif -->
       </div>
     </main>
 
-    <!-- MOBILE BOTTOM NAVIGATION (Khusus Tampilan Smartphone) -->
-    <nav class="mobile-bottom-nav fixed bottom-0 left-0 right-0 h-16 bg-white/95 backdrop-blur border-t border-slate-200 px-3 flex items-center justify-around z-30 shadow-lg">
-      <button type="button" onclick="window.app.navigateMenu('dashboard')" class="flex flex-col items-center gap-0.5 text-blue-600">
-        <i class="ph-fill ph-house text-xl"></i>
-        <span class="text-[10px] font-bold">Beranda</span>
-      </button>
-      <button type="button" onclick="window.app.navigateMenu('jadwal')" class="flex flex-col items-center gap-0.5 text-slate-500">
-        <i class="ph ph-calendar-check text-xl"></i>
-        <span class="text-[10px] font-bold">Ujian</span>
-      </button>
-      <button type="button" onclick="window.app.navigateMenu('rekap')" class="flex flex-col items-center gap-0.5 text-slate-500">
-        <i class="ph ph-chart-bar text-xl"></i>
-        <span class="text-[10px] font-bold">Nilai</span>
-      </button>
-      <button type="button" onclick="window.app.handleLogout()" class="flex flex-col items-center gap-0.5 text-rose-500">
-        <i class="ph ph-sign-out text-xl"></i>
-        <span class="text-[10px] font-bold">Keluar</span>
-      </button>
+    <!-- MOBILE BOTTOM NAVIGATION (Khusus Tampilan Smartphone Sesuai Referensi Gambar) -->
+    <nav id="mobile-bottom-nav" class="mobile-bottom-nav fixed bottom-0 left-0 right-0 bg-white/98 backdrop-blur-lg border-t border-slate-100 px-2 pt-2 pb-2 flex items-center justify-around z-40 shadow-[0_-4px_25px_rgba(0,0,0,0.08)] rounded-t-3xl transition-colors duration-200">
+      <!-- Diisi secara dinamis oleh renderBottomNav() -->
     </nav>
+
+    <!-- MOBILE MENU DRAWER / BOTTOM SHEET (MENU LENGKAP SEKUNDER) -->
+    <div id="mobile-menu-drawer" class="hidden fixed inset-0 z-50">
+      <div class="absolute inset-0 bg-slate-950/60 backdrop-blur-sm transition-opacity" onclick="window.app.closeMobileMenuDrawer()"></div>
+      <div class="absolute bottom-0 left-0 right-0 max-h-[85vh] bg-white rounded-t-3xl shadow-2xl border-t border-slate-100 p-5 pb-8 overflow-y-auto flex flex-col space-y-4">
+        <!-- Handle bar -->
+        <div class="w-12 h-1.5 rounded-full bg-slate-200 mx-auto"></div>
+
+        <div class="flex items-center justify-between pb-2 border-b border-slate-100">
+          <div class="flex items-center gap-2.5">
+            <div class="w-9 h-9 rounded-2xl bg-blue-600 text-white flex items-center justify-center shadow-md shadow-blue-500/20">
+              <i class="ph-bold ph-squares-four text-lg"></i>
+            </div>
+            <div>
+              <h3 class="font-black text-sm text-slate-900 leading-tight">Menu Lengkap EduCBT</h3>
+              <p class="text-[10px] text-slate-400 font-bold">Pilih modul yang ingin diakses</p>
+            </div>
+          </div>
+          <button type="button" onclick="window.app.closeMobileMenuDrawer()" class="w-8 h-8 rounded-full bg-slate-100 text-slate-500 hover:text-slate-800 flex items-center justify-center transition">
+            <i class="ph-bold ph-x text-sm"></i>
+          </button>
+        </div>
+
+        <!-- Profil Singkat Pengguna di Drawer -->
+        <div class="p-3.5 rounded-2xl bg-blue-50/80 border border-blue-100 flex items-center justify-between">
+          <div class="flex items-center gap-2.5 min-w-0">
+            <div class="w-9 h-9 rounded-full bg-blue-600 text-white flex items-center justify-center font-black text-xs shrink-0 shadow-sm">
+              <i class="ph-fill ph-user"></i>
+            </div>
+            <div class="min-w-0">
+              <p id="drawer-user-name" class="text-xs font-black text-slate-900 truncate">Pengguna</p>
+              <p id="drawer-user-role" class="text-[9px] font-extrabold text-blue-600 uppercase tracking-wider">PESERTA</p>
+            </div>
+          </div>
+          <button type="button" onclick="window.app.handleLogout()" class="px-3 py-1.5 rounded-xl bg-rose-50 text-rose-600 border border-rose-200 text-xs font-bold flex items-center gap-1 shrink-0 hover:bg-rose-100 transition">
+            <i class="ph-bold ph-sign-out text-sm"></i> Keluar
+          </button>
+        </div>
+
+        <!-- Grid Menu Dinamis Berdasarkan Hak Akses -->
+        <div id="drawer-menu-grid" class="grid grid-cols-2 gap-2.5">
+          <!-- Populated by JavaScript -->
+        </div>
+
+        <!-- Tombol Pengaturan Cepat di Drawer -->
+        <div class="pt-2 border-t border-slate-100 grid grid-cols-2 gap-2">
+          <button type="button" onclick="window.app.toggleTheme()" class="p-2.5 rounded-2xl bg-slate-50 border border-slate-200 text-xs font-bold text-slate-700 flex items-center justify-center gap-2 hover:bg-slate-100 transition">
+            <i class="ph-bold ph-sun text-amber-500 text-base theme-icon-sync"></i>
+            <span>Mode Tema</span>
+          </button>
+          <button type="button" onclick="window.app.showGasConfigModal(); window.app.closeMobileMenuDrawer();" class="p-2.5 rounded-2xl bg-slate-50 border border-slate-200 text-xs font-bold text-slate-700 flex items-center justify-center gap-2 hover:bg-slate-100 transition">
+            <i class="ph-bold ph-database text-blue-500 text-base"></i>
+            <span>Database CBT</span>
+          </button>
+        </div>
+      </div>
+    </div>
   </div>
 
   <!-- MODAL DIALOG GLOBAL -->
-  <div id="app-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
-    <div class="w-full max-w-xl bg-white rounded-3xl shadow-2xl border border-slate-100 overflow-hidden flex flex-col max-h-[90vh]">
-      <div class="px-6 py-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
-        <h3 id="modal-title" class="font-extrabold text-slate-900 text-sm sm:text-base">Judul Modal</h3>
-        <button type="button" onclick="window.app.closeModal()" class="w-8 h-8 rounded-full hover:bg-slate-200 text-slate-500 flex items-center justify-center transition">
+  <div id="app-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-900/60 backdrop-blur-sm">
+    <div class="w-[94vw] sm:w-full sm:max-w-xl bg-white dark:bg-[#172033] rounded-3xl shadow-2xl border border-slate-100 dark:border-[#293548] overflow-hidden flex flex-col max-h-[90vh]">
+      <div class="px-5 sm:px-6 py-4 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between bg-slate-50/50 dark:bg-slate-800/40">
+        <h3 id="modal-title" class="font-extrabold text-slate-900 dark:text-white text-sm sm:text-base truncate">Judul Modal</h3>
+        <button type="button" onclick="window.app.closeModal()" class="w-8 h-8 rounded-full hover:bg-slate-200 dark:hover:bg-slate-800 text-slate-500 dark:text-slate-400 flex items-center justify-center transition">
           <i class="ph-bold ph-x"></i>
         </button>
       </div>
-      <div id="modal-body" class="p-6 overflow-y-auto flex-1">
+      <div id="modal-body" class="p-4 sm:p-6 overflow-y-auto flex-1 text-slate-800 dark:text-slate-200">
         <!-- Content injected here -->
       </div>
     </div>
@@ -1134,6 +1234,11 @@
     if (loginText) {
       loginText.textContent = isDark ? 'Malam' : 'Siang';
     }
+
+    // 3. Ikon Tema di Header Mobile & Drawer Menu
+    document.querySelectorAll('.theme-icon-sync').forEach(el => {
+      el.className = isDark ? 'ph-bold ph-moon text-sky-400 text-lg theme-icon-sync' : 'ph-bold ph-sun text-amber-500 text-lg theme-icon-sync';
+    });
   }
 
   function toggleTheme() {
@@ -1572,6 +1677,7 @@
     localStorage.removeItem(AUTH_TOKEN_KEY);
     localStorage.removeItem(SAVED_MENU_KEY);
     localStorage.removeItem(ACTIVE_EXAM_STORAGE_KEY);
+    closeMobileMenuDrawer();
     state.user = null;
     state.activeExam = null;
     hideSessionLoading();
@@ -1588,6 +1694,7 @@
     checkAndRestoreActiveExam();
 
     renderSidebarMenu();
+    renderBottomNav();
     updateUserProfileDisplay();
     updateThemeButtonUI(state.theme);
     renderAll();
@@ -1671,20 +1778,256 @@
       localStorage.setItem(SAVED_MENU_KEY, menuId);
     } catch (e) {}
     renderSidebarMenu();
+    renderBottomNav();
     renderAll();
+  }
+
+  // ============================================================================
+  // BOTTOM NAVIGATION KHUSUS SMARTPHONE (SESUAI GAMBAR REFERENSI MOBILE)
+  // ============================================================================
+  function renderBottomNav() {
+    const nav = document.getElementById('mobile-bottom-nav');
+    if (!nav) return;
+
+    if (state.activeExam) {
+      nav.classList.add('hidden');
+      return;
+    }
+    nav.classList.remove('hidden');
+
+    const curr = state.activeMenu;
+    const isMenuOpen = !!state.isMobileMenuOpen;
+    const isOtherMenu = ['soal', 'siswa', 'pengguna', 'pengaturan'].includes(curr);
+
+    const items = [
+      { id: 'dashboard', label: 'Beranda', icon: 'ph-house', fillIcon: 'ph-fill ph-house' },
+      { id: 'kelas', label: 'Kelas', icon: 'ph-users-three', fillIcon: 'ph-fill ph-users-three' },
+      { id: 'jadwal', label: 'Ujian', icon: 'ph-article', fillIcon: 'ph-fill ph-article' },
+      { id: 'rekap', label: 'Nilai', icon: 'ph-chart-bar', fillIcon: 'ph-fill ph-chart-bar' },
+      { id: 'menu', label: 'Menu', icon: 'ph-squares-four', fillIcon: 'ph-fill ph-squares-four', isDrawerTrigger: true }
+    ];
+
+    nav.innerHTML = items.map(it => {
+      let active = false;
+      if (it.isDrawerTrigger) {
+        active = isMenuOpen || isOtherMenu;
+      } else {
+        active = !isMenuOpen && curr === it.id;
+      }
+
+      if (active) {
+        return `
+          <button type="button" onclick="window.app.handleBottomNavClick('${it.id}')" class="flex flex-col items-center gap-1 min-w-[56px] focus:outline-none transition group">
+            <span class="w-14 h-8 rounded-2xl bg-blue-600 text-white flex items-center justify-center shadow-md shadow-blue-500/25 group-active:scale-95 transition">
+              <i class="${it.fillIcon} text-lg"></i>
+            </span>
+            <span class="text-[10px] sm:text-[11px] font-black text-blue-600 dark:text-blue-400 leading-none">${it.label}</span>
+          </button>
+        `;
+      } else {
+        return `
+          <button type="button" onclick="window.app.handleBottomNavClick('${it.id}')" class="flex flex-col items-center gap-1 min-w-[56px] focus:outline-none transition group">
+            <span class="w-14 h-8 flex items-center justify-center text-slate-400 dark:text-slate-400 group-hover:text-blue-500 group-active:scale-95 transition">
+              <i class="ph-bold ${it.icon} text-xl"></i>
+            </span>
+            <span class="text-[10px] sm:text-[11px] font-bold text-slate-400 dark:text-slate-400 group-hover:text-blue-500 leading-none">${it.label}</span>
+          </button>
+        `;
+      }
+    }).join('');
+  }
+
+  function handleBottomNavClick(id) {
+    if (id === 'menu') {
+      toggleMobileMenuDrawer();
+      return;
+    }
+    closeMobileMenuDrawer();
+    if (id === 'kelas') {
+      const isStaff = state.user?.role === 'admin' || state.user?.role === 'guru';
+      if (!isStaff) {
+        showSiswaClassModal();
+        return;
+      }
+    }
+    navigateMenu(id);
+  }
+
+  function toggleMobileMenuDrawer() {
+    state.isMobileMenuOpen = !state.isMobileMenuOpen;
+    const drawer = document.getElementById('mobile-menu-drawer');
+    if (drawer) {
+      if (state.isMobileMenuOpen) {
+        const nameEl = document.getElementById('drawer-user-name');
+        if (nameEl && state.user) nameEl.textContent = state.user.nama;
+        const roleEl = document.getElementById('drawer-user-role');
+        if (roleEl && state.user) {
+          roleEl.textContent = state.user.role === 'admin' ? 'ADMINISTRATOR' : state.user.role === 'guru' ? 'GURU PENGAMPU' : 'PESERTA UJIAN';
+        }
+
+        const grid = document.getElementById('drawer-menu-grid');
+        if (grid) {
+          const isStaff = state.user?.role === 'admin' || state.user?.role === 'guru';
+          const items = isStaff ? [
+            { id: 'soal', label: 'Bank Soal CBT', icon: 'ph-file-text', color: 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400 border-emerald-200 dark:border-emerald-900/40' },
+            { id: 'siswa', label: 'Data Siswa', icon: 'ph-student', color: 'bg-blue-50 text-blue-700 dark:bg-blue-950/40 dark:text-blue-400 border-blue-200 dark:border-blue-900/40' },
+            { id: 'pengguna', label: 'Data Pengguna', icon: 'ph-user-gear', color: 'bg-purple-50 text-purple-700 dark:bg-purple-950/40 dark:text-purple-400 border-purple-200 dark:border-purple-900/40' },
+            { id: 'pengaturan', label: 'Pengaturan Sekolah', icon: 'ph-gear-six', color: 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300 border-slate-200 dark:border-slate-700' },
+            { id: 'kelas', label: 'Manajemen Kelas', icon: 'ph-users-three', color: 'bg-indigo-50 text-indigo-700 dark:bg-indigo-950/40 dark:text-indigo-400 border-indigo-200 dark:border-indigo-900/40' },
+            { id: 'jadwal', label: 'Jadwal & Mapel', icon: 'ph-calendar-check', color: 'bg-sky-50 text-sky-700 dark:bg-sky-950/40 dark:text-sky-400 border-sky-200 dark:border-sky-900/40' },
+            { id: 'rekap', label: 'Rekap Nilai', icon: 'ph-chart-bar', color: 'bg-amber-50 text-amber-700 dark:bg-amber-950/40 dark:text-amber-400 border-amber-200 dark:border-amber-900/40' },
+            { id: 'dashboard', label: 'Dashboard Utama', icon: 'ph-house', color: 'bg-blue-50 text-blue-700 dark:bg-blue-950/40 dark:text-blue-400 border-blue-200 dark:border-blue-900/40' }
+          ] : [
+            { id: 'dashboard', label: 'Dashboard Siswa', icon: 'ph-house', color: 'bg-blue-50 text-blue-700 dark:bg-blue-950/40 dark:text-blue-400 border-blue-200 dark:border-blue-900/40' },
+            { id: 'jadwal', label: 'Daftar Ujian Saya', icon: 'ph-article', color: 'bg-purple-50 text-purple-700 dark:bg-purple-950/40 dark:text-purple-400 border-purple-200 dark:border-purple-900/40' },
+            { id: 'rekap', label: 'Hasil Nilai Saya', icon: 'ph-chart-bar', color: 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400 border-emerald-200 dark:border-emerald-900/40' }
+          ];
+
+          grid.innerHTML = items.map(m => `
+            <button type="button" onclick="window.app.navigateMenu('${m.id}'); window.app.closeMobileMenuDrawer();" class="p-3 rounded-2xl border ${m.color} flex items-center gap-2.5 font-black text-xs transition active:scale-95 text-left shadow-sm">
+              <span class="w-8 h-8 rounded-xl bg-white dark:bg-slate-900 flex items-center justify-center shrink-0 shadow-sm text-base">
+                <i class="ph-bold ${m.icon}"></i>
+              </span>
+              <span class="truncate">${m.label}</span>
+            </button>
+          `).join('');
+        }
+
+        drawer.classList.remove('hidden');
+      } else {
+        drawer.classList.add('hidden');
+      }
+    }
+    renderBottomNav();
+  }
+
+  function closeMobileMenuDrawer() {
+    state.isMobileMenuOpen = false;
+    const drawer = document.getElementById('mobile-menu-drawer');
+    if (drawer) drawer.classList.add('hidden');
+    renderBottomNav();
+  }
+
+  function showNotificationsModal() {
+    openModal('Pusat Notifikasi EduCBT', `
+      <div class="space-y-3">
+        <div class="p-3.5 rounded-2xl bg-blue-50/80 dark:bg-blue-950/40 border border-blue-100 dark:border-blue-900/40 flex items-start gap-3">
+          <div class="w-9 h-9 rounded-xl bg-blue-600 text-white flex items-center justify-center shrink-0 text-base shadow-sm">
+            <i class="ph-fill ph-shield-check"></i>
+          </div>
+          <div>
+            <h4 class="text-xs font-black text-slate-900 dark:text-white">Server CBT Online & Terenkripsi</h4>
+            <p class="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">Database Google Spreadsheet terhubung dengan proteksi LockService dan persistensi lokal.</p>
+            <span class="text-[9px] font-bold text-blue-600 dark:text-blue-400 mt-1 inline-block">Sistem Aktif</span>
+          </div>
+        </div>
+
+        <div class="p-3.5 rounded-2xl bg-emerald-50/80 dark:bg-emerald-950/40 border border-emerald-100 dark:border-emerald-900/40 flex items-start gap-3">
+          <div class="w-9 h-9 rounded-xl bg-emerald-600 text-white flex items-center justify-center shrink-0 text-base shadow-sm">
+            <i class="ph-fill ph-calendar-check"></i>
+          </div>
+          <div>
+            <h4 class="text-xs font-black text-slate-900 dark:text-white">Jadwal Ujian Aktif</h4>
+            <p class="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">${state.mapel_jadwal.length} sesi ujian siap dilaksanakan dengan acak soal otomatis.</p>
+            <span class="text-[9px] font-bold text-emerald-600 dark:text-emerald-400 mt-1 inline-block">Tahun Ajaran 2026/2027</span>
+          </div>
+        </div>
+
+        <div class="p-3.5 rounded-2xl bg-amber-50/80 dark:bg-amber-950/40 border border-amber-100 dark:border-amber-900/40 flex items-start gap-3">
+          <div class="w-9 h-9 rounded-xl bg-amber-500 text-white flex items-center justify-center shrink-0 text-base shadow-sm">
+            <i class="ph-fill ph-trophy"></i>
+          </div>
+          <div>
+            <h4 class="text-xs font-black text-slate-900 dark:text-white">Leaderboard XP Peserta</h4>
+            <p class="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">Poin pengerjaan soal otomatis terakumulasi ke papan peringkat siswa.</p>
+            <span class="text-[9px] font-bold text-amber-600 dark:text-amber-400 mt-1 inline-block">Update Real-Time</span>
+          </div>
+        </div>
+
+        <div class="flex justify-end pt-2 border-t border-slate-100 dark:border-slate-800">
+          <button type="button" onclick="window.app.closeModal()" class="px-5 py-2 rounded-xl bg-blue-600 text-white text-xs font-bold shadow-md shadow-blue-500/20">
+            Tutup
+          </button>
+        </div>
+      </div>
+    `);
+  }
+
+  function showSiswaClassModal() {
+    const kls = state.kelas.find(k => k.id === state.user?.kelas_id);
+    const namaKelas = kls ? kls.nama_kelas : 'Kelas Anda';
+    const waliKelas = kls ? kls.wali_kelas : 'Belum ditentukan';
+    const totalSiswaKelas = state.siswa.filter(s => s.kelas_id === state.user?.kelas_id).length;
+    const jadwalKelas = state.mapel_jadwal.filter(j => !j.kelas_id || j.kelas_id === state.user?.kelas_id);
+
+    openModal(`Informasi ${namaKelas}`, `
+      <div class="space-y-4">
+        <div class="p-4 rounded-2xl bg-blue-50 dark:bg-blue-950/40 border border-blue-100 dark:border-blue-900/40 flex items-center justify-between">
+          <div>
+            <span class="text-[10px] font-black uppercase tracking-wider text-blue-600 dark:text-blue-400">Kelas Terdaftar</span>
+            <h3 class="text-base font-black text-slate-900 dark:text-white leading-tight">${namaKelas}</h3>
+            <p class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">Wali Kelas: <b>${waliKelas}</b></p>
+          </div>
+          <div class="w-12 h-12 rounded-2xl bg-blue-600 text-white flex items-center justify-center text-2xl shadow-md shadow-blue-500/25">
+            <i class="ph-fill ph-users-three"></i>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-2 gap-3 text-center">
+          <div class="p-3 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-100 dark:border-slate-700">
+            <span class="text-xs text-slate-400 font-bold block">Teman Sekelas</span>
+            <span class="text-lg font-black text-slate-900 dark:text-white">${totalSiswaKelas} Siswa</span>
+          </div>
+          <div class="p-3 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-100 dark:border-slate-700">
+            <span class="text-xs text-slate-400 font-bold block">Ujian Kelas</span>
+            <span class="text-lg font-black text-blue-600 dark:text-blue-400">${jadwalKelas.length} Jadwal</span>
+          </div>
+        </div>
+
+        <div class="space-y-2">
+          <h4 class="text-xs font-black text-slate-800 dark:text-slate-200">Jadwal Ujian untuk ${namaKelas}:</h4>
+          <div class="space-y-2 max-h-48 overflow-y-auto">
+            ${jadwalKelas.length === 0 ? '<p class="text-xs text-slate-400 py-3 text-center">Belum ada jadwal khusus kelas ini.</p>' : jadwalKelas.map(j => `
+              <div class="p-3 rounded-xl bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 flex items-center justify-between">
+                <div>
+                  <p class="text-xs font-black text-slate-900 dark:text-white">${j.nama_mapel}</p>
+                  <p class="text-[10px] text-slate-400">${j.durasi_menit} Menit • ${j.token ? 'Wajib Token: ' + j.token : 'Tanpa Token'}</p>
+                </div>
+                <button type="button" onclick="window.app.closeModal(); window.app.promptStartExam('${j.id}');" class="px-3 py-1.5 rounded-lg bg-blue-600 text-white text-[11px] font-bold">
+                  Mulai
+                </button>
+              </div>
+            `).join('')}
+          </div>
+        </div>
+
+        <div class="flex justify-end gap-2 pt-2 border-t border-slate-100 dark:border-slate-800">
+          <button type="button" onclick="window.app.closeModal()" class="px-4 py-2 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 text-xs font-bold">
+            Tutup
+          </button>
+          <button type="button" onclick="window.app.closeModal(); window.app.navigateMenu('jadwal');" class="px-4 py-2 rounded-xl bg-blue-600 text-white text-xs font-bold">
+            Buka Ruang Ujian
+          </button>
+        </div>
+      </div>
+    `);
   }
 
   // ============================================================================
   // RENDER CONTAINER UTAMA
   // ============================================================================
   function renderAll() {
+    renderBottomNav();
     const container = document.getElementById('main-content-scroll');
     if (!container || !state.user) return;
 
     if (state.activeExam) {
       document.getElementById('topbar-title').textContent = 'Ruang Pengerjaan Ujian CBT';
+      document.getElementById('mobile-bottom-nav')?.classList.add('hidden');
       container.innerHTML = renderActiveExamRunner();
       return;
+    } else {
+      document.getElementById('mobile-bottom-nav')?.classList.remove('hidden');
     }
 
     const titles = {
@@ -1746,337 +2089,197 @@
     const sortedSiswa = [...state.siswa].sort((a, b) => (b.poin || 0) - (a.poin || 0)).slice(0, 5);
 
     return `
-      <div class="space-y-6">
-        <!-- Banner Sambutan Lingora Biru Gradien dengan Ilustrasi Guru & Gedung Sekolah -->
-        <div class="relative overflow-hidden rounded-3xl p-6 sm:p-7 text-white shadow-xl shadow-blue-500/10" style="background: linear-gradient(110deg, #1A56DB 0%, #1E6BFF 30%, #38BDF8 75%, #0284C7 100%);">
+      <div class="space-y-5 sm:space-y-6">
+        <!-- Banner Sambutan Lingora Biru Gradien dengan Ilustrasi Guru & Gedung Sekolah (Sesuai Referensi Mobile) -->
+        <div class="relative overflow-hidden rounded-3xl p-5 sm:p-7 text-white shadow-xl shadow-blue-500/10" style="background: linear-gradient(110deg, #1A56DB 0%, #1E6BFF 30%, #38BDF8 75%, #0284C7 100%);">
           <!-- Ornamen cahaya lembut di background -->
           <div class="absolute -top-24 -left-24 w-80 h-80 rounded-full bg-white/10 blur-2xl pointer-events-none"></div>
           <div class="absolute -bottom-24 -right-24 w-80 h-80 rounded-full bg-sky-200/20 blur-2xl pointer-events-none"></div>
 
-          <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-center relative z-10">
-            <!-- Sisi Kiri: Teks Selamat Datang -->
-            <div class="lg:col-span-5 space-y-2.5 text-center sm:text-left">
-              <div class="inline-flex items-center gap-1.5 px-3.5 py-1 rounded-full bg-white text-blue-900 text-[11px] font-black shadow-sm tracking-wider uppercase">
-                <span class="italic">SELAMAT DATANG</span>
+          <div class="flex items-center justify-between gap-3 relative z-10">
+            <!-- Sisi Kiri: Teks Sambutan & Identitas Pengguna -->
+            <div class="space-y-1.5 sm:space-y-2.5 max-w-[62%] sm:max-w-md">
+              <div class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white text-blue-900 text-[10px] sm:text-[11px] font-black shadow-sm tracking-wider uppercase">
                 <span>👋</span>
+                <span class="italic">SELAMAT DATANG</span>
               </div>
-              <h2 class="text-2xl sm:text-3xl font-black text-white leading-tight drop-shadow-sm">
-                ${state.user?.nama || 'Dr. H. Ahmad Sulaiman, M.Pd!'}
+              <h2 class="text-base sm:text-2xl lg:text-3xl font-black text-white leading-tight drop-shadow-sm uppercase truncate">
+                ${state.user?.nama || 'SAMSUL ARIFIN, S.Pd'}
               </h2>
-              <p class="text-xs sm:text-[13px] text-white/95 leading-relaxed font-medium">
-                ${isAdmin ? 'Database tersimpan di Google Spreadsheet. Kelola bank soal, pantau aktivitas pengerjaan CBT siswa, dan unduh rekap nilai instan.' : 'Pilih jadwal mata pelajaran yang aktif untuk memulai evaluasi belajar mandiri Anda hari ini.'}
+              <p class="text-[11px] sm:text-xs text-white/95 leading-relaxed font-medium line-clamp-3 sm:line-clamp-none">
+                ${isAdmin ? 'Dashboard E-CBT Lingora. Semangat terus dalam mendukung proses pembelajaran yang lebih baik.' : 'Dashboard Siswa E-CBT Lingora. Selamat belajar dan raih prestasi terbaikmu hari ini.'}
               </p>
             </div>
 
-            <!-- Sisi Tengah: Ilustrasi Gedung Sekolah & Guru Berdiri di Meja Laptop -->
-            <div class="lg:col-span-4 flex flex-col items-center justify-center relative">
-              <div class="relative w-full max-w-[270px] h-[155px]">
-                <svg viewBox="0 0 320 180" class="w-full h-full drop-shadow-md">
-                  <!-- Gedung Sekolah Klasik di Latar Belakang -->
-                  <rect x="70" y="30" width="180" height="110" rx="6" fill="#BAE6FD" fill-opacity="0.85"/>
-                  <polygon points="160,5 60,35 260,35" fill="#38BDF8"/>
-                  <!-- Jam Menara -->
-                  <circle cx="160" cy="23" r="8" fill="#FFFFFF"/>
-                  <line x1="160" y1="23" x2="160" y2="18" stroke="#0284C7" stroke-width="1.5" stroke-linecap="round"/>
-                  <line x1="160" y1="23" x2="164" y2="23" stroke="#0284C7" stroke-width="1.5" stroke-linecap="round"/>
-                  <!-- Jendela Gedung -->
-                  <rect x="85" y="45" width="22" height="28" rx="4" fill="#FFFFFF" fill-opacity="0.9"/>
-                  <rect x="120" y="45" width="22" height="28" rx="4" fill="#FFFFFF" fill-opacity="0.9"/>
-                  <rect x="180" y="45" width="22" height="28" rx="4" fill="#FFFFFF" fill-opacity="0.9"/>
-                  <rect x="215" y="45" width="22" height="28" rx="4" fill="#FFFFFF" fill-opacity="0.9"/>
-                  <rect x="145" y="90" width="30" height="50" rx="3" fill="#0284C7"/>
-                  <!-- Pepohonan -->
-                  <circle cx="55" cy="115" r="22" fill="#34D399" fill-opacity="0.9"/>
-                  <circle cx="265" cy="115" r="22" fill="#34D399" fill-opacity="0.9"/>
-                  
-                  <!-- Meja Kerja -->
-                  <rect x="40" y="130" width="240" height="16" rx="4" fill="#64748B"/>
-                  <rect x="45" y="146" width="10" height="30" fill="#475569"/>
-                  <rect x="265" y="146" width="10" height="30" fill="#475569"/>
+            <!-- Sisi Kanan: Ilustrasi Guru Thumbs Up & Gedung Sekolah -->
+            <div class="w-[38%] sm:w-60 max-w-[210px] shrink-0 flex items-center justify-end">
+              <svg viewBox="0 0 280 180" class="w-full h-auto drop-shadow-md">
+                <!-- Gedung Sekolah Klasik di Latar Belakang -->
+                <rect x="50" y="30" width="160" height="110" rx="6" fill="#BAE6FD" fill-opacity="0.85"/>
+                <polygon points="130,10 40,35 220,35" fill="#38BDF8"/>
+                <!-- Jam Menara -->
+                <circle cx="130" cy="23" r="8" fill="#FFFFFF"/>
+                <line x1="130" y1="23" x2="130" y2="18" stroke="#0284C7" stroke-width="1.5" stroke-linecap="round"/>
+                <line x1="130" y1="23" x2="134" y2="23" stroke="#0284C7" stroke-width="1.5" stroke-linecap="round"/>
+                <!-- Jendela Gedung -->
+                <rect x="65" y="45" width="20" height="26" rx="4" fill="#FFFFFF" fill-opacity="0.9"/>
+                <rect x="95" y="45" width="20" height="26" rx="4" fill="#FFFFFF" fill-opacity="0.9"/>
+                <rect x="145" y="45" width="20" height="26" rx="4" fill="#FFFFFF" fill-opacity="0.9"/>
+                <rect x="175" y="45" width="20" height="26" rx="4" fill="#FFFFFF" fill-opacity="0.9"/>
+                <!-- Pepohonan -->
+                <circle cx="35" cy="115" r="20" fill="#34D399" fill-opacity="0.9"/>
+                <circle cx="235" cy="115" r="20" fill="#34D399" fill-opacity="0.9"/>
+                
+                <!-- Bendera Merah Putih -->
+                <line x1="130" y1="10" x2="130" y2="0" stroke="#FFFFFF" stroke-width="1.5"/>
+                <rect x="131" y="0" width="10" height="3.5" fill="#EF4444"/>
+                <rect x="131" y="3.5" width="10" height="3.5" fill="#FFFFFF"/>
 
-                  <!-- Tumpukan Buku -->
-                  <rect x="55" y="118" width="32" height="7" rx="1.5" fill="#EF4444"/>
-                  <rect x="57" y="110" width="30" height="7" rx="1.5" fill="#F59E0B"/>
-                  <rect x="54" y="102" width="34" height="7" rx="1.5" fill="#10B981"/>
+                <!-- Guru Pria dengan Jas Biru, Dasi & Jempol Teracung (Thumbs Up) -->
+                <path d="M110,180 C110,110 130,98 150,98 C170,98 190,110 190,180 Z" fill="#1E3A8A"/>
+                <polygon points="144,98 156,98 152,130 148,130" fill="#38BDF8"/>
+                <polygon points="148,130 152,130 150,155" fill="#1D4ED8"/>
+                
+                <!-- Kepala & Rambut -->
+                <circle cx="150" cy="74" r="18" fill="#FED7AA"/>
+                <path d="M132,70 C132,52 168,52 168,70 C168,58 162,50 150,50 C138,50 132,58 132,70 Z" fill="#1E293B"/>
+                
+                <!-- Kacamata & Senyum -->
+                <circle cx="143" cy="73" r="5" fill="none" stroke="#0F172A" stroke-width="1.8"/>
+                <circle cx="157" cy="73" r="5" fill="none" stroke="#0F172A" stroke-width="1.8"/>
+                <line x1="148" y1="73" x2="152" y2="73" stroke="#0F172A" stroke-width="1.8"/>
+                <path d="M145,83 Q150,87 155,83" stroke="#C2410C" stroke-width="1.8" fill="none" stroke-linecap="round"/>
 
-                  <!-- Laptop -->
-                  <polygon points="175,130 220,130 226,134 169,134" fill="#94A3B8"/>
-                  <polygon points="182,98 218,98 220,130 175,130" fill="#1E293B"/>
-                  <rect x="185" y="101" width="30" height="26" fill="#38BDF8"/>
-                  <circle cx="200" cy="114" r="3.5" fill="#FFFFFF"/>
-
-                  <!-- Guru Pria dengan Jas Biru Tua & Kacamata Menunjuk -->
-                  <!-- Badan Jas -->
-                  <path d="M125,140 C125,95 140,88 152,88 C164,88 178,95 178,140 Z" fill="#0F172A"/>
-                  <polygon points="146,88 158,88 154,115 150,115" fill="#38BDF8"/>
-                  <polygon points="150,115 154,115 152,135" fill="#1D4ED8"/>
-                  <!-- Kepala & Rambut -->
-                  <circle cx="152" cy="68" r="16" fill="#FED7AA"/>
-                  <path d="M136,65 C136,50 168,50 168,65 C168,54 162,48 152,48 C142,48 136,54 136,65 Z" fill="#0F172A"/>
-                  <!-- Kacamata & Senyum -->
-                  <circle cx="146" cy="67" r="4.5" fill="none" stroke="#0F172A" stroke-width="1.8"/>
-                  <circle cx="158" cy="67" r="4.5" fill="none" stroke="#0F172A" stroke-width="1.8"/>
-                  <line x1="150.5" y1="67" x2="153.5" y2="67" stroke="#0F172A" stroke-width="1.8"/>
-                  <path d="M148,76 Q152,80 156,76" stroke="#C2410C" stroke-width="1.8" fill="none" stroke-linecap="round"/>
-                  <!-- Tangan Mengacung Menunjuk ke Kanan (Ke Tombol) -->
-                  <path d="M172,105 C185,95 198,78 202,70 C204,66 206,68 204,74 C201,84 190,102 178,115 Z" fill="#FED7AA"/>
-                  <path d="M168,102 C178,95 186,90 190,95 C190,98 178,115 168,118 Z" fill="#0F172A"/>
-                </svg>
-              </div>
-              <p class="text-[11px] font-bold text-white/95 italic tracking-wide text-center drop-shadow mt-0.5">
-                Bersama Mewujudkan Pendidikan Berkualitas
-              </p>
-            </div>
-
-            <!-- Sisi Kanan: Tombol Aksi Cepat (Buat Butir Soal & Rekap Nilai) -->
-            <div class="lg:col-span-3 flex flex-col gap-3 justify-center">
-              ${isAdmin ? `
-                <button type="button" onclick="window.app.navigateMenu('soal')" class="w-full py-3.5 px-4 rounded-2xl bg-blue-600 hover:bg-blue-700 active:scale-[0.99] text-white font-black text-xs shadow-lg shadow-blue-900/30 flex items-center justify-between transition border border-white/30 group">
-                  <div class="flex items-center gap-2.5">
-                    <span class="w-7 h-7 rounded-full bg-white text-blue-600 flex items-center justify-center shadow-sm">
-                      <i class="ph-fill ph-play text-xs ml-0.5"></i>
-                    </span>
-                    <span class="font-extrabold text-white">Buat Butir Soal</span>
-                  </div>
-                  <i class="ph-bold ph-arrow-right text-sm group-hover:translate-x-1 transition"></i>
-                </button>
-
-                <button type="button" onclick="window.app.navigateMenu('rekap')" class="w-full py-3.5 px-4 rounded-2xl bg-white hover:bg-slate-50 active:scale-[0.99] text-slate-900 font-black text-xs shadow-lg flex items-center justify-between transition group">
-                  <div class="flex items-center gap-2.5">
-                    <span class="w-7 h-7 rounded-full bg-slate-100 text-slate-800 flex items-center justify-center">
-                      <i class="ph-bold ph-chart-bar text-sm"></i>
-                    </span>
-                    <span class="font-extrabold text-slate-900">Rekap Nilai</span>
-                  </div>
-                  <i class="ph-bold ph-arrow-right text-sm text-slate-400 group-hover:translate-x-1 transition"></i>
-                </button>
-              ` : `
-                <button type="button" onclick="window.app.navigateMenu('jadwal')" class="w-full py-3.5 px-5 rounded-2xl bg-white hover:bg-slate-50 text-blue-600 font-extrabold text-xs shadow-lg flex items-center justify-between transition">
-                  <div class="flex items-center gap-2.5">
-                    <i class="ph-bold ph-play-circle text-lg"></i>
-                    <span>Mulai Ujian</span>
-                  </div>
-                  <i class="ph-bold ph-arrow-right text-sm"></i>
-                </button>
-              `}
+                <!-- Tangan Kiri Mengacungkan Jempol (Thumbs Up) -->
+                <path d="M128,125 C118,125 110,135 110,145 C110,150 115,152 120,150 C125,148 130,140 132,135 Z" fill="#FED7AA"/>
+                <!-- Jempol Up -->
+                <path d="M118,135 C115,128 116,122 120,123 C123,124 124,130 124,135 Z" fill="#FED7AA"/>
+                <!-- Buku Digenggam di Dada -->
+                <rect x="140" y="132" width="28" height="40" rx="3" fill="#1E293B"/>
+                <rect x="144" y="134" width="22" height="36" rx="2" fill="#38BDF8"/>
+              </svg>
             </div>
           </div>
         </div>
 
-        <!-- Metric Stat Cards (4 Kartu Bernuansa Pastel & Ilustrasi 3D Seperti Screenshot) -->
-        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <!-- 4 Metric Stat Cards (Khusus Mobile Disusun 2 Kolom Sesuai Referensi Gambar) -->
+        <div class="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
           <!-- Kartu 1: Total Siswa (Blue Theme) -->
-          <div class="bg-white p-5 rounded-3xl border border-blue-100 shadow-sm flex items-center justify-between relative overflow-hidden group hover:shadow-md transition">
-            <div class="space-y-1 z-10">
-              <div class="w-11 h-11 rounded-2xl bg-blue-600 text-white flex items-center justify-center text-xl shadow-md shadow-blue-500/25 mb-1.5">
+          <div onclick="window.app.navigateMenu('siswa')" class="bg-white dark:bg-[#172033] p-4 sm:p-5 rounded-3xl border border-blue-100 dark:border-[#293548] shadow-sm flex flex-col justify-between cursor-pointer hover:shadow-md transition group">
+            <div class="flex items-center justify-between">
+              <div class="w-11 h-11 sm:w-12 sm:h-12 rounded-2xl bg-blue-600 text-white flex items-center justify-center text-xl sm:text-2xl shadow-md shadow-blue-500/25 shrink-0">
                 <i class="ph-fill ph-users"></i>
               </div>
-              <p class="text-xs text-slate-700 font-extrabold">Total Siswa</p>
-              <h3 class="text-2xl font-black text-slate-900 leading-tight">${totalSiswa}</h3>
-              <p class="text-[11px] font-bold text-emerald-600 flex items-center gap-1 pt-0.5">
+              <i class="ph-bold ph-caret-right text-blue-400 text-sm sm:text-base group-hover:translate-x-1 transition"></i>
+            </div>
+            <div class="mt-2.5">
+              <p class="text-xs font-black text-slate-800 dark:text-slate-200">Total Siswa</p>
+              <h3 class="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white leading-tight mt-0.5">${totalSiswa}</h3>
+              <p class="text-[10px] sm:text-[11px] font-bold text-emerald-600 flex items-center gap-1 mt-1">
                 <span>↑ 0%</span> <span class="text-slate-400 font-medium">dari semester lalu</span>
               </p>
-            </div>
-            <!-- Ilustrasi Siswa & Siswi Berhijab Seragam Sekolah -->
-            <div class="w-20 h-20 shrink-0 relative">
-              <svg viewBox="0 0 80 80" class="w-full h-full drop-shadow">
-                <!-- Siswa Laki-laki -->
-                <circle cx="28" cy="28" r="11" fill="#FED7AA"/>
-                <path d="M18,24 C18,16 38,16 38,24 C38,18 34,14 28,14 C22,14 18,18 18,24 Z" fill="#1E293B"/>
-                <path d="M17,58 C17,42 22,39 28,39 C34,39 39,42 39,58 Z" fill="#FFFFFF"/>
-                <polygon points="26,39 30,39 29,48 27,48" fill="#1D4ED8"/>
-                <path d="M19,56 L37,56 L38,72 L18,72 Z" fill="#60A5FA"/>
-                <!-- Siswi Perempuan Berhijab Putih -->
-                <ellipse cx="52" cy="30" rx="13" ry="15" fill="#F8FAFC"/>
-                <circle cx="52" cy="30" r="9.5" fill="#FED7AA"/>
-                <ellipse cx="52" cy="23" rx="9" ry="5" fill="#F8FAFC"/>
-                <path d="M40,60 C40,46 45,43 52,43 C59,43 64,46 64,60 Z" fill="#FFFFFF"/>
-                <path d="M42,57 L62,57 L63,72 L41,72 Z" fill="#93C5FD"/>
-                <!-- Tas Ransel Hijau di Belakang -->
-                <rect x="60" y="38" width="7" height="18" rx="3.5" fill="#34D399"/>
-              </svg>
             </div>
           </div>
 
           <!-- Kartu 2: Jadwal Ujian (Purple Theme) -->
-          <div class="bg-white p-5 rounded-3xl border border-purple-100 shadow-sm flex items-center justify-between relative overflow-hidden group hover:shadow-md transition">
-            <div class="space-y-1 z-10">
-              <div class="w-11 h-11 rounded-2xl bg-purple-600 text-white flex items-center justify-center text-xl shadow-md shadow-purple-500/25 mb-1.5">
-                <i class="ph-fill ph-calendar-check"></i>
+          <div onclick="window.app.navigateMenu('jadwal')" class="bg-white dark:bg-[#172033] p-4 sm:p-5 rounded-3xl border border-purple-100 dark:border-[#293548] shadow-sm flex flex-col justify-between cursor-pointer hover:shadow-md transition group">
+            <div class="flex items-center justify-between">
+              <div class="w-11 h-11 sm:w-12 sm:h-12 rounded-2xl bg-purple-600 text-white flex items-center justify-center text-xl sm:text-2xl shadow-md shadow-purple-500/25 shrink-0">
+                <i class="ph-fill ph-calendar-blank"></i>
               </div>
-              <p class="text-xs text-slate-700 font-extrabold">Jadwal Ujian</p>
-              <h3 class="text-2xl font-black text-slate-900 leading-tight">${totalJadwal}</h3>
-              <p class="text-[11px] font-bold text-emerald-600 flex items-center gap-1 pt-0.5">
+              <i class="ph-bold ph-caret-right text-purple-400 text-sm sm:text-base group-hover:translate-x-1 transition"></i>
+            </div>
+            <div class="mt-2.5">
+              <p class="text-xs font-black text-slate-800 dark:text-slate-200">Jadwal Ujian</p>
+              <h3 class="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white leading-tight mt-0.5">${totalJadwal}</h3>
+              <p class="text-[10px] sm:text-[11px] font-bold text-emerald-600 flex items-center gap-1 mt-1">
                 <span>↑ 0%</span> <span class="text-slate-400 font-medium">dari semester lalu</span>
               </p>
-            </div>
-            <!-- Ilustrasi Kalender & Jam 3D -->
-            <div class="w-20 h-20 shrink-0 relative">
-              <svg viewBox="0 0 80 80" class="w-full h-full drop-shadow">
-                <!-- Lembar Kalender Ungu -->
-                <rect x="14" y="16" width="46" height="46" rx="10" fill="#DDD6FE"/>
-                <rect x="14" y="16" width="46" height="16" rx="10" fill="#7C3AED"/>
-                <circle cx="24" cy="14" r="3" fill="#C4B5FD"/>
-                <circle cx="50" cy="14" r="3" fill="#C4B5FD"/>
-                <!-- Garis-Garis Tanggal -->
-                <circle cx="25" cy="42" r="3" fill="#8B5CF6"/>
-                <circle cx="37" cy="42" r="3" fill="#8B5CF6"/>
-                <circle cx="49" cy="42" r="3" fill="#8B5CF6"/>
-                <circle cx="25" cy="52" r="3" fill="#8B5CF6"/>
-                <circle cx="37" cy="52" r="3" fill="#A78BFA"/>
-                <!-- Jam Meja Biru di Depan -->
-                <circle cx="55" cy="54" r="14" fill="#3B82F6" stroke="#FFFFFF" stroke-width="2"/>
-                <line x1="55" y1="54" x2="55" y2="46" stroke="#FFFFFF" stroke-width="2" stroke-linecap="round"/>
-                <line x1="55" y1="54" x2="61" y2="54" stroke="#FDE047" stroke-width="2" stroke-linecap="round"/>
-              </svg>
             </div>
           </div>
 
           <!-- Kartu 3: Bank Soal (Emerald Theme) -->
-          <div class="bg-white p-5 rounded-3xl border border-emerald-100 shadow-sm flex items-center justify-between relative overflow-hidden group hover:shadow-md transition">
-            <div class="space-y-1 z-10">
-              <div class="w-11 h-11 rounded-2xl bg-emerald-600 text-white flex items-center justify-center text-xl shadow-md shadow-emerald-500/25 mb-1.5">
-                <i class="ph-fill ph-book-open"></i>
+          <div onclick="window.app.navigateMenu('soal')" class="bg-white dark:bg-[#172033] p-4 sm:p-5 rounded-3xl border border-emerald-100 dark:border-[#293548] shadow-sm flex flex-col justify-between cursor-pointer hover:shadow-md transition group">
+            <div class="flex items-center justify-between">
+              <div class="w-11 h-11 sm:w-12 sm:h-12 rounded-2xl bg-emerald-500 text-white flex items-center justify-center text-xl sm:text-2xl shadow-md shadow-emerald-500/25 shrink-0">
+                <i class="ph-fill ph-folder-open"></i>
               </div>
-              <p class="text-xs text-slate-700 font-extrabold">Bank Soal</p>
-              <h3 class="text-2xl font-black text-slate-900 leading-tight">${totalSoal}</h3>
-              <p class="text-[11px] font-bold text-emerald-600 flex items-center gap-1 pt-0.5">
+              <i class="ph-bold ph-caret-right text-emerald-400 text-sm sm:text-base group-hover:translate-x-1 transition"></i>
+            </div>
+            <div class="mt-2.5">
+              <p class="text-xs font-black text-slate-800 dark:text-slate-200">Bank Soal</p>
+              <h3 class="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white leading-tight mt-0.5">${totalSoal}</h3>
+              <p class="text-[10px] sm:text-[11px] font-bold text-emerald-600 flex items-center gap-1 mt-1">
                 <span>↑ 0%</span> <span class="text-slate-400 font-medium">dari semester lalu</span>
               </p>
-            </div>
-            <!-- Ilustrasi Tumpukan Buku 3D -->
-            <div class="w-20 h-20 shrink-0 relative">
-              <svg viewBox="0 0 80 80" class="w-full h-full drop-shadow">
-                <!-- Buku Bawah (Kuning) -->
-                <polygon points="12,58 55,54 68,62 25,66" fill="#FBBF24"/>
-                <polygon points="12,58 25,66 25,72 12,64" fill="#D97706"/>
-                <polygon points="25,66 68,62 68,67 25,72" fill="#FDE68A"/>
-                <!-- Buku Tengah (Toska) -->
-                <polygon points="16,46 58,42 70,50 28,54" fill="#38BDF8"/>
-                <polygon points="16,46 28,54 28,60 16,52" fill="#0284C7"/>
-                <polygon points="28,54 70,50 70,55 28,60" fill="#E0F2FE"/>
-                <!-- Buku Atas (Hijau Emerald) -->
-                <polygon points="18,34 56,30 68,38 30,42" fill="#10B981"/>
-                <polygon points="18,34 30,42 30,48 18,40" fill="#059669"/>
-                <polygon points="30,42 68,38 68,43 30,48" fill="#D1FAE5"/>
-                <!-- Bookmark Pita Merah -->
-                <path d="M42,32 L46,45 L42,43 L38,45 Z" fill="#EF4444"/>
-              </svg>
             </div>
           </div>
 
           <!-- Kartu 4: Ujian Dikerjakan (Amber Theme) -->
-          <div class="bg-white p-5 rounded-3xl border border-amber-100 shadow-sm flex items-center justify-between relative overflow-hidden group hover:shadow-md transition">
-            <div class="space-y-1 z-10">
-              <div class="w-11 h-11 rounded-2xl bg-amber-500 text-white flex items-center justify-center text-xl shadow-md shadow-amber-500/25 mb-1.5">
-                <i class="ph-fill ph-chat-circle-text"></i>
+          <div onclick="window.app.navigateMenu('rekap')" class="bg-white dark:bg-[#172033] p-4 sm:p-5 rounded-3xl border border-amber-100 dark:border-[#293548] shadow-sm flex flex-col justify-between cursor-pointer hover:shadow-md transition group">
+            <div class="flex items-center justify-between">
+              <div class="w-11 h-11 sm:w-12 sm:h-12 rounded-2xl bg-amber-500 text-white flex items-center justify-center text-xl sm:text-2xl shadow-md shadow-amber-500/25 shrink-0">
+                <i class="ph-fill ph-clipboard-text"></i>
               </div>
-              <p class="text-xs text-slate-700 font-extrabold">Ujian Dikerjakan</p>
-              <h3 class="text-2xl font-black text-slate-900 leading-tight">${totalUjianSelesai}</h3>
-              <p class="text-[11px] font-bold text-emerald-600 flex items-center gap-1 pt-0.5">
+              <i class="ph-bold ph-caret-right text-amber-400 text-sm sm:text-base group-hover:translate-x-1 transition"></i>
+            </div>
+            <div class="mt-2.5">
+              <p class="text-xs font-black text-slate-800 dark:text-slate-200">Ujian Dikerjakan</p>
+              <h3 class="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white leading-tight mt-0.5">${totalUjianSelesai}</h3>
+              <p class="text-[10px] sm:text-[11px] font-bold text-emerald-600 flex items-center gap-1 mt-1">
                 <span>↑ 0%</span> <span class="text-slate-400 font-medium">dari semester lalu</span>
               </p>
-            </div>
-            <!-- Ilustrasi Papan Ujian & Centang 3D -->
-            <div class="w-20 h-20 shrink-0 relative">
-              <svg viewBox="0 0 80 80" class="w-full h-full drop-shadow">
-                <!-- Papan Kayu Clipboard -->
-                <rect x="22" y="16" width="44" height="54" rx="8" fill="#F59E0B"/>
-                <rect x="26" y="22" width="36" height="44" rx="4" fill="#FFFFFF"/>
-                <!-- Klip Logam -->
-                <rect x="34" y="12" width="20" height="8" rx="3" fill="#94A3B8"/>
-                <circle cx="44" cy="14" r="2" fill="#475569"/>
-                <!-- Baris Kertas -->
-                <line x1="30" y1="30" x2="52" y2="30" stroke="#CBD5E1" stroke-width="2.5" stroke-linecap="round"/>
-                <line x1="30" y1="38" x2="56" y2="38" stroke="#CBD5E1" stroke-width="2.5" stroke-linecap="round"/>
-                <line x1="30" y1="46" x2="48" y2="46" stroke="#CBD5E1" stroke-width="2.5" stroke-linecap="round"/>
-                <!-- Lingkaran Centang Oranye/Emas di Bawah Kanan -->
-                <circle cx="58" cy="58" r="13" fill="#F59E0B" stroke="#FFFFFF" stroke-width="2.5"/>
-                <path d="M53,58 L57,62 L64,54" stroke="#FFFFFF" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
-              </svg>
             </div>
           </div>
         </div>
 
         <!-- Leaderboard & Jadwal Terdekat Grid -->
-        <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
-          <!-- SISI KIRI: Jadwal Ujian Tersedia -->
-          <div class="lg:col-span-7 bg-white rounded-3xl p-6 border border-slate-100 shadow-sm space-y-4 relative overflow-hidden flex flex-col justify-between">
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-5 sm:gap-6">
+          <!-- SISI KIRI: Jadwal Ujian Tersedia (Sesuai Referensi Gambar Mobile) -->
+          <div class="lg:col-span-7 bg-white dark:bg-[#172033] rounded-3xl p-5 sm:p-6 border border-slate-100 dark:border-[#293548] shadow-sm space-y-4 relative overflow-hidden flex flex-col justify-between">
             <div class="space-y-4">
               <div class="flex items-center justify-between">
                 <div class="flex items-center gap-3">
-                  <div class="w-10 h-10 rounded-2xl bg-blue-600 text-white flex items-center justify-center text-lg shadow-md shadow-blue-500/20 shrink-0">
+                  <div class="w-11 h-11 rounded-2xl bg-blue-600 text-white flex items-center justify-center text-xl shadow-md shadow-blue-500/20 shrink-0">
                     <i class="ph-fill ph-calendar-blank"></i>
                   </div>
                   <div>
-                    <h3 class="text-base font-extrabold text-slate-900 leading-snug">Jadwal Ujian Tersedia</h3>
-                    <p class="text-xs text-slate-400">Pilih mata pelajaran untuk pengerjaan</p>
+                    <h3 class="text-sm sm:text-base font-black text-slate-900 dark:text-white leading-snug">Jadwal Ujian Tersedia</h3>
+                    <p class="text-[11px] text-slate-400 dark:text-slate-500">Pilih ujian yang tersedia dan mulai mengerjakan.</p>
                   </div>
                 </div>
                 <button type="button" onclick="window.app.navigateMenu('jadwal')" class="text-xs font-bold text-blue-600 hover:text-blue-700 flex items-center gap-1 transition">
                   <span>Lihat Semua</span>
-                  <i class="ph-bold ph-arrow-right"></i>
+                  <i class="ph-bold ph-caret-right text-xs"></i>
                 </button>
               </div>
 
-              <!-- List Kartu Jadwal Ujian -->
+              <!-- List Kartu Jadwal Ujian (Sesuai Screenshot: Badge Bulat Kode Mapel & Tombol Pill Mulai) -->
               <div class="space-y-3">
-                ${state.mapel_jadwal.slice(0, 3).map((j, idx) => {
+                ${state.mapel_jadwal.slice(0, 4).map((j, idx) => {
                   const soalCount = state.soal.filter(s => s.jadwal_id === j.id).length;
-                  const isMath = j.kode_mapel.toUpperCase().includes('MAT') || j.nama_mapel.toLowerCase().includes('matematika');
+                  const codeInit = (j.kode_mapel || j.nama_mapel || 'CBT').slice(0, 3).toUpperCase();
                   return `
-                    <div class="p-4 rounded-2xl bg-slate-50/80 border border-slate-100 hover:border-blue-200 hover:bg-blue-50/20 transition flex items-center justify-between gap-4">
-                      <div class="flex items-center gap-3.5 min-w-0">
-                        <div class="w-12 h-12 rounded-full bg-blue-100/90 text-blue-700 font-black text-xs flex items-center justify-center tracking-wider shrink-0">
-                          ${j.kode_mapel.slice(0, 3).toUpperCase()}
+                    <div class="p-3.5 sm:p-4 rounded-2xl bg-slate-50/80 dark:bg-[#1E293B]/60 border border-slate-100 dark:border-[#293548] flex items-center justify-between gap-3">
+                      <div class="flex items-center gap-3 min-w-0">
+                        <div class="w-11 h-11 sm:w-12 sm:h-12 rounded-full bg-blue-100 dark:bg-blue-900/40 text-blue-600 dark:text-blue-400 font-black text-xs flex items-center justify-center tracking-wider shrink-0 shadow-sm">
+                          ${codeInit}
                         </div>
                         <div class="min-w-0">
-                          <h4 class="text-xs sm:text-sm font-extrabold text-slate-900 truncate">${j.nama_mapel}</h4>
-                          <p class="text-[11px] text-slate-500 truncate mt-0.5">
-                            ${j.judul_ujian} • <b class="text-blue-600">${soalCount} Soal</b> • ${j.durasi_menit} Menit
+                          <h4 class="text-xs sm:text-sm font-black text-slate-900 dark:text-white truncate">${j.nama_mapel}</h4>
+                          <p class="text-[11px] text-slate-500 dark:text-slate-400 flex items-center gap-1.5 mt-0.5">
+                            <i class="ph-bold ph-article text-xs"></i> <span>${soalCount} Soal</span>
+                            <span>•</span>
+                            <i class="ph-bold ph-clock text-xs"></i> <span>${j.durasi_menit} Menit</span>
                           </p>
                         </div>
                       </div>
 
-                      <div class="flex items-center gap-3 shrink-0">
-                        <!-- Ilustrasi Kecil 3D (Kalkulator atau Headphone) -->
-                        <div class="hidden sm:block w-14 h-10 opacity-90">
-                          ${isMath || idx === 0 ? `
-                            <svg viewBox="0 0 60 40" class="w-full h-full">
-                              <!-- Kalkulator 3D & Penggaris Segitiga -->
-                              <rect x="22" y="5" width="26" height="32" rx="4" fill="#3B82F6"/>
-                              <rect x="25" y="8" width="20" height="8" rx="2" fill="#93C5FD"/>
-                              <circle cx="28" cy="21" r="2" fill="#FFFFFF"/>
-                              <circle cx="35" cy="21" r="2" fill="#FFFFFF"/>
-                              <circle cx="42" cy="21" r="2" fill="#FFFFFF"/>
-                              <circle cx="28" cy="28" r="2" fill="#FFFFFF"/>
-                              <circle cx="35" cy="28" r="2" fill="#FFFFFF"/>
-                              <circle cx="42" cy="28" r="2" fill="#FBBF24"/>
-                              <polygon points="5,35 22,12 22,35" fill="#F59E0B" fill-opacity="0.9"/>
-                              <polygon points="8,33 19,19 19,33" fill="#FEF3C7"/>
-                              <text x="5" y="14" fill="#38BDF8" font-size="10" font-weight="bold">8</text>
-                              <text x="49" y="16" fill="#38BDF8" font-size="10" font-weight="bold">3</text>
-                            </svg>
-                          ` : `
-                            <svg viewBox="0 0 60 40" class="w-full h-full">
-                              <!-- Buku & Headphone Musik/Bahasa Inggris -->
-                              <rect x="10" y="24" width="38" height="6" rx="2" fill="#EF4444"/>
-                              <rect x="12" y="18" width="34" height="6" rx="2" fill="#F59E0B"/>
-                              <rect x="8" y="12" width="40" height="6" rx="2" fill="#3B82F6"/>
-                              <!-- Headphone Biru -->
-                              <path d="M28,6 C38,6 46,14 46,24" fill="none" stroke="#2563EB" stroke-width="3.5" stroke-linecap="round"/>
-                              <rect x="42" y="20" width="7" height="12" rx="3.5" fill="#1D4ED8"/>
-                              <rect x="23" y="20" width="7" height="12" rx="3.5" fill="#1D4ED8"/>
-                            </svg>
-                          `}
-                        </div>
-
-                        <!-- Tombol Mulai Biru -->
-                        <button type="button" onclick="window.app.promptStartExam('${j.id}')" class="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold transition flex items-center gap-1 shadow-sm">
-                          <span>Mulai</span>
-                          <i class="ph-bold ph-arrow-right text-xs"></i>
-                        </button>
-                      </div>
+                      <button type="button" onclick="window.app.promptStartExam('${j.id}')" class="px-3.5 sm:px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 active:scale-95 text-white text-xs font-black flex items-center gap-1.5 shadow-md shadow-blue-500/20 shrink-0 transition">
+                        <i class="ph-fill ph-play text-xs"></i>
+                        <span>Mulai</span>
+                        <i class="ph-bold ph-caret-right text-xs"></i>
+                      </button>
                     </div>
                   `;
                 }).join('') || '<p class="text-xs text-slate-400 py-6 text-center">Belum ada jadwal ujian aktif.</p>'}
@@ -2084,95 +2287,83 @@
             </div>
 
             <!-- Pita Footer Ornamen Prestasi Hari Ini -->
-            <div class="pt-4 border-t border-slate-100 flex items-center justify-center relative">
+            <div class="pt-3 border-t border-slate-100 dark:border-[#293548] flex items-center justify-center relative">
               <span class="text-xs font-bold text-amber-500 italic tracking-wide flex items-center gap-1">
                 <span>⭐</span> Prestasi Hari Ini, Masa Depan Esok
               </span>
             </div>
           </div>
 
-          <!-- SISI KANAN: Peringkat XP Siswa (Piala Emas & Avatar) -->
-          <div class="lg:col-span-5 bg-white rounded-3xl p-6 border border-slate-100 shadow-sm space-y-4 relative overflow-hidden flex flex-col justify-between">
+          <!-- SISI KANAN: Peringkat XP Siswa (Piala Emas & Avatar Sesuai Screenshot) -->
+          <div class="lg:col-span-5 bg-white dark:bg-[#172033] rounded-3xl p-5 sm:p-6 border border-slate-100 dark:border-[#293548] shadow-sm space-y-4 relative overflow-hidden flex flex-col justify-between">
             <div class="space-y-4 relative z-10">
               <div class="flex items-center justify-between">
                 <div class="flex items-center gap-2.5">
                   <span class="text-2xl">🏆</span>
-                  <h3 class="text-base font-extrabold text-slate-900 leading-snug">Peringkat XP Siswa</h3>
+                  <h3 class="text-sm sm:text-base font-black text-slate-900 dark:text-white leading-snug">Peringkat XP Siswa</h3>
                 </div>
                 <button type="button" onclick="window.app.navigateMenu('siswa')" class="text-xs font-bold text-blue-600 hover:text-blue-700 flex items-center gap-1 transition">
                   <span>Top 5 Peserta</span>
-                  <i class="ph-bold ph-arrow-right"></i>
+                  <i class="ph-bold ph-caret-right text-xs"></i>
                 </button>
               </div>
 
               <div class="space-y-3">
                 ${sortedSiswa.map((s, idx) => {
                   const isFirst = idx === 0;
-                  const isSecond = idx === 1;
                   return `
-                    <div class="p-3.5 rounded-2xl ${isFirst ? 'bg-amber-50/60 border border-amber-200/60' : 'bg-slate-50 border border-slate-100'} flex items-center justify-between gap-3">
-                      <div class="flex items-center gap-3 min-w-0">
+                    <div class="p-3 sm:p-3.5 rounded-2xl ${isFirst ? 'bg-amber-50/50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800/40 shadow-sm' : 'bg-slate-50/80 dark:bg-[#1E293B]/60 border border-slate-100 dark:border-[#293548]'} flex items-center justify-between gap-3">
+                      <div class="flex items-center gap-2.5 sm:gap-3 min-w-0">
                         <!-- Medali 1 / 2 -->
-                        <span class="w-6 h-6 rounded-full flex items-center justify-center font-black text-xs shrink-0 ${
+                        <span class="w-6 h-6 sm:w-7 sm:h-7 rounded-full flex items-center justify-center font-black text-xs shrink-0 ${
                           isFirst
                             ? 'bg-amber-400 text-white shadow-sm'
-                            : isSecond
-                            ? 'bg-slate-300 text-slate-700'
-                            : 'bg-amber-100 text-amber-800'
+                            : 'bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300'
                         }">
                           ${idx + 1}
                         </span>
 
-                        <!-- Avatar Siswa Berkarakter Kartun -->
-                        <div class="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center shrink-0 overflow-hidden ring-2 ${isFirst ? 'ring-amber-300' : 'ring-blue-200'}">
-                          ${isFirst ? `
-                            <!-- Siswi Sophie -->
-                            <svg viewBox="0 0 40 40" class="w-full h-full">
-                              <circle cx="20" cy="20" r="20" fill="#FED7AA"/>
-                              <path d="M8,40 C8,30 14,26 20,26 C26,26 32,30 32,40 Z" fill="#EF4444"/>
-                              <circle cx="20" cy="18" r="8" fill="#FDE68A"/>
-                              <path d="M12,18 C12,10 28,10 28,18 C28,11 25,7 20,7 C15,7 12,11 12,18 Z" fill="#1E293B"/>
-                              <circle cx="17" cy="18" r="1.5" fill="#0F172A"/>
-                              <circle cx="23" cy="18" r="1.5" fill="#0F172A"/>
-                              <path d="M18,22 Q20,24 22,22" stroke="#EA580C" stroke-width="1" fill="none"/>
-                            </svg>
-                          ` : `
-                            <!-- Siswa Alex -->
-                            <svg viewBox="0 0 40 40" class="w-full h-full">
-                              <circle cx="20" cy="20" r="20" fill="#E0F2FE"/>
-                              <path d="M8,40 C8,30 14,26 20,26 C26,26 32,30 32,40 Z" fill="#1D4ED8"/>
-                              <polygon points="18,26 22,26 21,33 19,33" fill="#F59E0B"/>
-                              <circle cx="20" cy="18" r="8" fill="#FED7AA"/>
-                              <path d="M12,17 C12,9 28,9 28,17 C28,11 24,8 20,8 C16,8 12,11 12,17 Z" fill="#78350F"/>
-                              <circle cx="17" cy="18" r="1.5" fill="#0F172A"/>
-                              <circle cx="23" cy="18" r="1.5" fill="#0F172A"/>
-                              <path d="M18,22 Q20,24 22,22" stroke="#B45309" stroke-width="1" fill="none"/>
-                            </svg>
-                          `}
+                        <!-- Avatar Siswa Kartun -->
+                        <div class="w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-blue-100 dark:bg-blue-900/40 flex items-center justify-center shrink-0 overflow-hidden ring-2 ${isFirst ? 'ring-amber-300 dark:ring-amber-500' : 'ring-blue-200 dark:ring-blue-800'}">
+                          <svg viewBox="0 0 40 40" class="w-full h-full">
+                            <circle cx="20" cy="20" r="20" fill="#FED7AA"/>
+                            <path d="M8,40 C8,30 14,26 20,26 C26,26 32,30 32,40 Z" fill="${isFirst ? '#1D4ED8' : '#059669'}"/>
+                            <circle cx="20" cy="18" r="8" fill="#FDE68A"/>
+                            <path d="M12,18 C12,10 28,10 28,18 C28,11 25,7 20,7 C15,7 12,11 12,18 Z" fill="#1E293B"/>
+                            <circle cx="17" cy="18" r="1.5" fill="#0F172A"/>
+                            <circle cx="23" cy="18" r="1.5" fill="#0F172A"/>
+                            <path d="M18,22 Q20,24 22,22" stroke="#EA580C" stroke-width="1" fill="none"/>
+                          </svg>
                         </div>
 
                         <div class="min-w-0">
-                          <h4 class="text-xs sm:text-sm font-extrabold text-slate-900 truncate">${s.nama_lengkap}</h4>
-                          <p class="text-[10px] text-slate-400 font-mono">NISN : ${s.nisn}</p>
+                          <h4 class="text-xs sm:text-sm font-black text-slate-900 dark:text-white truncate">${s.nama_lengkap}</h4>
+                          <p class="text-[10px] text-slate-500 dark:text-slate-400 flex items-center gap-1 mt-0.5">
+                            <i class="ph-fill ph-star text-amber-500"></i>
+                            <span>${(s.poin || 110) >= 1000 ? ((s.poin || 110)/1000).toFixed(2) + 'k' : (s.poin || 110)}</span>
+                            <span>•</span>
+                            <span>${s.kelas_id || 'Kelas'}</span>
+                          </p>
                         </div>
                       </div>
 
-                      <!-- XP Pill -->
-                      <span class="px-3 py-1 rounded-full bg-blue-50 text-blue-600 border border-blue-200/60 text-xs font-black shrink-0 flex items-center gap-1 shadow-sm">
-                        <span>💎</span> ${s.poin || 0} XP
-                      </span>
+                      <!-- XP Pill Sesuai Screenshot -->
+                      <div class="px-3 py-1 rounded-xl bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 text-xs font-black border border-blue-100 dark:border-blue-800/40 shrink-0 flex items-center gap-1 shadow-sm">
+                        <i class="ph-fill ph-star text-amber-500"></i>
+                        <span>${s.poin || 110} XP</span>
+                      </div>
                     </div>
                   `;
-                }).join('') || '<p class="text-xs text-slate-400 py-6 text-center">Belum ada siswa.</p>'}
+                }).join('') || '<p class="text-xs text-slate-400 py-6 text-center">Belum ada data siswa.</p>'}
               </div>
             </div>
 
-            <!-- Ilustrasi Piala Emas 3D di Sudut Bawah Kanan -->
-            <div class="absolute -bottom-4 -right-4 w-32 h-32 opacity-95 pointer-events-none z-0">
-              <svg viewBox="0 0 100 100" class="w-full h-full drop-shadow-lg">
+            <!-- Ilustrasi Piala Emas 3D di Sudut Bawah Kanan Sesuai Screenshot -->
+            <div class="absolute -bottom-2 -right-2 w-28 h-28 opacity-80 pointer-events-none z-0">
+              <svg viewBox="0 0 100 100" class="w-full h-full">
                 <!-- Ombak Biru Latar Belakang -->
-                <path d="M0,85 Q40,65 100,85 L100,100 L0,100 Z" fill="#93C5FD" opacity="0.6"/>
-                <path d="M0,92 Q50,75 100,92 L100,100 L0,100 Z" fill="#3B82F6" opacity="0.8"/>
+                <path d="M0,85 Q40,65 100,85 L100,100 L0,100 Z" fill="#93C5FD" opacity="0.5"/>
+                <path d="M0,92 Q50,75 100,92 L100,100 L0,100 Z" fill="#3B82F6" opacity="0.6"/>
                 <!-- Piala Emas -->
                 <polygon points="50,65 42,85 58,85" fill="#D97706"/>
                 <rect x="36" y="85" width="28" height="6" rx="2" fill="#B45309"/>
@@ -5754,6 +5945,12 @@
     toggleTheme,
     applyTheme,
     initTheme,
+    renderBottomNav,
+    handleBottomNavClick,
+    toggleMobileMenuDrawer,
+    closeMobileMenuDrawer,
+    showNotificationsModal,
+    showSiswaClassModal,
     restoreSession,
     retryRestoreSession,
     forceLoginView,
