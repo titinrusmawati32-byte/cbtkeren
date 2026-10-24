@@ -76,7 +76,7 @@ function doPost(e) {
     const ss = SpreadsheetApp.getActiveSpreadsheet();
 
     switch (action) {
-      // 1. AUTENTIKASI ADMIN & GURU DARI DATABASE
+      // 1. AUTENTIKASI ADMIN & GURU DARI DATABASE DENGAN TOKEN SESI PERSISTEN
       case 'loginAdmin': {
         const userSheet = ss.getSheetByName(SHEETS.PENGGUNA);
         let found = null;
@@ -92,16 +92,31 @@ function doPost(e) {
         }
 
         if (found) {
+          if (found.status && String(found.status).toLowerCase() !== 'aktif') {
+            return jsonResponse({ status: 'error', code: 'USER_INACTIVE', message: 'Akun Anda dinonaktifkan oleh administrator!' });
+          }
+
+          const userData = {
+            id: found.id,
+            role: (found.role || 'admin').toLowerCase(),
+            nama: found.nama_lengkap || found.username,
+            username: found.username,
+            email: found.email,
+            poin: 999
+          };
+
+          const sessionInfo = generateSessionToken({
+            id: userData.id,
+            role: userData.role,
+            identifier: userData.username || userData.email,
+            type: 'admin'
+          });
+
           return jsonResponse({
             status: 'success',
-            user: {
-              id: found.id,
-              role: (found.role || 'admin').toLowerCase(),
-              nama: found.nama_lengkap || found.username,
-              username: found.username,
-              email: found.email,
-              poin: 999
-            }
+            token: sessionInfo.token,
+            expiresAt: sessionInfo.exp,
+            user: userData
           });
         }
 
@@ -113,29 +128,98 @@ function doPost(e) {
         const adminPass = String(config.admin_password || 'admin123').trim();
 
         if ((inputId === adminEmail || inputId === 'admin') && inputPass === adminPass) {
+          const userData = {
+            id: 'admin-gas',
+            role: 'admin',
+            nama: config.nama_kepsek || 'Administrator Utama',
+            email: config.admin_email || 'admin@educbt.id',
+            username: 'admin',
+            poin: 999
+          };
+
+          const sessionInfo = generateSessionToken({
+            id: userData.id,
+            role: 'admin',
+            identifier: 'admin',
+            type: 'admin'
+          });
+
           return jsonResponse({
             status: 'success',
-            user: {
-              id: 'admin-gas',
-              role: 'admin',
-              nama: config.nama_kepsek || 'Administrator Utama',
-              email: config.admin_email || 'admin@educbt.id',
-              username: 'admin',
-              poin: 999
-            }
+            token: sessionInfo.token,
+            expiresAt: sessionInfo.exp,
+            user: userData
           });
         } else {
-          return jsonResponse({ status: 'error', message: 'Username/Email atau Password Guru/Admin tidak cocok dengan database!' });
+          return jsonResponse({ status: 'error', code: 'AUTH_FAILED', message: 'Username/Email atau Password Guru/Admin tidak cocok dengan database!' });
         }
       }
 
-      // 2. AUTENTIKASI SISWA
+      // 2. AUTENTIKASI SISWA DENGAN TOKEN SESI PERSISTEN
       case 'loginSiswa': {
         const siswaSheet = ss.getSheetByName(SHEETS.SISWA);
         const siswaList = sheetToObjects(siswaSheet);
         const found = siswaList.find(s => String(s.nisn).trim() === String(payload.nisn).trim() && String(s.password).trim() === String(payload.password).trim());
 
         if (found) {
+          const userData = {
+            id: found.id,
+            role: 'siswa',
+            nama: found.nama_lengkap,
+            nisn: found.nisn,
+            kelas_id: found.kelas_id,
+            poin: Number(found.poin || 100)
+          };
+
+          const sessionInfo = generateSessionToken({
+            id: userData.id,
+            role: 'siswa',
+            identifier: String(userData.nisn),
+            type: 'siswa'
+          });
+
+          return jsonResponse({
+            status: 'success',
+            token: sessionInfo.token,
+            expiresAt: sessionInfo.exp,
+            user: userData
+          });
+        } else {
+          return jsonResponse({ status: 'error', code: 'AUTH_FAILED', message: 'NISN atau Password siswa tidak cocok!' });
+        }
+      }
+
+      // 2B. VALIDASI SESI DARI TOKEN PERSISTEN (UNTUK REFRESH F5 / BUKA TAB BARU)
+      case 'validateSession': {
+        const token = String(payload.token || '').trim();
+        if (!token) {
+          return jsonResponse({ status: 'error', code: 'TOKEN_REQUIRED', message: 'Token sesi diperlukan' });
+        }
+
+        const verification = verifySessionToken(token);
+        if (!verification) {
+          return jsonResponse({ status: 'error', code: 'INVALID_TOKEN', message: 'Token autentikasi tidak valid atau sudah dibatalkan' });
+        }
+        if (verification.expired) {
+          return jsonResponse({ status: 'error', code: 'EXPIRED_TOKEN', message: 'Sesi login telah kedaluwarsa. Silakan masuk kembali.' });
+        }
+
+        // Ambil data mutakhir langsung dari Database Google Sheets (Keamanan Backend Terverifikasi)
+        if (verification.type === 'siswa' || verification.role === 'siswa') {
+          const siswaSheet = ss.getSheetByName(SHEETS.SISWA);
+          if (!siswaSheet) {
+            return jsonResponse({ status: 'error', code: 'DB_ERROR', message: 'Tabel siswa belum siap' });
+          }
+          const siswaList = sheetToObjects(siswaSheet);
+          const found = siswaList.find(s => 
+            String(s.id) === String(verification.sub) || 
+            (verification.identifier && String(s.nisn).trim() === String(verification.identifier).trim())
+          );
+
+          if (!found) {
+            return jsonResponse({ status: 'error', code: 'USER_NOT_FOUND', message: 'Akun siswa tidak ditemukan di database' });
+          }
+
           return jsonResponse({
             status: 'success',
             user: {
@@ -148,8 +232,65 @@ function doPost(e) {
             }
           });
         } else {
-          return jsonResponse({ status: 'error', message: 'NISN atau Password siswa tidak cocok!' });
+          // Role Admin atau Guru
+          const userSheet = ss.getSheetByName(SHEETS.PENGGUNA);
+          let found = null;
+          if (userSheet) {
+            const userList = sheetToObjects(userSheet);
+            found = userList.find(u => 
+              String(u.id) === String(verification.sub) ||
+              (verification.identifier && (String(u.username || '').toLowerCase() === String(verification.identifier).toLowerCase() || String(u.email || '').toLowerCase() === String(verification.identifier).toLowerCase()))
+            );
+          }
+
+          if (found) {
+            if (found.status && String(found.status).toLowerCase() !== 'aktif') {
+              return jsonResponse({ status: 'error', code: 'USER_INACTIVE', message: 'Akun Anda dinonaktifkan oleh administrator!' });
+            }
+            return jsonResponse({
+              status: 'success',
+              user: {
+                id: found.id,
+                role: (found.role || 'admin').toLowerCase(),
+                nama: found.nama_lengkap || found.username,
+                username: found.username,
+                email: found.email,
+                poin: 999
+              }
+            });
+          }
+
+          // Fallback akun default admin dari pengaturan
+          const setSheet = ss.getSheetByName(SHEETS.PENGATURAN);
+          if (setSheet) {
+            const setRows = sheetToObjects(setSheet);
+            const config = setRows[0] || {};
+            if (verification.sub === 'admin-gas' || verification.identifier === 'admin' || verification.identifier === (config.admin_email || 'admin@educbt.id').toLowerCase()) {
+              return jsonResponse({
+                status: 'success',
+                user: {
+                  id: 'admin-gas',
+                  role: 'admin',
+                  nama: config.nama_kepsek || 'Administrator Utama',
+                  email: config.admin_email || 'admin@educbt.id',
+                  username: 'admin',
+                  poin: 999
+                }
+              });
+            }
+          }
+
+          return jsonResponse({ status: 'error', code: 'USER_NOT_FOUND', message: 'Akun staf/guru tidak ditemukan di database' });
         }
+      }
+
+      // 2C. LOGOUT & PENCABUTAN TOKEN SESI
+      case 'logoutSession': {
+        const token = String(payload.token || '').trim();
+        if (token) {
+          revokeSessionToken(token);
+        }
+        return jsonResponse({ status: 'success', message: 'Sesi berhasil diakhiri' });
       }
 
       // 3. CRUD KELAS
@@ -658,5 +799,100 @@ function deleteRowsByForeignKey(sheet, colIndex, fkValue) {
     if (String(data[i][colIndex - 1]) === String(fkValue)) {
       sheet.deleteRow(i + 1);
     }
+  }
+}
+
+/**
+ * ============================================================================
+ * HELPER MANAJEMEN SESI & TOKEN PERSISTEN (HMAC-SHA256)
+ * ============================================================================
+ */
+function getSessionSecret() {
+  const props = PropertiesService.getScriptProperties();
+  let secret = props.getProperty('EDUCBT_SESSION_SECRET');
+  if (!secret) {
+    secret = Utilities.getUuid() + '-' + Utilities.getUuid() + '-' + Date.now();
+    props.setProperty('EDUCBT_SESSION_SECRET', secret);
+  }
+  return secret;
+}
+
+function generateSessionToken(userData) {
+  const secret = getSessionSecret();
+  const now = new Date().getTime();
+  const exp = now + (7 * 24 * 60 * 60 * 1000); // Masa berlaku sesi: 7 Hari
+  const tokenPayload = {
+    sub: String(userData.id),
+    role: String(userData.role || 'siswa').toLowerCase(),
+    identifier: String(userData.identifier || ''),
+    type: String(userData.type || (userData.role === 'siswa' ? 'siswa' : 'user')),
+    iat: now,
+    exp: exp
+  };
+
+  const payloadB64 = Utilities.base64EncodeWebSafe(JSON.stringify(tokenPayload));
+  const sigBytes = Utilities.computeHmacSha256Signature(payloadB64, secret);
+  const sigB64 = Utilities.base64EncodeWebSafe(sigBytes);
+  const token = payloadB64 + '.' + sigB64;
+
+  // Cache sesi agar verifikasi instan
+  try {
+    CacheService.getScriptCache().put('sess_' + userData.id, token, 21600);
+  } catch (e) {}
+
+  return { token: token, exp: exp };
+}
+
+function verifySessionToken(token) {
+  if (!token || typeof token !== 'string') return null;
+  const parts = token.split('.');
+  if (parts.length !== 2) return null;
+
+  const payloadB64 = parts[0];
+  const sigB64 = parts[1];
+  const secret = getSessionSecret();
+
+  const expectedSig = Utilities.base64EncodeWebSafe(Utilities.computeHmacSha256Signature(payloadB64, secret));
+  if (expectedSig !== sigB64) {
+    return null; // Token diubah / tidak valid
+  }
+
+  try {
+    const jsonStr = Utilities.newBlob(Utilities.base64DecodeWebSafe(payloadB64)).getDataAsString();
+    const payload = JSON.parse(jsonStr);
+    const now = new Date().getTime();
+    if (payload.exp && now > payload.exp) {
+      return { expired: true };
+    }
+
+    // Cek daftar token yang dicabut (revoked tokens)
+    const props = PropertiesService.getScriptProperties();
+    const revoked = props.getProperty('REVOKED_TOKENS') || '';
+    const tokenSigSnippet = sigB64.substring(0, 20);
+    if (revoked.indexOf(tokenSigSnippet) !== -1) {
+      return null; // Token telah di-logout
+    }
+
+    return payload;
+  } catch (err) {
+    return null;
+  }
+}
+
+function revokeSessionToken(token) {
+  if (!token || typeof token !== 'string') return;
+  const parts = token.split('.');
+  if (parts.length === 2) {
+    const sigSnippet = parts[1].substring(0, 20);
+    try {
+      const props = PropertiesService.getScriptProperties();
+      let revoked = props.getProperty('REVOKED_TOKENS') || '';
+      const list = revoked ? revoked.split(',') : [];
+      if (!list.includes(sigSnippet)) {
+        list.push(sigSnippet);
+        if (list.length > 100) list.shift();
+        props.setProperty('REVOKED_TOKENS', list.join(','));
+      }
+    } catch (e) {}
   }
 }

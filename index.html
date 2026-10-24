@@ -447,11 +447,47 @@
         padding-bottom: 5.5rem !important;
       }
     }
+
+    @keyframes indeterminate {
+      0% { margin-left: 0%; width: 20%; }
+      50% { margin-left: 35%; width: 50%; }
+      100% { margin-left: 100%; width: 15%; }
+    }
+    .animate-indeterminate {
+      animation: indeterminate 1.3s infinite ease-in-out;
+    }
   </style>
 </head>
 <body class="m-0 p-0 overflow-hidden select-none">
 
 <div id="educbt-root">
+  <!-- VIEW 0: INDIKATOR PEMULIHAN SESI (MENCEGAH FLICKER / KEDIP SAAT REFRESH) -->
+  <div id="session-loading-view" class="hidden flex-1 flex flex-col items-center justify-center p-6 relative">
+    <div class="w-full max-w-sm p-8 rounded-3xl bg-white/95 dark:bg-[#172033] border border-slate-200 dark:border-[#293548] shadow-2xl backdrop-blur-md text-center space-y-4">
+      <div class="relative w-16 h-16 mx-auto">
+        <div class="w-16 h-16 rounded-2xl bg-blue-600 text-white flex items-center justify-center text-3xl shadow-lg shadow-blue-500/30 animate-pulse">
+          <i class="ph-bold ph-shield-check"></i>
+        </div>
+        <div class="absolute -top-1 -right-1 w-5 h-5 rounded-full border-2 border-white dark:border-[#172033] bg-emerald-500 animate-ping"></div>
+      </div>
+      <div class="space-y-1">
+        <h3 id="session-loading-title" class="text-base font-black text-slate-900 dark:text-slate-100">Memulihkan Sesi Pengguna...</h3>
+        <p id="session-loading-desc" class="text-xs text-slate-500 dark:text-slate-400">Memverifikasi autentikasi ke database sekolah</p>
+      </div>
+      <div class="w-full bg-slate-100 dark:bg-slate-800 h-1.5 rounded-full overflow-hidden">
+        <div class="bg-blue-600 h-full rounded-full animate-indeterminate"></div>
+      </div>
+      <div id="session-retry-actions" class="hidden pt-2 flex flex-col gap-2">
+        <button type="button" onclick="window.app.retryRestoreSession()" class="w-full py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold transition flex items-center justify-center gap-1.5 shadow-md shadow-blue-500/20">
+          <i class="ph-bold ph-arrow-clockwise"></i> Coba Hubungkan Lagi
+        </button>
+        <button type="button" onclick="window.app.forceLoginView()" class="w-full py-2.5 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 text-slate-700 dark:text-slate-300 text-xs font-bold transition">
+          Masuk dengan Akun Lain
+        </button>
+      </div>
+    </div>
+  </div>
+
   <!-- VIEW 1: HALAMAN LOGIN (GLASSMORPHISM & LINGORA THEME) -->
   <div id="login-view" class="flex-1 flex items-center justify-center p-4 overflow-y-auto relative">
     <!-- Tombol Mode Siang & Malam Halaman Login -->
@@ -1216,6 +1252,154 @@
     }
   }
 
+  // ============================================================================
+  // MANAJEMEN SESI & TOKEN PERSISTEN (MENDUKUNG F5 / REFRESH HALAMAN)
+  // ============================================================================
+  const AUTH_TOKEN_KEY = 'educbt_auth_token';
+  const SAVED_MENU_KEY = 'educbt_saved_menu';
+
+  function showLoginView() {
+    hideSessionLoading();
+    document.getElementById('app-view').classList.add('hidden');
+    document.getElementById('login-view').classList.remove('hidden');
+  }
+
+  function showSessionLoading(desc = 'Memverifikasi autentikasi ke database sekolah...') {
+    document.getElementById('login-view').classList.add('hidden');
+    document.getElementById('app-view').classList.add('hidden');
+    const sessLoad = document.getElementById('session-loading-view');
+    if (sessLoad) {
+      sessLoad.classList.remove('hidden');
+      document.getElementById('session-loading-title').textContent = 'Memulihkan Sesi Pengguna...';
+      document.getElementById('session-loading-desc').textContent = desc;
+      document.getElementById('session-retry-actions').classList.add('hidden');
+    }
+  }
+
+  function hideSessionLoading() {
+    const sessLoad = document.getElementById('session-loading-view');
+    if (sessLoad) sessLoad.classList.add('hidden');
+  }
+
+  function showSessionRetryScreen(msg) {
+    const sessLoad = document.getElementById('session-loading-view');
+    if (sessLoad) {
+      sessLoad.classList.remove('hidden');
+      document.getElementById('session-loading-title').textContent = 'Koneksi Sesi Terkendala';
+      document.getElementById('session-loading-desc').textContent = msg;
+      document.getElementById('session-retry-actions').classList.remove('hidden');
+    }
+  }
+
+  function retryRestoreSession() {
+    showSessionLoading('Menghubungkan ulang ke database...');
+    restoreSession();
+  }
+
+  function forceLoginView() {
+    localStorage.removeItem(AUTH_TOKEN_KEY);
+    localStorage.removeItem(SAVED_MENU_KEY);
+    hideSessionLoading();
+    showLoginView();
+  }
+
+  function restoreSavedMenu() {
+    const saved = localStorage.getItem(SAVED_MENU_KEY);
+    if (!saved) {
+      state.activeMenu = 'dashboard';
+      return;
+    }
+    const isStaff = state.user?.role === 'admin' || state.user?.role === 'guru';
+    const staffMenus = ['dashboard', 'kelas', 'siswa', 'jadwal', 'soal', 'rekap', 'pengguna', 'pengaturan'];
+    const siswaMenus = ['dashboard', 'jadwal', 'rekap'];
+
+    if (isStaff && staffMenus.includes(saved)) {
+      state.activeMenu = saved;
+    } else if (!isStaff && siswaMenus.includes(saved)) {
+      state.activeMenu = saved;
+    } else {
+      state.activeMenu = 'dashboard';
+    }
+  }
+
+  async function restoreSession() {
+    const token = localStorage.getItem(AUTH_TOKEN_KEY);
+    if (!token) {
+      // Kategori A: Token tidak tersedia -> Tampilkan halaman login
+      showLoginView();
+      return false;
+    }
+
+    showSessionLoading('Memulihkan sesi login Anda...');
+
+    // 1. Sesi Demo Lokal
+    if (token.startsWith('demo_token_')) {
+      try {
+        const jsonStr = atob(token.replace('demo_token_', ''));
+        const u = JSON.parse(jsonStr);
+        if (u && u.role) {
+          state.user = u;
+          if (!IS_CONNECTED_GAS) {
+            initPreviewDummyData();
+          } else {
+            await loadAllDataFromGAS();
+          }
+          restoreSavedMenu();
+          enterApplication();
+          hideSessionLoading();
+          showToast(`Sesi login dipulihkan: Selamat datang kembali, ${u.nama}!`);
+          return true;
+        }
+      } catch (e) {
+        localStorage.removeItem(AUTH_TOKEN_KEY);
+        showLoginView();
+        return false;
+      }
+    }
+
+    // 2. Sesi Resmi Terverifikasi Backend Google Apps Script
+    try {
+      const res = await callGAS('validateSession', { token });
+      if (res && res.status === 'success' && res.user) {
+        // Kategori B: Token valid dan pengguna terverifikasi di database
+        state.user = res.user;
+        await loadAllDataFromGAS();
+        restoreSavedMenu();
+        enterApplication();
+        hideSessionLoading();
+        const roleLabel = state.user.role === 'admin' ? 'Administrator' : state.user.role === 'guru' ? 'Guru Pengampu' : 'Siswa';
+        showToast(`Sesi aktif (${roleLabel}): Selamat datang kembali, ${state.user.nama}!`);
+        return true;
+      } else {
+        throw new Error(res?.message || 'Token sesi tidak valid');
+      }
+    } catch (err) {
+      const errStr = String(err.message || '').toLowerCase();
+      // Kategori C: Token terbukti kedaluwarsa, tidak valid, atau akun dinonaktifkan
+      if (
+        errStr.includes('kedaluwarsa') ||
+        errStr.includes('expired') ||
+        errStr.includes('tidak valid') ||
+        errStr.includes('invalid') ||
+        errStr.includes('tidak ditemukan') ||
+        errStr.includes('dinonaktifkan')
+      ) {
+        localStorage.removeItem(AUTH_TOKEN_KEY);
+        localStorage.removeItem(SAVED_MENU_KEY);
+        hideSessionLoading();
+        showLoginView();
+        showToast('Sesi Anda telah berakhir atau akun tidak aktif. Silakan login kembali.', 'warning');
+        return false;
+      }
+
+      // Kategori D: Gangguan jaringan / timeout backend sementara
+      // JANGAN HAPUS TOKEN DARI LOCALSTORAGE!
+      console.warn('Gangguan koneksi saat verifikasi sesi:', err);
+      showSessionRetryScreen('Gagal memverifikasi sesi karena kendala koneksi ke database Google Apps Script.');
+      return false;
+    }
+  }
+
   async function handleLoginAdmin(e) {
     e.preventDefault();
     const identifierInput = document.getElementById('admin-identifier') || document.getElementById('admin-email');
@@ -1231,6 +1415,12 @@
         password: password
       });
       state.user = res.user;
+      if (res.token) {
+        localStorage.setItem(AUTH_TOKEN_KEY, res.token);
+      } else {
+        localStorage.setItem(AUTH_TOKEN_KEY, 'demo_token_' + btoa(JSON.stringify(res.user)));
+      }
+      localStorage.setItem(SAVED_MENU_KEY, 'dashboard');
       await loadAllDataFromGAS();
       enterApplication();
       const roleLabel = state.user.role === 'admin' ? 'Administrator' : 'Guru';
@@ -1250,6 +1440,8 @@
           email: found.email,
           poin: 999
         };
+        localStorage.setItem(AUTH_TOKEN_KEY, 'demo_token_' + btoa(JSON.stringify(state.user)));
+        localStorage.setItem(SAVED_MENU_KEY, 'dashboard');
         enterApplication();
         showToast(`Selamat datang, ${state.user.nama}!`);
         return;
@@ -1267,6 +1459,12 @@
       showToast('Memverifikasi data siswa ke database...');
       const res = await callGAS('loginSiswa', { nisn, password });
       state.user = res.user;
+      if (res.token) {
+        localStorage.setItem(AUTH_TOKEN_KEY, res.token);
+      } else {
+        localStorage.setItem(AUTH_TOKEN_KEY, 'demo_token_' + btoa(JSON.stringify(res.user)));
+      }
+      localStorage.setItem(SAVED_MENU_KEY, 'dashboard');
       await loadAllDataFromGAS();
       enterApplication();
       showToast(`Selamat datang, ${state.user.nama}!`);
@@ -1281,6 +1479,8 @@
           kelas_id: found.kelas_id,
           poin: found.poin || 100
         };
+        localStorage.setItem(AUTH_TOKEN_KEY, 'demo_token_' + btoa(JSON.stringify(state.user)));
+        localStorage.setItem(SAVED_MENU_KEY, 'dashboard');
         enterApplication();
         showToast(`Selamat belajar, ${found.nama_lengkap}!`);
         return;
@@ -1297,6 +1497,8 @@
       state.user = { id: s.id, role: 'siswa', nama: s.nama_lengkap, nisn: s.nisn, kelas_id: s.kelas_id, poin: s.poin };
     }
     state.activeExam = null;
+    localStorage.setItem(AUTH_TOKEN_KEY, 'demo_token_' + btoa(JSON.stringify(state.user)));
+    localStorage.setItem(SAVED_MENU_KEY, 'dashboard');
     enterApplication();
   }
 
@@ -1304,14 +1506,22 @@
     if (state.activeExam && state.activeExam.timerInterval) {
       clearInterval(state.activeExam.timerInterval);
     }
+    const token = localStorage.getItem(AUTH_TOKEN_KEY);
+    if (token && IS_CONNECTED_GAS && !token.startsWith('demo_token_')) {
+      callGAS('logoutSession', { token }).catch(() => {});
+    }
+    localStorage.removeItem(AUTH_TOKEN_KEY);
+    localStorage.removeItem(SAVED_MENU_KEY);
     state.user = null;
     state.activeExam = null;
+    hideSessionLoading();
     document.getElementById('app-view').classList.add('hidden');
     document.getElementById('login-view').classList.remove('hidden');
     showToast('Anda telah keluar dari aplikasi');
   }
 
   function enterApplication() {
+    hideSessionLoading();
     document.getElementById('login-view').classList.add('hidden');
     document.getElementById('app-view').classList.remove('hidden');
 
@@ -1395,6 +1605,9 @@
 
   function navigateMenu(menuId) {
     state.activeMenu = menuId;
+    try {
+      localStorage.setItem(SAVED_MENU_KEY, menuId);
+    } catch (e) {}
     renderSidebarMenu();
     renderAll();
   }
@@ -5208,6 +5421,9 @@
     toggleTheme,
     applyTheme,
     initTheme,
+    restoreSession,
+    retryRestoreSession,
+    forceLoginView,
     closeModal
   };
 
@@ -5216,11 +5432,17 @@
 
   async function bootstrap() {
     initTheme();
-    if (!IS_CONNECTED_GAS) {
-      initPreviewDummyData();
+    // Jika token tersimpan ditemukan di localStorage, tampilkan loading pemulihan sesi agar halaman login tidak berkedip
+    const hasToken = !!localStorage.getItem(AUTH_TOKEN_KEY);
+    if (hasToken) {
+      showSessionLoading('Menghubungkan sesi ke database...');
+    }
+    const restored = await restoreSession();
+    if (!restored) {
+      if (!IS_CONNECTED_GAS) {
+        initPreviewDummyData();
+      }
       applyBrandingUI();
-    } else {
-      await loadAllDataFromGAS();
     }
   }
 
