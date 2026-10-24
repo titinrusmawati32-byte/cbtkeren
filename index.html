@@ -203,9 +203,16 @@
       box-shadow: 0 1px 3px rgba(0, 0, 0, 0.4) !important;
     }
 
+    .desktop-sidebar {
+      background: linear-gradient(180deg, #533784 0%, #4a2f77 45%, #3d2466 75%, #301a52 100%) !important;
+      border-left: 14px solid #251640 !important;
+      border-top-left-radius: 32px !important;
+    }
+
     [data-theme="dark"] .desktop-sidebar {
-      background-color: var(--bg-sidebar) !important;
-      border-right: 1px solid var(--border-color) !important;
+      background: linear-gradient(180deg, #3d2366 0%, #341b59 45%, #2a134a 75%, #1e0b36 100%) !important;
+      border-left: 14px solid #160a29 !important;
+      border-right: none !important;
     }
 
     /* Kartu & Container */
@@ -583,53 +590,47 @@
 
   <!-- VIEW 2: DASHBOARD & WORKSPACE APLIKASI UTAMA -->
   <div id="app-view" class="hidden flex-1 flex overflow-hidden">
-    <!-- SIDEBAR DESKTOP (DEEP NAVY BLUE LIKE SCREENSHOT) -->
-    <aside class="desktop-sidebar w-64 bg-[#0A1633] text-white p-5 flex flex-col justify-between shrink-0 shadow-2xl relative overflow-hidden z-30">
-      <!-- Ornamen daun lembut di sudut bawah -->
-      <div class="absolute -bottom-8 -left-8 w-36 h-36 bg-emerald-500/10 rounded-full blur-2xl pointer-events-none"></div>
-
-      <div class="space-y-6 relative z-10">
-        <!-- Logo & Identitas Aplikasi -->
-        <div class="flex items-center justify-between px-1">
-          <div class="flex items-center gap-3">
-            <!-- Icon Logo Buku Terbuka & Topi Toga (Lingora Blue Glow) -->
-            <div class="w-11 h-11 rounded-2xl bg-gradient-to-tr from-blue-600 via-sky-500 to-blue-400 text-white flex items-center justify-center font-extrabold text-lg shadow-lg shadow-blue-500/30 ring-2 ring-white/20 shrink-0">
-              <svg viewBox="0 0 36 36" class="w-7 h-7 drop-shadow" fill="none">
-                <path d="M18 6 L5 12 L18 18 L31 12 Z" fill="#FFFFFF" />
-                <path d="M8 15.5 V23 C8 26, 18 30.5, 18 30.5 C18 30.5, 28 26, 28 23 V15.5 L18 20.5 Z" fill="#EFF6FF" fill-opacity="0.95" />
-                <circle cx="18" cy="18" r="2.5" fill="#FBBF24" />
-                <path d="M31 13 V23" stroke="#FBBF24" stroke-width="2" stroke-linecap="round" />
-              </svg>
-            </div>
-            <div class="min-w-0">
-              <h2 id="sidebar-app-name" class="font-extrabold text-base leading-none tracking-tight">
-                <span class="text-white">EduCBT </span><span class="text-amber-400">Lingora</span>
-              </h2>
-              <p id="sidebar-school-sub" class="text-[11px] font-medium text-slate-400 truncate mt-1">SMA Negeri Harapan Bangsa</p>
-            </div>
+    <!-- SIDEBAR DESKTOP (ROYAL PURPLE NOTCHED FOLDER TAB & BOTANICAL DESIGN) -->
+    <aside class="desktop-sidebar w-64 text-white flex flex-col justify-between shrink-0 shadow-2xl relative overflow-hidden z-30 select-none">
+      
+      <div class="relative z-10 flex flex-col">
+        <!-- Logo Siswa Membaca Buku Siluet Putih (Persis Seperti Screenshot) -->
+        <div class="pt-6 pb-4 flex flex-col items-center justify-center text-center px-4">
+          <div class="w-14 h-14 flex items-center justify-center text-white drop-shadow mb-1">
+            <svg viewBox="0 0 64 64" class="w-12 h-12 fill-current">
+              <!-- Kepala Siswa -->
+              <circle cx="32" cy="14" r="7" />
+              <!-- Bahu & Kerah -->
+              <path d="M22,26 C22,22 42,22 42,26 Z" />
+              <!-- Buku Terbuka Melengkung -->
+              <path d="M32,29 C26,24 17,25 11,27.5 C11,37 21,36 32,41 C43,36 53,37 53,27.5 C47,25 38,24 32,29 Z" />
+              <!-- Dua Tangan Menggenggam Sisi Buku -->
+              <rect x="8" y="28" width="4" height="9" rx="2" />
+              <rect x="52" y="28" width="4" height="9" rx="2" />
+            </svg>
           </div>
-          <button type="button" class="text-slate-500 hover:text-white p-1 rounded-lg transition" title="Menu">
-            <i class="ph ph-x text-sm"></i>
-          </button>
+          <h2 id="sidebar-app-name" class="font-black text-sm tracking-wide text-white leading-tight">
+            EduCBT <span class="text-amber-300">Lingora</span>
+          </h2>
+          <p id="sidebar-school-sub" class="text-[10px] text-purple-200/80 font-medium truncate max-w-[190px]">SMA Negeri Harapan Bangsa</p>
         </div>
 
-        <!-- Menu Navigasi Utama -->
-        <nav id="sidebar-menu-list" class="space-y-1.5">
-          <!-- Dynamic Generated Navigation Buttons -->
+        <!-- Menu Navigasi Utama dengan Lekukan Scoop Folder Tab -->
+        <nav id="sidebar-menu-list" class="space-y-0.5 pl-2 pr-0 mt-1 max-h-[calc(100vh-230px)] overflow-y-auto">
+          <!-- Dynamic Generated Navigation Buttons with Inverted Scooped Cutout -->
         </nav>
       </div>
 
       <!-- Profil Singkat & Logout -->
-      <div class="pt-4 border-t border-white/10 space-y-3 relative z-10">
-        <div class="flex items-center gap-3 p-2.5 rounded-2xl bg-white/5 border border-white/10 backdrop-blur-sm">
-          <div class="w-10 h-10 rounded-full bg-sky-100 flex items-center justify-center text-slate-800 font-extrabold text-sm shrink-0 overflow-hidden ring-2 ring-sky-400/50">
+      <div class="p-3 mx-3 mb-3 rounded-2xl bg-black/25 backdrop-blur-md border border-white/10 relative z-10 space-y-2">
+        <div class="flex items-center gap-2.5">
+          <div class="w-9 h-9 rounded-full bg-purple-200 flex items-center justify-center text-slate-800 font-extrabold text-xs shrink-0 overflow-hidden ring-2 ring-purple-300/60">
             <!-- Illustrated Avatar Guru / Admin -->
             <svg viewBox="0 0 48 48" class="w-full h-full">
               <circle cx="24" cy="24" r="24" fill="#E0F2FE"/>
               <path d="M10 44 C10 33, 17 30, 24 30 C31 30, 38 33, 38 44 Z" fill="#1E3A8A"/>
               <polygon points="22,30 26,30 25,37 23,37" fill="#38BDF8"/>
               <circle cx="24" cy="19" r="8" fill="#FDE68A"/>
-              <!-- Kacamata & Rambut -->
               <path d="M16 16 C16 11, 32 11, 32 16 C32 14, 30 11, 24 11 C18 11, 16 14, 16 16 Z" fill="#1E293B"/>
               <circle cx="20.5" cy="19" r="2.8" fill="none" stroke="#0F172A" stroke-width="1"/>
               <circle cx="27.5" cy="19" r="2.8" fill="none" stroke="#0F172A" stroke-width="1"/>
@@ -638,26 +639,52 @@
             </svg>
           </div>
           <div class="min-w-0 flex-1">
-            <p id="sidebar-user-name" class="text-xs font-extrabold text-white truncate">Dr. H. Ahmad Sulaiman, M.Pd</p>
-            <p id="sidebar-user-role" class="text-[10px] font-bold text-sky-400 uppercase tracking-wider">ADMINISTRATOR</p>
+            <p id="sidebar-user-name" class="text-xs font-black text-white truncate">Dr. H. Ahmad Sulaiman, M.Pd</p>
+            <p id="sidebar-user-role" class="text-[9px] font-extrabold text-amber-300 uppercase tracking-wider">ADMINISTRATOR</p>
           </div>
         </div>
-        <button type="button" onclick="window.app.handleLogout()" class="w-full py-2 px-3 rounded-xl text-xs font-bold text-rose-400 hover:text-rose-300 hover:bg-rose-500/10 transition flex items-center gap-2">
-          <i class="ph-bold ph-sign-out text-base"></i> Keluar
+        <button type="button" onclick="window.app.handleLogout()" class="w-full py-1.5 px-3 rounded-xl text-xs font-bold text-rose-300 hover:text-rose-200 hover:bg-rose-500/20 transition flex items-center justify-center gap-1.5">
+          <i class="ph-bold ph-sign-out text-sm"></i> Keluar
         </button>
       </div>
 
-      <!-- Ornamen daun hijau di sudut kiri bawah -->
-      <div class="absolute -bottom-2 -left-2 opacity-30 pointer-events-none w-20 h-20 text-emerald-400">
-        <svg viewBox="0 0 100 100" fill="currentColor">
-          <path d="M5,95 Q35,35 90,10 Q75,65 5,95 Z" />
-          <path d="M15,95 Q45,45 80,25 Q65,70 15,95 Z" opacity="0.6"/>
+      <!-- Ilustrasi Daun Tropis Multi-Warna di Bagian Bawah Sidebar (Persis Seperti Screenshot) -->
+      <div class="absolute bottom-0 left-0 right-0 pointer-events-none z-0 overflow-hidden h-72 opacity-85 select-none">
+        <svg viewBox="0 0 260 280" class="w-full h-full object-cover">
+          <!-- Lapisan Daun Belakang: Indigo Tua & Urat Daun -->
+          <path d="M20,280 C20,180 80,120 170,110 C160,190 120,250 20,280 Z" fill="#3D5485" opacity="0.9" />
+          <line x1="20" y1="280" x2="165" y2="115" stroke="#253556" stroke-width="2.5" />
+          <line x1="60" y1="230" x2="105" y2="195" stroke="#253556" stroke-width="1.8" />
+          <line x1="90" y1="200" x2="135" y2="165" stroke="#253556" stroke-width="1.8" />
+          <line x1="120" y1="170" x2="155" y2="140" stroke="#253556" stroke-width="1.8" />
+
+          <!-- Daun Palem Biru Muda (Cornflower / Sky Blue Fronds) -->
+          <path d="M120,280 C130,170 200,90 260,80 C250,150 210,230 120,280 Z" fill="#6EA0D6" opacity="0.9" />
+          <line x1="120" y1="280" x2="255" y2="85" stroke="#4875A8" stroke-width="2.5" />
+          <line x1="150" y1="230" x2="195" y2="190" stroke="#4875A8" stroke-width="1.8" />
+          <line x1="180" y1="190" x2="225" y2="150" stroke="#4875A8" stroke-width="1.8" />
+
+          <!-- Tangkai & Daun Kecil Biru Beranting -->
+          <path d="M140,280 Q190,190 210,130" stroke="#2B3E63" stroke-width="3" fill="none" />
+          <ellipse cx="175" cy="185" rx="14" ry="7" transform="rotate(-35 175 185)" fill="#4A6E9E" />
+          <ellipse cx="195" cy="155" rx="14" ry="7" transform="rotate(-30 195 155)" fill="#4A6E9E" />
+          <ellipse cx="208" cy="130" rx="12" ry="6" transform="rotate(-25 208 130)" fill="#6EA0D6" />
+
+          <!-- Daun Mint / Seafoam Hijau Toska Lembut -->
+          <path d="M0,280 C30,220 80,180 140,170 C130,230 80,270 0,280 Z" fill="#6FC1B5" opacity="0.9" />
+          <line x1="0" y1="280" x2="135" y2="175" stroke="#468F84" stroke-width="2" />
+
+          <!-- Daun Aksen Coral Pink / Salmon Lembut di Sudut Bawah -->
+          <path d="M-10,280 C10,240 50,220 95,225 C80,265 40,285 -10,280 Z" fill="#EFA39D" opacity="0.85" />
+
+          <!-- Daun Hijau Teal di Paling Depan -->
+          <path d="M40,280 C60,250 110,240 150,250 C130,275 90,285 40,280 Z" fill="#88C7C0" opacity="0.9" />
         </svg>
       </div>
     </aside>
 
     <!-- AREA KONTEN UTAMA -->
-    <main class="flex-1 flex flex-col min-w-0 overflow-hidden bg-[#F3F7FD]">
+    <main class="flex-1 flex flex-col min-w-0 overflow-hidden bg-[var(--bg-primary)]">
       <!-- Topbar Header (Persis Seperti Screenshot) -->
       <header class="h-16 bg-white border-b border-slate-100 px-6 flex items-center justify-between shrink-0 z-20 shadow-sm">
         <div class="flex items-center gap-3.5">
@@ -1318,16 +1345,40 @@
 
     list.innerHTML = menus.map(m => {
       const active = state.activeMenu === m.id;
-      return `
-        <button type="button" onclick="window.app.navigateMenu('${m.id}')" class="w-full px-4 py-3 rounded-2xl text-xs font-bold transition-all flex items-center gap-3.5 ${
-          active
-            ? 'bg-gradient-to-r from-blue-600 via-blue-500 to-sky-400 text-white shadow-lg shadow-blue-500/30 ring-1 ring-white/20'
-            : 'text-slate-300 hover:text-white hover:bg-white/10'
-        }">
-          <i class="ph-bold ${m.icon} text-lg shrink-0"></i>
-          <span class="truncate">${m.label}</span>
-        </button>
-      `;
+      if (active) {
+        return `
+          <div class="relative w-full my-1 z-20">
+            <!-- Curved Scoop Inverted Notch Atas -->
+            <div class="absolute -top-5 right-0 w-5 h-5 pointer-events-none z-20">
+              <svg viewBox="0 0 20 20" class="w-full h-full text-[var(--bg-primary)] fill-current">
+                <path d="M0,20 A20,20 0 0,0 20,0 L20,20 Z" />
+              </svg>
+            </div>
+
+            <!-- Active Tab Button: Mengalir Mulus Menyatu ke Background Utama di Kanan -->
+            <button type="button" onclick="window.app.navigateMenu('${m.id}')" class="w-full pl-6 pr-4 py-3 rounded-l-full bg-[var(--bg-primary)] text-[#4A327A] dark:text-[#38BDF8] text-xs font-black flex items-center gap-3 transition-all relative z-10 shadow-[-4px_0_10px_rgba(0,0,0,0.06)] group">
+              <i class="ph-bold ${m.icon} text-lg shrink-0 text-[#543689] dark:text-[#38BDF8]"></i>
+              <span class="truncate font-black tracking-wide">${m.label}</span>
+            </button>
+
+            <!-- Curved Scoop Inverted Notch Bawah -->
+            <div class="absolute -bottom-5 right-0 w-5 h-5 pointer-events-none z-20">
+              <svg viewBox="0 0 20 20" class="w-full h-full text-[var(--bg-primary)] fill-current">
+                <path d="M0,0 A20,20 0 0,1 20,20 L20,0 Z" />
+              </svg>
+            </div>
+          </div>
+        `;
+      } else {
+        return `
+          <div class="w-full my-0.5">
+            <button type="button" onclick="window.app.navigateMenu('${m.id}')" class="w-full pl-6 pr-4 py-2.5 rounded-l-full text-xs font-bold text-white/85 hover:text-white hover:bg-white/10 hover:translate-x-1 transition-all flex items-center gap-3">
+              <i class="ph ${m.icon} text-base shrink-0 text-white/70"></i>
+              <span class="truncate font-semibold tracking-wide">${m.label}</span>
+            </button>
+          </div>
+        `;
+      }
     }).join('');
   }
 
