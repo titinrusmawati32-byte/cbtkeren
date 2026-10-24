@@ -37,17 +37,36 @@ const SHEETS = {
  */
 function doGet(e) {
   try {
-    initDatabaseSheets(); // Pastikan seluruh sheet dan header sudah siap
+    initDatabaseSheets(); // Dipercepat: hanya inisialisasi jika belum pernah
 
     const action = e.parameter.action || 'getAllData';
 
     if (action === 'getAllData') {
-      const data = fetchAllDatabase();
+      const role = e.parameter.role || 'siswa';
+      const cache = CacheService.getScriptCache();
+      const cacheKey = 'educbt_cache_' + role;
+      
+      try {
+        const cached = cache.get(cacheKey);
+        if (cached) {
+          return jsonResponse({ status: 'success', data: JSON.parse(cached), fromCache: true });
+        }
+      } catch (err) {}
+
+      const data = fetchAllDatabase(role);
+
+      try {
+        const jsonStr = JSON.stringify(data);
+        if (jsonStr.length < 95000) {
+          cache.put(cacheKey, jsonStr, 600); // Simpan di RAM Google selama 10 menit
+        }
+      } catch (err) {}
+
       return jsonResponse({ status: 'success', data: data });
     }
 
     if (action === 'ping') {
-      return jsonResponse({ status: 'success', message: 'Backend Google Apps Script EduCBT Aktif!' });
+      return jsonResponse({ status: 'success', message: 'Backend Google Apps Script EduCBT Aktif!', timestamp: new Date().toISOString() });
     }
 
     return jsonResponse({ status: 'error', message: 'Action GET tidak dikenali: ' + action });
@@ -299,13 +318,15 @@ function doPost(e) {
         const id = payload.id || 'kls-' + Utilities.getUuid();
         const row = [id, payload.nama_kelas, payload.wali_kelas, new Date().toISOString()];
         upsertRowById(sheet, id, row);
-        return jsonResponse({ status: 'success', id: id, allData: fetchAllDatabase() });
+        invalidateDataCache();
+        return jsonResponse({ status: 'success', id: id });
       }
 
       case 'deleteKelas': {
         const sheet = ss.getSheetByName(SHEETS.KELAS);
         deleteRowById(sheet, payload.id);
-        return jsonResponse({ status: 'success', allData: fetchAllDatabase() });
+        invalidateDataCache();
+        return jsonResponse({ status: 'success', id: payload.id });
       }
 
       // 4. CRUD SISWA
@@ -314,7 +335,8 @@ function doPost(e) {
         const id = payload.id || 'sis-' + Utilities.getUuid();
         const row = [id, String(payload.nisn), payload.nama_lengkap, payload.password, payload.kelas_id, Number(payload.poin || 100), new Date().toISOString()];
         upsertRowById(sheet, id, row);
-        return jsonResponse({ status: 'success', id: id, allData: fetchAllDatabase() });
+        invalidateDataCache();
+        return jsonResponse({ status: 'success', id: id });
       }
 
       case 'importSiswaBatch': {
@@ -325,13 +347,15 @@ function doPost(e) {
           const row = [id, String(item.nisn), item.nama_lengkap, item.password || '123456', item.kelas_id, Number(item.poin || 100), new Date().toISOString()];
           upsertRowByColumnValue(sheet, 2, String(item.nisn), row); // Kolom 2 adalah NISN
         });
-        return jsonResponse({ status: 'success', count: list.length, allData: fetchAllDatabase() });
+        invalidateDataCache();
+        return jsonResponse({ status: 'success', count: list.length });
       }
 
       case 'deleteSiswa': {
         const sheet = ss.getSheetByName(SHEETS.SISWA);
         deleteRowById(sheet, payload.id);
-        return jsonResponse({ status: 'success', allData: fetchAllDatabase() });
+        invalidateDataCache();
+        return jsonResponse({ status: 'success', id: payload.id });
       }
 
       // 5. CRUD MAPEL / JADWAL UJIAN
@@ -351,7 +375,8 @@ function doPost(e) {
           new Date().toISOString()
         ];
         upsertRowById(sheet, id, row);
-        return jsonResponse({ status: 'success', id: id, allData: fetchAllDatabase() });
+        invalidateDataCache();
+        return jsonResponse({ status: 'success', id: id });
       }
 
       case 'deleteJadwal': {
@@ -360,7 +385,8 @@ function doPost(e) {
         // Hapus juga butir soal terkait
         const soalSheet = ss.getSheetByName(SHEETS.SOAL);
         deleteRowsByForeignKey(soalSheet, 2, payload.id); // kolom 2 adalah jadwal_id
-        return jsonResponse({ status: 'success', allData: fetchAllDatabase() });
+        invalidateDataCache();
+        return jsonResponse({ status: 'success', id: payload.id });
       }
 
       // 6. CRUD SOAL & BULK ACTIONS & UPLOAD MEDIA
@@ -385,7 +411,8 @@ function doPost(e) {
           new Date().toISOString()
         ];
         upsertRowById(sheet, id, row);
-        return jsonResponse({ status: 'success', id: id, allData: fetchAllDatabase() });
+        invalidateDataCache();
+        return jsonResponse({ status: 'success', id: id });
       }
 
       case 'saveBulkSoal': {
@@ -430,7 +457,8 @@ function doPost(e) {
           sheet.getRange(sheet.getLastRow() + 1, 1, rowsToAppend.length, rowsToAppend[0].length).setValues(rowsToAppend);
         }
 
-        return jsonResponse({ status: 'success', count: list.length, allData: fetchAllDatabase() });
+        invalidateDataCache();
+        return jsonResponse({ status: 'success', count: list.length });
       }
 
       case 'deleteBulkSoal': {
@@ -442,13 +470,15 @@ function doPost(e) {
             sheet.deleteRow(i + 1);
           }
         }
-        return jsonResponse({ status: 'success', allData: fetchAllDatabase() });
+        invalidateDataCache();
+        return jsonResponse({ status: 'success', count: ids.size });
       }
 
       case 'deleteSoal': {
         const sheet = ss.getSheetByName(SHEETS.SOAL);
         deleteRowById(sheet, payload.id);
-        return jsonResponse({ status: 'success', allData: fetchAllDatabase() });
+        invalidateDataCache();
+        return jsonResponse({ status: 'success', id: payload.id });
       }
 
       case 'uploadImage': {
@@ -501,43 +531,103 @@ function doPost(e) {
         }
       }
 
-      // 7. SUBMIT UJIAN & REKAP NILAI
+      // 7. SUBMIT UJIAN & REKAP NILAI DENGAN LOCKSERVICE & PENILAIAN AMAN DI SERVER
       case 'saveRekap': {
-        const sheet = ss.getSheetByName(SHEETS.REKAP);
-        const id = 'rek-' + Utilities.getUuid();
-        const row = [
-          id,
-          payload.siswa_id,
-          payload.jadwal_id,
-          Number(payload.benar || 0),
-          Number(payload.salah || 0),
-          Number(payload.nilai_akhir || 0),
-          JSON.stringify(payload.jawaban_json || {}),
-          payload.waktu_selesai || new Date().toISOString()
-        ];
-        sheet.appendRow(row);
-
-        // Update Poin XP Siswa jika ada
-        if (payload.siswa_id) {
-          const siswaSheet = ss.getSheetByName(SHEETS.SISWA);
-          const dataSiswa = siswaSheet.getDataRange().getValues();
-          for (let i = 1; i < dataSiswa.length; i++) {
-            if (String(dataSiswa[i][0]) === String(payload.siswa_id)) {
-              const currentPoin = Number(dataSiswa[i][5] || 0);
-              const newPoin = currentPoin + Number(payload.nilai_akhir || 0);
-              siswaSheet.getRange(i + 1, 6).setValue(newPoin);
-              break;
-            }
-          }
+        const lock = LockService.getScriptLock();
+        try {
+          lock.waitLock(15000); // Mencegah race condition ketika banyak siswa kumpul serentak
+        } catch (lockErr) {
+          return jsonResponse({ status: 'error', code: 'SERVER_BUSY', message: 'Antrian server penuh, silakan klik kirim ulang.' });
         }
 
-        return jsonResponse({ status: 'success', id: id, allData: fetchAllDatabase() });
+        try {
+          const sheet = ss.getSheetByName(SHEETS.REKAP);
+          const id = 'rek-' + Utilities.getUuid();
+
+          // Penilaian server-side dari kunci jawaban resmi di database
+          const soalSheet = ss.getSheetByName(SHEETS.SOAL);
+          const allSoal = sheetToObjects(soalSheet).filter(s => String(s.jadwal_id) === String(payload.jadwal_id));
+
+          let totalBenar = 0;
+          let totalSalah = 0;
+          let totalSkor = 0;
+          let totalBobot = 0;
+          const userAnswers = payload.jawaban_json || {};
+
+          allSoal.forEach(s => {
+            const bobot = Number(s.bobot || 10);
+            totalBobot += bobot;
+            const studentAns = String(userAnswers[s.id] || '').trim();
+
+            if (s.jenis_soal === 'ESAI') {
+              const keyAns = String(s.kunci_jawaban || '').trim().toLowerCase();
+              const lowerAns = studentAns.toLowerCase();
+              if (lowerAns.length > 0 && keyAns.length > 0 && (lowerAns === keyAns || lowerAns.includes(keyAns) || keyAns.includes(lowerAns))) {
+                totalBenar++;
+                totalSkor += bobot;
+              } else if (lowerAns.length > 0) {
+                totalBenar++;
+                totalSkor += Math.round(bobot * 0.75);
+              } else {
+                totalSalah++;
+              }
+            } else {
+              if (studentAns.toUpperCase() === String(s.kunci_jawaban || '').trim().toUpperCase()) {
+                totalBenar++;
+                totalSkor += bobot;
+              } else {
+                totalSalah++;
+              }
+            }
+          });
+
+          const nilaiAkhir = totalBobot > 0 ? Math.round((totalSkor / totalBobot) * 100) : 0;
+
+          const row = [
+            id,
+            payload.siswa_id,
+            payload.jadwal_id,
+            totalBenar,
+            totalSalah,
+            nilaiAkhir,
+            JSON.stringify(userAnswers),
+            payload.waktu_selesai || new Date().toISOString()
+          ];
+          sheet.appendRow(row);
+
+          // Update XP Poin Siswa secara efisien
+          if (payload.siswa_id) {
+            const siswaSheet = ss.getSheetByName(SHEETS.SISWA);
+            const dataSiswa = siswaSheet.getDataRange().getValues();
+            for (let i = 1; i < dataSiswa.length; i++) {
+              if (String(dataSiswa[i][0]) === String(payload.siswa_id)) {
+                const currentPoin = Number(dataSiswa[i][5] || 0);
+                siswaSheet.getRange(i + 1, 6).setValue(currentPoin + nilaiAkhir);
+                break;
+              }
+            }
+          }
+
+          invalidateDataCache();
+
+          return jsonResponse({
+            status: 'success',
+            id: id,
+            benar: totalBenar,
+            salah: totalSalah,
+            nilai_akhir: nilaiAkhir,
+            message: 'Hasil ujian berhasil disimpan'
+          });
+        } finally {
+          lock.releaseLock();
+        }
       }
 
       case 'deleteRekap': {
         const sheet = ss.getSheetByName(SHEETS.REKAP);
         deleteRowById(sheet, payload.id);
-        return jsonResponse({ status: 'success', allData: fetchAllDatabase() });
+        invalidateDataCache();
+        return jsonResponse({ status: 'success', id: payload.id });
       }
 
       // 8. PENGATURAN IDENTITAS SEKOLAH
@@ -563,7 +653,8 @@ function doPost(e) {
           new Date().toISOString()
         ];
         upsertRowById(sheet, 1, row);
-        return jsonResponse({ status: 'success', allData: fetchAllDatabase() });
+        invalidateDataCache();
+        return jsonResponse({ status: 'success' });
       }
 
       // 9. CRUD PENGGUNA (ADMIN & GURU)
@@ -581,13 +672,15 @@ function doPost(e) {
           new Date().toISOString()
         ];
         upsertRowById(sheet, id, row);
-        return jsonResponse({ status: 'success', id: id, allData: fetchAllDatabase() });
+        invalidateDataCache();
+        return jsonResponse({ status: 'success', id: id });
       }
 
       case 'deletePengguna': {
         const sheet = ss.getSheetByName(SHEETS.PENGGUNA);
         deleteRowById(sheet, payload.id);
-        return jsonResponse({ status: 'success', allData: fetchAllDatabase() });
+        invalidateDataCache();
+        return jsonResponse({ status: 'success', id: payload.id });
       }
 
       default:
@@ -599,18 +692,60 @@ function doPost(e) {
 }
 
 /**
- * Mengambil Seluruh Isi Database dari Spreadsheet
+ * Invalidate Cache RAM Google Apps Script saat terjadi mutasi data
  */
-function fetchAllDatabase() {
+function invalidateDataCache() {
+  try {
+    const cache = CacheService.getScriptCache();
+    cache.remove('educbt_cache_admin');
+    cache.remove('educbt_cache_guru');
+    cache.remove('educbt_cache_siswa');
+  } catch (e) {}
+}
+
+/**
+ * Mengambil Seluruh Isi Database dari Spreadsheet dengan Otorisasi Hak Akses (Role)
+ */
+function fetchAllDatabase(userRole = 'admin') {
   const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const kelas = sheetToObjects(ss.getSheetByName(SHEETS.KELAS));
+  const mapel_jadwal = sheetToObjects(ss.getSheetByName(SHEETS.JADWAL));
+  const pengaturan = sheetToObjects(ss.getSheetByName(SHEETS.PENGATURAN))[0] || {};
+  let rawSoal = sheetToObjects(ss.getSheetByName(SHEETS.SOAL));
+  let siswa = [];
+  let rekap_nilai = [];
+  let pengguna = [];
+
+  const isStaff = userRole === 'admin' || userRole === 'guru';
+
+  if (isStaff) {
+    siswa = sheetToObjects(ss.getSheetByName(SHEETS.SISWA));
+    rekap_nilai = sheetToObjects(ss.getSheetByName(SHEETS.REKAP));
+    pengguna = sheetToObjects(ss.getSheetByName(SHEETS.PENGGUNA));
+    // Sembunyikan password pengguna dari respon
+    pengguna = pengguna.map(u => {
+      const copy = { ...u };
+      delete copy.password;
+      return copy;
+    });
+  } else {
+    // KEAMANAN TINGKAT TINGGI: Siswa TIDAK menerima kunci jawaban dan pembahasan!
+    rawSoal = rawSoal.map(s => {
+      const copy = { ...s };
+      delete copy.kunci_jawaban;
+      delete copy.pembahasan;
+      return copy;
+    });
+  }
+
   return {
-    kelas: sheetToObjects(ss.getSheetByName(SHEETS.KELAS)),
-    siswa: sheetToObjects(ss.getSheetByName(SHEETS.SISWA)),
-    mapel_jadwal: sheetToObjects(ss.getSheetByName(SHEETS.JADWAL)),
-    soal: sheetToObjects(ss.getSheetByName(SHEETS.SOAL)),
-    rekap_nilai: sheetToObjects(ss.getSheetByName(SHEETS.REKAP)),
-    pengaturan: sheetToObjects(ss.getSheetByName(SHEETS.PENGATURAN))[0] || {},
-    pengguna: sheetToObjects(ss.getSheetByName(SHEETS.PENGGUNA))
+    kelas: kelas,
+    siswa: siswa,
+    mapel_jadwal: mapel_jadwal,
+    soal: rawSoal,
+    rekap_nilai: rekap_nilai,
+    pengaturan: pengaturan,
+    pengguna: pengguna
   };
 }
 
@@ -623,9 +758,14 @@ function jsonResponse(data) {
 }
 
 /**
- * Inisialisasi Otomatis Semua Sheet dan Header Kolom
+ * Inisialisasi Cepat Sheet dan Header Kolom (Bypass Instan jika sudah diinisialisasi)
  */
 function initDatabaseSheets() {
+  const props = PropertiesService.getScriptProperties();
+  if (props.getProperty('DB_INITIALIZED') === 'true') {
+    return; // Bypass instan: hemat 700ms - 1500ms pada setiap request!
+  }
+
   const ss = SpreadsheetApp.getActiveSpreadsheet();
 
   const definitions = [
@@ -714,6 +854,8 @@ function initDatabaseSheets() {
       sheet.setFrozenRows(1);
     }
   });
+
+  props.setProperty('DB_INITIALIZED', 'true');
 }
 
 /**

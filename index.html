@@ -1142,11 +1142,66 @@
   }
 
   // ============================================================================
-  // SINKRONISASI DATA DARI GOOGLE SPREADSHEET
+  // SINKRONISASI DATA DARI GOOGLE SPREADSHEET & LOCAL CACHE ENGINE
   // ============================================================================
-  async function loadAllDataFromGAS() {
+  const LOCAL_CACHE_KEY = 'educbt_local_cache';
+
+  function saveLocalDataCache(data) {
     try {
-      const res = await fetch(GAS_URL + '?action=getAllData');
+      localStorage.setItem(LOCAL_CACHE_KEY, JSON.stringify({
+        timestamp: Date.now(),
+        data: {
+          kelas: data.kelas || [],
+          siswa: data.siswa || [],
+          mapel_jadwal: data.mapel_jadwal || [],
+          soal: data.soal || [],
+          rekap_nilai: data.rekap_nilai || [],
+          pengguna: data.pengguna || [],
+          pengaturan: data.pengaturan || {}
+        }
+      }));
+    } catch (e) {}
+  }
+
+  function loadLocalDataCache() {
+    try {
+      const raw = localStorage.getItem(LOCAL_CACHE_KEY);
+      if (!raw) return null;
+      const parsed = JSON.parse(raw);
+      // Cache berlaku selama 5 menit
+      if (Date.now() - parsed.timestamp < 5 * 60 * 1000) {
+        return parsed.data;
+      }
+    } catch (e) {}
+    return null;
+  }
+
+  let _isLoadingGAS = false;
+  async function loadAllDataFromGAS(force = false) {
+    // 1. Coba baca dari Local Cache terlebih dahulu untuk Instant Render (0ms)
+    if (!force) {
+      const cached = loadLocalDataCache();
+      if (cached) {
+        state.kelas = cached.kelas || [];
+        state.siswa = cached.siswa || [];
+        state.mapel_jadwal = cached.mapel_jadwal || [];
+        state.soal = cached.soal || [];
+        state.rekap_nilai = cached.rekap_nilai || [];
+        state.pengguna = cached.pengguna || [];
+        if (cached.pengaturan && Object.keys(cached.pengaturan).length > 0) {
+          state.pengaturan = { ...state.pengaturan, ...cached.pengaturan };
+        }
+        applyBrandingUI();
+        renderAll();
+      }
+    }
+
+    if (_isLoadingGAS) return;
+    _isLoadingGAS = true;
+
+    try {
+      const roleParam = state.user?.role || 'siswa';
+      const res = await fetch(GAS_URL + '?action=getAllData&role=' + encodeURIComponent(roleParam));
       const json = await res.json();
 
       if (json.status === 'success' && json.data) {
@@ -1160,6 +1215,7 @@
         if (d.pengaturan && Object.keys(d.pengaturan).length > 0) {
           state.pengaturan = { ...state.pengaturan, ...d.pengaturan };
         }
+        saveLocalDataCache(state);
       }
       applyBrandingUI();
       renderAll();
@@ -1167,6 +1223,8 @@
       console.warn('Gagal memuat data dari Spreadsheet:', err);
       applyBrandingUI();
       renderAll();
+    } finally {
+      _isLoadingGAS = false;
     }
   }
 
@@ -1257,6 +1315,7 @@
   // ============================================================================
   const AUTH_TOKEN_KEY = 'educbt_auth_token';
   const SAVED_MENU_KEY = 'educbt_saved_menu';
+  const ACTIVE_EXAM_STORAGE_KEY = 'educbt_active_exam_v1';
 
   function showLoginView() {
     hideSessionLoading();
@@ -1512,6 +1571,7 @@
     }
     localStorage.removeItem(AUTH_TOKEN_KEY);
     localStorage.removeItem(SAVED_MENU_KEY);
+    localStorage.removeItem(ACTIVE_EXAM_STORAGE_KEY);
     state.user = null;
     state.activeExam = null;
     hideSessionLoading();
@@ -1524,6 +1584,8 @@
     hideSessionLoading();
     document.getElementById('login-view').classList.add('hidden');
     document.getElementById('app-view').classList.remove('hidden');
+
+    checkAndRestoreActiveExam();
 
     renderSidebarMenu();
     updateUserProfileDisplay();
@@ -2226,9 +2288,17 @@
 
     try {
       showToast('Menyimpan kelas ke Spreadsheet...');
-      await callGAS('saveKelas', payload);
+      const res = await callGAS('saveKelas', payload);
+      const newId = res.id || editId || ('kls-' + Date.now());
+      if (editId) {
+        const idx = state.kelas.findIndex(k => k.id === editId);
+        if (idx > -1) state.kelas[idx] = { ...state.kelas[idx], ...payload };
+      } else {
+        state.kelas.push({ id: newId, ...payload });
+      }
       closeModal();
-      await loadAllDataFromGAS();
+      saveLocalDataCache(state);
+      renderAll();
       showToast('Data kelas tersimpan ke Google Sheets!');
     } catch (err) {
       showToast('Gagal menyimpan kelas: ' + err.message, 'error');
@@ -2246,7 +2316,9 @@
     try {
       showToast('Menghapus kelas dari Spreadsheet...');
       await callGAS('deleteKelas', { id });
-      await loadAllDataFromGAS();
+      state.kelas = state.kelas.filter(k => k.id !== id);
+      saveLocalDataCache(state);
+      renderAll();
       showToast('Kelas berhasil dihapus');
     } catch (err) {
       showToast('Gagal menghapus kelas: ' + err.message, 'error');
@@ -2568,9 +2640,17 @@
 
     try {
       showToast('Menyimpan siswa ke Spreadsheet...');
-      await callGAS('saveSiswa', payload);
+      const res = await callGAS('saveSiswa', payload);
+      const newId = res.id || editId || ('sis-' + Date.now());
+      if (editId) {
+        const idx = state.siswa.findIndex(s => s.id === editId);
+        if (idx > -1) state.siswa[idx] = { ...state.siswa[idx], ...payload };
+      } else {
+        state.siswa.push({ id: newId, ...payload });
+      }
       closeModal();
-      await loadAllDataFromGAS();
+      saveLocalDataCache(state);
+      renderAll();
       showToast('Data siswa tersimpan ke Google Sheets!');
     } catch (err) {
       showToast('Gagal menyimpan siswa: ' + err.message, 'error');
@@ -2588,7 +2668,9 @@
     try {
       showToast('Menghapus siswa dari Spreadsheet...');
       await callGAS('deleteSiswa', { id });
-      await loadAllDataFromGAS();
+      state.siswa = state.siswa.filter(s => s.id !== id);
+      saveLocalDataCache(state);
+      renderAll();
       showToast('Siswa berhasil dihapus dari Spreadsheet');
     } catch (err) {
       showToast('Gagal menghapus siswa: ' + err.message, 'error');
@@ -2755,9 +2837,17 @@
 
     try {
       showToast('Menyimpan jadwal ke Spreadsheet...');
-      await callGAS('saveJadwal', payload);
+      const res = await callGAS('saveJadwal', payload);
+      const newId = res.id || editId || ('jdw-' + Date.now());
+      if (editId) {
+        const idx = state.mapel_jadwal.findIndex(j => j.id === editId);
+        if (idx > -1) state.mapel_jadwal[idx] = { ...state.mapel_jadwal[idx], ...payload };
+      } else {
+        state.mapel_jadwal.push({ id: newId, ...payload, warna_tema: 'blue', status_aktif: true });
+      }
       closeModal();
-      await loadAllDataFromGAS();
+      saveLocalDataCache(state);
+      renderAll();
       showToast('Jadwal ujian tersimpan ke Google Sheets!');
     } catch (err) {
       showToast('Gagal menyimpan jadwal: ' + err.message, 'error');
@@ -2776,7 +2866,10 @@
     try {
       showToast('Menghapus jadwal dari Spreadsheet...');
       await callGAS('deleteJadwal', { id });
-      await loadAllDataFromGAS();
+      state.mapel_jadwal = state.mapel_jadwal.filter(j => j.id !== id);
+      state.soal = state.soal.filter(s => s.jadwal_id !== id);
+      saveLocalDataCache(state);
+      renderAll();
       showToast('Jadwal berhasil dihapus dari Spreadsheet');
     } catch (err) {
       showToast('Gagal menghapus jadwal: ' + err.message, 'error');
@@ -3125,9 +3218,13 @@
     renderAll();
   }
 
+  let _soalSearchDebounceTimer = null;
   function handleSoalSearch(query) {
     state.soalSearchQuery = query;
-    renderAll();
+    clearTimeout(_soalSearchDebounceTimer);
+    _soalSearchDebounceTimer = setTimeout(() => {
+      renderAll();
+    }, 200);
   }
 
   function handleSoalFilterJenis(jenis) {
@@ -4060,9 +4157,17 @@
 
     try {
       showToast('Menyimpan butir soal ke Google Sheets...');
-      await callGAS('saveSoal', payload);
+      const res = await callGAS('saveSoal', payload);
+      const newId = res.id || editId || ('soal-' + Date.now());
+      if (editId) {
+        const idx = state.soal.findIndex(s => s.id === editId);
+        if (idx > -1) state.soal[idx] = { ...state.soal[idx], ...payload };
+      } else {
+        state.soal.push({ id: newId, ...payload });
+      }
       closeModal();
-      await loadAllDataFromGAS();
+      saveLocalDataCache(state);
+      renderAll();
       showToast('Butir soal tersimpan permanen di database!');
     } catch (err) {
       showToast('Gagal menyimpan soal: ' + err.message, 'error');
@@ -4080,7 +4185,9 @@
     try {
       showToast('Menghapus butir soal dari Spreadsheet...');
       await callGAS('deleteSoal', { id });
-      await loadAllDataFromGAS();
+      state.soal = state.soal.filter(s => s.id !== id);
+      saveLocalDataCache(state);
+      renderAll();
       showToast('Soal dihapus dari Google Sheets');
     } catch (err) {
       showToast('Gagal menghapus soal: ' + err.message, 'error');
@@ -4106,8 +4213,11 @@
 
     try {
       showToast('Menduplikasi soal...');
-      await callGAS('saveSoal', newSoal);
-      await loadAllDataFromGAS();
+      const res = await callGAS('saveSoal', newSoal);
+      const newId = res.id || newSoal.id;
+      state.soal.push({ ...newSoal, id: newId });
+      saveLocalDataCache(state);
+      renderAll();
       showToast('Soal berhasil diduplikasi di Google Sheets!');
     } catch (err) {
       showToast('Gagal menduplikasi: ' + err.message, 'error');
@@ -4356,24 +4466,12 @@
       violations: 0
     };
 
+    saveActiveExamLocal();
+
     // Auto Fullscreen saat ujian dimulai
     toggleFullscreen();
 
-    // Setup Timer Hitung Mundur
-    state.activeExam.timerInterval = setInterval(() => {
-      if (!state.activeExam) return;
-      state.activeExam.remainingSeconds--;
-      const timerEl = document.getElementById('cbt-countdown-display');
-      if (timerEl) {
-        const m = String(Math.floor(state.activeExam.remainingSeconds / 60)).padStart(2, '0');
-        const s = String(state.activeExam.remainingSeconds % 60).padStart(2, '0');
-        timerEl.textContent = `${m}:${s}`;
-      }
-      if (state.activeExam.remainingSeconds <= 0) {
-        clearInterval(state.activeExam.timerInterval);
-        finishExamSession();
-      }
-    }, 1000);
+    initExamTimer();
 
     // Pasang Pengawas Anti-Curang (Deteksi Pindah Tab / Layar)
     if (state.pengaturan.anti_curang) {
@@ -4381,6 +4479,93 @@
     }
 
     renderAll();
+  }
+
+  function initExamTimer() {
+    if (!state.activeExam) return;
+    if (state.activeExam.timerInterval) clearInterval(state.activeExam.timerInterval);
+
+    state.activeExam.timerInterval = setInterval(() => {
+      if (!state.activeExam) return;
+      state.activeExam.remainingSeconds--;
+      const timerEl = document.getElementById('cbt-countdown-display');
+      if (timerEl) {
+        const rem = Math.max(0, state.activeExam.remainingSeconds);
+        const m = String(Math.floor(rem / 60)).padStart(2, '0');
+        const s = String(rem % 60).padStart(2, '0');
+        timerEl.textContent = `${m}:${s}`;
+      }
+
+      if (state.activeExam.remainingSeconds % 10 === 0) {
+        saveActiveExamLocal();
+      }
+
+      if (state.activeExam.remainingSeconds <= 0) {
+        clearInterval(state.activeExam.timerInterval);
+        finishExamSession(true);
+      }
+    }, 1000);
+  }
+
+  function saveActiveExamLocal() {
+    if (!state.activeExam) {
+      try { localStorage.removeItem(ACTIVE_EXAM_STORAGE_KEY); } catch (e) {}
+      return;
+    }
+    try {
+      const data = {
+        userId: state.user ? state.user.id : '',
+        jadwal: state.activeExam.jadwal,
+        soalList: state.activeExam.soalList,
+        currentIndex: state.activeExam.currentIndex,
+        answers: state.activeExam.answers,
+        ragu: state.activeExam.ragu,
+        remainingSeconds: state.activeExam.remainingSeconds,
+        violations: state.activeExam.violations || 0,
+        savedAt: Date.now()
+      };
+      localStorage.setItem(ACTIVE_EXAM_STORAGE_KEY, JSON.stringify(data));
+    } catch (e) {}
+  }
+
+  function checkAndRestoreActiveExam() {
+    try {
+      const savedStr = localStorage.getItem(ACTIVE_EXAM_STORAGE_KEY);
+      if (!savedStr) return false;
+      const data = JSON.parse(savedStr);
+      if (!data || !data.soalList || !data.jadwal || String(data.userId) !== String(state.user?.id)) {
+        return false;
+      }
+
+      const elapsedSeconds = Math.max(0, Math.floor((Date.now() - (data.savedAt || Date.now())) / 1000));
+      const remaining = data.remainingSeconds - elapsedSeconds;
+
+      if (remaining <= 0) {
+        localStorage.removeItem(ACTIVE_EXAM_STORAGE_KEY);
+        showToast('Waktu ujian Anda telah habis saat sesi ditutup.', 'warning');
+        return false;
+      }
+
+      state.activeExam = {
+        jadwal: data.jadwal,
+        soalList: data.soalList,
+        currentIndex: data.currentIndex || 0,
+        answers: data.answers || {},
+        ragu: data.ragu || {},
+        remainingSeconds: remaining,
+        timerInterval: null,
+        violations: data.violations || 0
+      };
+
+      initExamTimer();
+      if (state.pengaturan.anti_curang) {
+        setupAntiCheatWatcher();
+      }
+      showToast('Sesi pengerjaan ujian Anda berhasil dipulihkan!');
+      return true;
+    } catch (e) {
+      return false;
+    }
   }
 
   function setupAntiCheatWatcher() {
@@ -4398,11 +4583,12 @@
   function handleExamBlurEvent() {
     if (!state.activeExam) return;
     state.activeExam.violations = (state.activeExam.violations || 0) + 1;
+    saveActiveExamLocal();
     const max = state.pengaturan.max_pelanggaran || 3;
 
     if (state.activeExam.violations >= max) {
       alert(`⚠️ PERINGATAN KERAS: Anda telah berpindah aplikasi / tab sebanyak ${state.activeExam.violations} kali! Sesuai tata tertib, ujian Anda otomatis diselesaikan.`);
-      finishExamSession();
+      finishExamSession(true);
     } else {
       alert(`⚠️ PERINGATAN KECURANGAN (${state.activeExam.violations}/${max}): Dilarang berpindah tab atau meminimalisir layar selama ujian berlangsung! Jika mencapai ${max} pelanggaran, ujian akan otomatis dikumpulkan.`);
     }
@@ -4415,8 +4601,8 @@
     const isRagu = !!ex.ragu[currentSoal.id];
     const jmlOpsi = Number(state.pengaturan.jumlah_opsi || 4);
 
-    const m = String(Math.floor(ex.remainingSeconds / 60)).padStart(2, '0');
-    const s = String(ex.remainingSeconds % 60).padStart(2, '0');
+    const m = String(Math.floor(Math.max(0, ex.remainingSeconds) / 60)).padStart(2, '0');
+    const s = String(Math.max(0, ex.remainingSeconds) % 60).padStart(2, '0');
 
     const allOptions = [
       { key: 'A', text: currentSoal.opsi_a },
@@ -4479,19 +4665,19 @@
               <div class="space-y-3">
                 <label class="block font-extrabold text-slate-800 text-sm">Lembar Jawaban Esai:</label>
                 <textarea oninput="window.app.saveExamEssayAnswer('${currentSoal.id}', this.value)" rows="6" placeholder="Ketikkan jawaban uraian / esai Anda secara lengkap di sini..." class="w-full p-4 rounded-2xl border border-slate-200 bg-white font-medium text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500 leading-relaxed text-sm shadow-inner">${selectedAns}</textarea>
-                <p class="text-[11px] text-slate-400">Jawaban esai Anda tersimpan otomatis. Gunakan tombol 'Selanjutnya' atau peta nomor soal untuk beralih.</p>
+                <p class="text-[11px] text-slate-400">Jawaban esai Anda tersimpan otomatis secara berkala. Gunakan tombol 'Selanjutnya' atau peta nomor soal untuk berpindah.</p>
               </div>
             ` : `
-              <div class="space-y-2.5">
+              <div class="space-y-2.5" id="cbt-options-container">
                 ${options.map(opt => {
                   const active = selectedAns === opt.key;
                   return `
-                    <button type="button" onclick="window.app.selectExamOption('${currentSoal.id}', '${opt.key}')" class="w-full p-4 rounded-2xl border text-left transition flex items-center gap-3.5 ${
+                    <button type="button" id="cbt-opt-btn-${opt.key}" onclick="window.app.selectExamOption('${currentSoal.id}', '${opt.key}')" class="w-full p-4 rounded-2xl border text-left transition flex items-center gap-3.5 ${
                       active
                         ? 'bg-blue-600 text-white border-blue-600 shadow-md shadow-blue-500/20'
                         : 'bg-slate-50/80 hover:bg-blue-50/50 border-slate-200 text-slate-800'
                     }">
-                      <span class="w-8 h-8 rounded-xl font-extrabold text-xs flex items-center justify-center shrink-0 ${
+                      <span id="cbt-opt-badge-${opt.key}" class="w-8 h-8 rounded-xl font-extrabold text-xs flex items-center justify-center shrink-0 ${
                         active ? 'bg-white text-blue-600' : 'bg-white border border-slate-200 text-slate-700'
                       }">${opt.key}</span>
                       <span class="text-xs sm:text-sm font-semibold">${opt.text}</span>
@@ -4529,7 +4715,7 @@
           <div class="space-y-4">
             <div class="flex items-center justify-between">
               <h4 class="text-sm font-extrabold text-slate-900">Navigasi Nomor Soal</h4>
-              <span class="text-xs font-bold text-slate-400">${Object.keys(ex.answers).length} / ${ex.soalList.length} Terisi</span>
+              <span id="cbt-answered-count" class="text-xs font-bold text-slate-400">${Object.keys(ex.answers).length} / ${ex.soalList.length} Terisi</span>
             </div>
 
             <div class="grid grid-cols-5 gap-2">
@@ -4546,7 +4732,7 @@
                 }
 
                 return `
-                  <button type="button" onclick="window.app.jumpExamIndex(${idx})" class="h-10 rounded-xl border text-xs flex items-center justify-center transition relative ${bgClass} ${
+                  <button type="button" id="cbt-nav-btn-${idx}" onclick="window.app.jumpExamIndex(${idx})" class="h-10 rounded-xl border text-xs flex items-center justify-center transition relative ${bgClass} ${
                     isCurr ? 'ring-2 ring-offset-2 ring-slate-900' : ''
                   }">
                     ${idx + 1}
@@ -4573,18 +4759,89 @@
   function selectExamOption(soalId, optionKey) {
     if (!state.activeExam) return;
     state.activeExam.answers[soalId] = optionKey;
-    renderAll();
+    saveActiveExamLocal();
+
+    // DOM Micro-updates: Update hanya tombol opsi dan peta navigasi tanpa full render
+    const optKeys = ['A', 'B', 'C', 'D', 'E'];
+    let domSuccess = false;
+    optKeys.forEach(k => {
+      const btn = document.getElementById('cbt-opt-btn-' + k);
+      const badge = document.getElementById('cbt-opt-badge-' + k);
+      if (btn && badge) {
+        domSuccess = true;
+        if (k === optionKey) {
+          btn.className = 'w-full p-4 rounded-2xl border text-left transition flex items-center gap-3.5 bg-blue-600 text-white border-blue-600 shadow-md shadow-blue-500/20';
+          badge.className = 'w-8 h-8 rounded-xl font-extrabold text-xs flex items-center justify-center shrink-0 bg-white text-blue-600';
+        } else {
+          btn.className = 'w-full p-4 rounded-2xl border text-left transition flex items-center gap-3.5 bg-slate-50/80 hover:bg-blue-50/50 border-slate-200 text-slate-800';
+          badge.className = 'w-8 h-8 rounded-xl font-extrabold text-xs flex items-center justify-center shrink-0 bg-white border border-slate-200 text-slate-700';
+        }
+      }
+    });
+
+    const navBtn = document.getElementById('cbt-nav-btn-' + state.activeExam.currentIndex);
+    if (navBtn) {
+      const isRagu = !!state.activeExam.ragu[soalId];
+      if (!isRagu) {
+        navBtn.className = 'h-10 rounded-xl border text-xs flex items-center justify-center transition relative bg-blue-600 text-white border-blue-600 font-extrabold ring-2 ring-offset-2 ring-slate-900';
+      }
+    }
+
+    const countEl = document.getElementById('cbt-answered-count');
+    if (countEl) {
+      countEl.textContent = `${Object.keys(state.activeExam.answers).length} / ${state.activeExam.soalList.length} Terisi`;
+    }
+
+    if (!domSuccess) {
+      renderAll();
+    }
   }
 
+  let _essaySaveTimer = null;
   function saveExamEssayAnswer(soalId, val) {
     if (!state.activeExam) return;
     state.activeExam.answers[soalId] = val;
+    clearTimeout(_essaySaveTimer);
+    _essaySaveTimer = setTimeout(() => {
+      saveActiveExamLocal();
+      const navBtn = document.getElementById('cbt-nav-btn-' + state.activeExam?.currentIndex);
+      if (navBtn) {
+        const isRagu = !!state.activeExam.ragu[soalId];
+        const answered = !!String(val).trim();
+        if (!isRagu) {
+          if (answered) {
+            navBtn.className = 'h-10 rounded-xl border text-xs flex items-center justify-center transition relative bg-blue-600 text-white border-blue-600 font-extrabold ring-2 ring-offset-2 ring-slate-900';
+          } else {
+            navBtn.className = 'h-10 rounded-xl border text-xs flex items-center justify-center transition relative bg-slate-100 text-slate-700 border-slate-200 ring-2 ring-offset-2 ring-slate-900';
+          }
+        }
+      }
+      const countEl = document.getElementById('cbt-answered-count');
+      if (countEl && state.activeExam) {
+        countEl.textContent = `${Object.keys(state.activeExam.answers).length} / ${state.activeExam.soalList.length} Terisi`;
+      }
+    }, 300);
   }
 
   function toggleExamRagu(soalId) {
     if (!state.activeExam) return;
     state.activeExam.ragu[soalId] = !state.activeExam.ragu[soalId];
-    renderAll();
+    saveActiveExamLocal();
+
+    const navBtn = document.getElementById('cbt-nav-btn-' + state.activeExam.currentIndex);
+    if (navBtn) {
+      const isRagu = !!state.activeExam.ragu[soalId];
+      const answered = !!state.activeExam.answers[soalId];
+      let bgClass = 'bg-slate-100 text-slate-700 border-slate-200';
+      if (isRagu) {
+        bgClass = 'bg-amber-400 text-white border-amber-500 font-extrabold';
+      } else if (answered) {
+        bgClass = 'bg-blue-600 text-white border-blue-600 font-extrabold';
+      }
+      navBtn.className = `h-10 rounded-xl border text-xs flex items-center justify-center transition relative ${bgClass} ring-2 ring-offset-2 ring-slate-900`;
+    } else {
+      renderAll();
+    }
   }
 
   function moveExamIndex(dir) {
@@ -4592,6 +4849,7 @@
     const newIdx = state.activeExam.currentIndex + dir;
     if (newIdx >= 0 && newIdx < state.activeExam.soalList.length) {
       state.activeExam.currentIndex = newIdx;
+      saveActiveExamLocal();
       renderAll();
     }
   }
@@ -4599,11 +4857,25 @@
   function jumpExamIndex(idx) {
     if (!state.activeExam) return;
     state.activeExam.currentIndex = idx;
+    saveActiveExamLocal();
     renderAll();
   }
 
-  async function finishExamSession() {
-    if (!state.activeExam) return;
+  let _isSubmittingExam = false;
+  async function finishExamSession(forceSubmit = false) {
+    if (!state.activeExam || _isSubmittingExam) return;
+
+    if (!forceSubmit && state.activeExam.remainingSeconds > 0) {
+      const answeredCount = Object.keys(state.activeExam.answers).length;
+      const totalCount = state.activeExam.soalList.length;
+      const confirmMsg = answeredCount < totalCount
+        ? `Anda baru menjawab ${answeredCount} dari ${totalCount} butir soal.\nApakah Anda yakin ingin mengakhiri dan mengumpulkan ujian sekarang?`
+        : `Apakah Anda yakin ingin mengumpulkan seluruh lembar jawaban ujian sekarang?`;
+      if (!confirm(confirmMsg)) return;
+    }
+
+    _isSubmittingExam = true;
+
     if (state.activeExam.timerInterval) clearInterval(state.activeExam.timerInterval);
     clearAntiCheatWatcher();
 
@@ -4638,45 +4910,66 @@
       }
     });
 
-    const nilaiAkhir = totalBobot > 0 ? Math.round((totalSkor / totalBobot) * 100) : 0;
+    const clientNilaiAkhir = totalBobot > 0 ? Math.round((totalSkor / totalBobot) * 100) : 0;
 
     const rekapPayload = {
       siswa_id: state.user.id,
       jadwal_id: ex.jadwal.id,
       benar: totalBenar,
       salah: totalSalah,
-      nilai_akhir: nilaiAkhir,
+      nilai_akhir: clientNilaiAkhir,
       jawaban_json: ex.answers,
       waktu_selesai: new Date().toISOString()
     };
 
-    state.activeExam = null;
-
     if (!IS_CONNECTED_GAS) {
       state.rekap_nilai.push({ id: 'rek-' + Date.now(), ...rekapPayload });
       if (state.user.role === 'siswa') {
-        state.user.poin = (state.user.poin || 0) + nilaiAkhir;
+        state.user.poin = (state.user.poin || 0) + clientNilaiAkhir;
         const sIdx = state.siswa.findIndex(s => s.id === state.user.id);
         if (sIdx > -1) state.siswa[sIdx].poin = state.user.poin;
       }
+      state.activeExam = null;
+      try { localStorage.removeItem(ACTIVE_EXAM_STORAGE_KEY); } catch (e) {}
+      _isSubmittingExam = false;
       renderAll();
-      showToast(`Ujian selesai! Nilai Akhir Anda: ${nilaiAkhir}`);
+      showToast(`Ujian selesai! Nilai Akhir Anda: ${clientNilaiAkhir}`);
       return;
     }
 
     try {
-      showToast('Mengirim hasil ujian ke Google Spreadsheet...');
-      await callGAS('saveRekap', rekapPayload);
+      showToast('Mengirim hasil ujian ke Google Spreadsheet (Lock Protected)...');
+      const res = await callGAS('saveRekap', rekapPayload);
+
+      const finalNilai = (res && typeof res.nilai_akhir === 'number') ? res.nilai_akhir : clientNilaiAkhir;
+      const finalBenar = (res && typeof res.benar === 'number') ? res.benar : totalBenar;
+      const finalSalah = (res && typeof res.salah === 'number') ? res.salah : totalSalah;
 
       if (state.user.role === 'siswa') {
-        state.user.poin = (state.user.poin || 0) + nilaiAkhir;
+        state.user.poin = (state.user.poin || 0) + finalNilai;
+        const sIdx = state.siswa.findIndex(s => s.id === state.user.id);
+        if (sIdx > -1) state.siswa[sIdx].poin = state.user.poin;
       }
 
-      await loadAllDataFromGAS();
-      showToast(`Jawaban berhasil dikirim ke Spreadsheet! Skor: ${nilaiAkhir}`);
-    } catch (err) {
-      showToast('Gagal menyimpan hasil ujian: ' + err.message, 'error');
+      state.rekap_nilai.push({
+        id: (res && res.id) || ('rek-' + Date.now()),
+        ...rekapPayload,
+        nilai_akhir: finalNilai,
+        benar: finalBenar,
+        salah: finalSalah
+      });
+
+      saveLocalDataCache(state);
+
+      state.activeExam = null;
+      try { localStorage.removeItem(ACTIVE_EXAM_STORAGE_KEY); } catch (e) {}
+      _isSubmittingExam = false;
+
       renderAll();
+      showToast(`Jawaban berhasil tersimpan di Spreadsheet! Skor Anda: ${finalNilai}`, 'success');
+    } catch (err) {
+      _isSubmittingExam = false;
+      showToast('Gagal mengirim jawaban ke server: ' + err.message + '. Lembar jawaban Anda tetap tersimpan aman di perangkat. Silakan coba klik Kirim lagi.', 'error');
     }
   }
 
@@ -5293,8 +5586,16 @@
     showToast('Menyimpan akun pengguna ke database...');
 
     try {
-      await callGAS('savePengguna', payload);
-      await loadAllDataFromGAS();
+      const res = await callGAS('savePengguna', payload);
+      const newId = res.id || id || ('usr-' + Date.now());
+      if (id) {
+        const idx = (state.pengguna || []).findIndex(u => String(u.id) === String(id));
+        if (idx !== -1) state.pengguna[idx] = { ...state.pengguna[idx], ...payload };
+      } else {
+        state.pengguna.push({ id: newId, ...payload });
+      }
+      saveLocalDataCache(state);
+      renderAll();
       showToast('Akun pengguna berhasil disimpan!');
     } catch (err) {
       if (id) {
@@ -5304,7 +5605,7 @@
         state.pengguna.push({ id: 'usr-' + Date.now(), ...payload });
       }
       renderAll();
-      showToast('Tersimpan di cache');
+      showToast('Tersimpan di cache lokal');
     }
   }
 
@@ -5317,7 +5618,9 @@
     showToast('Menghapus akun pengguna dari database...');
     try {
       await callGAS('deletePengguna', { id });
-      await loadAllDataFromGAS();
+      state.pengguna = (state.pengguna || []).filter(u => String(u.id) !== String(id));
+      saveLocalDataCache(state);
+      renderAll();
       showToast('Akun berhasil dihapus dari database!');
     } catch (err) {
       state.pengguna = (state.pengguna || []).filter(u => String(u.id) !== String(id));
@@ -5357,16 +5660,23 @@
     try {
       showToast('Menyimpan pengaturan ke Spreadsheet...');
       await callGAS('savePengaturan', payload);
-      await loadAllDataFromGAS();
+      state.pengaturan = { ...state.pengaturan, ...payload };
+      saveLocalDataCache(state);
+      applyBrandingUI();
+      renderAll();
       showToast('Pengaturan tersimpan ke Google Sheets!');
     } catch (err) {
       showToast('Gagal menyimpan pengaturan: ' + err.message, 'error');
     }
   }
 
+  let _searchDebounceTimer = null;
   function handleGlobalSearch(val) {
     state.searchQuery = val;
-    renderAll();
+    clearTimeout(_searchDebounceTimer);
+    _searchDebounceTimer = setTimeout(() => {
+      renderAll();
+    }, 200);
   }
 
   // ============================================================================
@@ -5429,6 +5739,8 @@
     moveExamIndex,
     jumpExamIndex,
     finishExamSession,
+    saveActiveExamLocal,
+    checkAndRestoreActiveExam,
     filterRekapByJadwal,
     deleteRekap,
     exportRekapCSV,
