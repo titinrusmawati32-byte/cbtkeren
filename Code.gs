@@ -1,6 +1,6 @@
 /**
  * ============================================================================
- * BACKEND GOOGLE APPS SCRIPT (GAS) UNTUK APLIKASI EDUCBT LINGORA
+ * BACKEND GOOGLE APPS SCRIPT (GAS) UNTUK APLIKASI EDU CBT SENAPATI
  * Database: Google Sheets (Spreadsheet)
  * ============================================================================
  * 
@@ -908,7 +908,7 @@ function initDatabaseSheets() {
       initial: [
         [
           1,
-          'EduCBT Lingora',
+          'EDU CBT SENAPATI',
           'SMA Negeri Harapan Bangsa',
           '',
           'Jl. Pendidikan No. 45, Kota Cerdas',

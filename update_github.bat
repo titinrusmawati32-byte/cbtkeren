@@ -1,6 +1,6 @@
 @echo off
 echo ========================================================
-echo   EduCBT Lingora - Sinkronisasi Perubahan ke GitHub
+echo   EDU CBT SENAPATI - Sinkronisasi Perubahan ke GitHub
 echo ========================================================
 echo.
 cd /d "%~dp0"
@@ -9,7 +9,7 @@ echo [1/3] Menambahkan berkas yang diubah...
 git add .
 
 echo [2/3] Menyimpan commit...
-git commit -m "Perf: Fast login decoupling, GAS targeted auth query, submission guards, and client timing metrics"
+git commit -m "Branding: Update nama aplikasi menjadi EDU CBT SENAPATI dan optimasi login"
 
 echo [3/3] Mengunggah ke GitHub...
 git push origin main
