@@ -3191,6 +3191,63 @@
     return s;
   }
 
+  function getPdfBlobUrl(rawUrl) {
+    if (!rawUrl) return '';
+    if (rawUrl.startsWith('data:')) {
+      try {
+        const parts = rawUrl.split(';base64,');
+        const contentType = parts[0].split(':')[1] || 'application/pdf';
+        const raw = window.atob(parts[1] || parts[0]);
+        const rawLength = raw.length;
+        const uInt8Array = new Uint8Array(rawLength);
+        for (let i = 0; i < rawLength; ++i) {
+          uInt8Array[i] = raw.charCodeAt(i);
+        }
+        const blob = new Blob([uInt8Array], { type: contentType });
+        return URL.createObjectURL(blob);
+      } catch (e) {
+        return rawUrl;
+      }
+    }
+    return rawUrl;
+  }
+
+  function openPdfInNativeViewer(id) {
+    const m = (state.materi || []).find(it => it.id === id);
+    if (!m || !m.url) return;
+
+    if (m.url.startsWith('http') && m.url.includes('drive.google.com')) {
+      const match = m.url.match(/\/file\/d\/([a-zA-Z0-9_-]+)/) || m.url.match(/id=([a-zA-Z0-9_-]+)/);
+      const targetUrl = match && match[1] ? `https://drive.google.com/file/d/${match[1]}/view` : m.url;
+      window.open(targetUrl, '_blank');
+      return;
+    }
+
+    const blobUrl = getPdfBlobUrl(m.url);
+    const a = document.createElement('a');
+    a.href = blobUrl;
+    a.target = '_blank';
+    a.rel = 'noopener noreferrer';
+    document.body.appendChild(a);
+    a.click();
+    setTimeout(() => a.remove(), 200);
+  }
+
+  function downloadPdfMateri(id) {
+    const m = (state.materi || []).find(it => it.id === id);
+    if (!m || !m.url) return;
+
+    const blobUrl = getPdfBlobUrl(m.url);
+    const fileName = (m.judul || 'Materi-Pembelajaran').replace(/[^a-zA-Z0-9_-]/g, '_') + '.pdf';
+    const a = document.createElement('a');
+    a.href = blobUrl;
+    a.download = fileName;
+    document.body.appendChild(a);
+    a.click();
+    setTimeout(() => a.remove(), 200);
+    showToast('Mengunduh dokumen PDF...');
+  }
+
   function handleMateriSearch(val) {
     state.materiSearchQuery = val;
     renderAll();
@@ -3684,44 +3741,92 @@
         </div>
       `;
     } else if (m.jenis === 'PDF') {
-      const pdfPreviewUrl = getPdfPreviewUrl(m.url);
+      const isMobile = window.innerWidth < 768 || /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent);
+      const isBase64 = String(m.url || '').startsWith('data:');
 
-      contentHtml = `
-        <div class="space-y-4">
-          <!-- Floating Action Bar PDF -->
-          <div class="flex flex-wrap items-center justify-between gap-2 p-3 rounded-2xl bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700">
-            <div class="flex items-center gap-2">
-              <span class="w-8 h-8 rounded-xl bg-red-600 text-white flex items-center justify-center text-lg shadow-sm">
-                <i class="ph-fill ph-file-pdf"></i>
-              </span>
-              <div>
-                <span class="text-xs font-black text-slate-900 dark:text-white block">Dokumen PDF Terbuka</span>
-                <span class="text-[10px] text-slate-500 dark:text-slate-400">Gunakan scrollbar di dalam reader untuk membaca seluruh halaman</span>
+      if (isMobile || isBase64) {
+        contentHtml = `
+          <div class="space-y-4">
+            <!-- Tampilan Kartu PDF Mobile Khusus Smartphone (Menghilangkan Tampilan Rusak Base64 Android) -->
+            <div class="p-6 sm:p-8 rounded-3xl bg-gradient-to-br from-red-50 via-rose-50 to-amber-50 dark:from-red-950/30 dark:via-rose-950/20 dark:to-slate-900 border border-red-200/80 dark:border-red-900/40 text-center space-y-4 shadow-sm">
+              <div class="relative w-20 h-20 mx-auto">
+                <div class="w-20 h-20 rounded-3xl bg-red-600 text-white flex items-center justify-center text-4xl shadow-xl shadow-red-500/30 animate-pulse">
+                  <i class="ph-fill ph-file-pdf"></i>
+                </div>
+                <div class="absolute -top-1.5 -right-1.5 px-2 py-0.5 rounded-full bg-emerald-500 text-white text-[10px] font-black shadow-sm">
+                  DOKUMEN PDF
+                </div>
+              </div>
+
+              <div class="space-y-1.5 max-w-md mx-auto">
+                <h3 class="text-base sm:text-lg font-black text-slate-900 dark:text-white leading-snug">
+                  ${m.judul}
+                </h3>
+                <p class="text-xs text-slate-500 dark:text-slate-400">
+                  Dokumen Pembelajaran Digital • Nyaman Dibaca di Semua Smartphone
+                </p>
+              </div>
+
+              <!-- Tombol Aksi Utama Baca & Unduh -->
+              <div class="flex flex-col sm:flex-row items-center justify-center gap-2.5 max-w-md mx-auto pt-2">
+                <button type="button" onclick="window.app.openPdfInNativeViewer('${m.id}')" class="w-full sm:w-auto flex-1 py-3.5 px-5 rounded-2xl bg-gradient-to-r from-red-600 to-rose-600 hover:from-red-700 hover:to-rose-700 active:scale-95 text-white font-black text-xs sm:text-sm flex items-center justify-center gap-2 shadow-lg shadow-red-500/25 transition">
+                  <i class="ph-bold ph-book-open-text text-lg"></i>
+                  <span>Buka & Baca Dokumen PDF</span>
+                  <i class="ph-bold ph-arrow-square-out text-sm"></i>
+                </button>
+
+                <button type="button" onclick="window.app.downloadPdfMateri('${m.id}')" class="w-full sm:w-auto py-3.5 px-5 rounded-2xl bg-white dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700 font-bold text-xs flex items-center justify-center gap-2 shadow-sm transition">
+                  <i class="ph-bold ph-download-simple text-base"></i>
+                  <span>Unduh File</span>
+                </button>
+              </div>
+
+              <div class="pt-2 text-[11px] text-slate-500 dark:text-slate-400 flex items-center justify-center gap-1.5">
+                <i class="ph-bold ph-check-circle text-emerald-500"></i>
+                <span>Membuka dokumen dengan pembaca PDF ponsel beresolusi tinggi & bebas kuota</span>
               </div>
             </div>
-            <div class="flex items-center gap-2">
-              <a href="${m.url}" target="_blank" rel="noopener noreferrer" class="px-3 py-1.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:text-blue-600 text-xs font-bold flex items-center gap-1 shadow-sm transition">
-                <i class="ph-bold ph-arrow-square-out text-sm"></i>
-                <span>Tab Baru</span>
-              </a>
-              <a href="${m.url}" download="${m.judul}.pdf" target="_blank" class="px-3.5 py-1.5 rounded-xl bg-red-600 hover:bg-red-700 text-white text-xs font-black flex items-center gap-1 shadow-sm transition">
-                <i class="ph-bold ph-download-simple text-sm"></i>
-                <span>Unduh PDF</span>
-              </a>
+          </div>
+        `;
+      } else {
+        const pdfPreviewUrl = getPdfPreviewUrl(m.url);
+        contentHtml = `
+          <div class="space-y-4">
+            <!-- Floating Action Bar PDF Desktop -->
+            <div class="flex flex-wrap items-center justify-between gap-2 p-3 rounded-2xl bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700">
+              <div class="flex items-center gap-2">
+                <span class="w-8 h-8 rounded-xl bg-red-600 text-white flex items-center justify-center text-lg shadow-sm">
+                  <i class="ph-fill ph-file-pdf"></i>
+                </span>
+                <div>
+                  <span class="text-xs font-black text-slate-900 dark:text-white block">Dokumen PDF Terbuka</span>
+                  <span class="text-[10px] text-slate-500 dark:text-slate-400">Gunakan scrollbar di dalam reader untuk membaca seluruh halaman</span>
+                </div>
+              </div>
+              <div class="flex items-center gap-2">
+                <button type="button" onclick="window.app.openPdfInNativeViewer('${m.id}')" class="px-3 py-1.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:text-blue-600 text-xs font-bold flex items-center gap-1 shadow-sm transition">
+                  <i class="ph-bold ph-arrow-square-out text-sm"></i>
+                  <span>Tab Baru</span>
+                </button>
+                <button type="button" onclick="window.app.downloadPdfMateri('${m.id}')" class="px-3.5 py-1.5 rounded-xl bg-red-600 hover:bg-red-700 text-white text-xs font-black flex items-center gap-1 shadow-sm transition">
+                  <i class="ph-bold ph-download-simple text-sm"></i>
+                  <span>Unduh PDF</span>
+                </button>
+              </div>
+            </div>
+
+            <!-- Embedded High-Height PDF Viewer Desktop -->
+            <div class="w-full h-[580px] sm:h-[650px] rounded-2xl overflow-hidden border border-slate-200 dark:border-slate-700 shadow-inner bg-slate-900/5">
+              <iframe 
+                src="${pdfPreviewUrl}" 
+                title="${m.judul}"
+                class="w-full h-full border-0"
+                allow="fullscreen">
+              </iframe>
             </div>
           </div>
-
-          <!-- Embedded High-Height PDF Viewer -->
-          <div class="w-full h-[580px] sm:h-[650px] rounded-2xl overflow-hidden border border-slate-200 dark:border-slate-700 shadow-inner bg-slate-900/5">
-            <iframe 
-              src="${pdfPreviewUrl}" 
-              title="${m.judul}"
-              class="w-full h-full border-0"
-              allow="fullscreen">
-            </iframe>
-          </div>
-        </div>
-      `;
+        `;
+      }
     } else {
       // GAMBAR DENGAN KONTROL ZOOM
       window._previewImageZoom = 1;
@@ -7711,6 +7816,8 @@
     setMateriModalJenis,
     handleMateriFileUpload,
     zoomPreviewImage,
+    openPdfInNativeViewer,
+    downloadPdfMateri,
     handleGlobalSearch,
     toggleFullscreen,
     toggleTheme,
