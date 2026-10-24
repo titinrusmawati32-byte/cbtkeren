@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-  <title>EDU CBT SENAPATI — Aplikasi CBT & Pembelajaran Modern</title>
+  <title>SENAPATI EXAM — Sistem Evaluasi dan Pembelajaran Berbasis Digital</title>
 
   <!-- PWA Manifest Single-File Data URI -->
   <link rel="manifest" href="data:application/manifest+json;utf8,%7B%22name%22%3A%22EDU%20CBT%20SENAPATI%22%2C%22short_name%22%3A%22EDU%20CBT%20SENAPATI%22%2C%22start_url%22%3A%22.%22%2C%22display%22%3A%22standalone%22%2C%22background_color%22%3A%22%23F4F7FE%22%2C%22theme_color%22%3A%22%232563EB%22%2C%22icons%22%3A%5B%7B%22src%22%3A%22https%3A%2F%2Fcdn-icons-png.flaticon.com%2F512%2F3135%2F3135810.png%22%2C%22sizes%22%3A%22512x512%22%2C%22type%22%3A%22image%2Fpng%22%7D%5D%7D" />
@@ -517,140 +517,422 @@
     </div>
   </div>
 
-  <!-- VIEW 1: HALAMAN LOGIN (GLASSMORPHISM & SENAPATI THEME) -->
-  <div id="login-view" class="flex-1 flex items-center justify-center p-4 overflow-y-auto relative">
-    <!-- Tombol Mode Siang & Malam Halaman Login -->
-    <div class="absolute top-5 right-5 z-20">
-      <button type="button" onclick="window.app.toggleTheme()" class="theme-toggle-btn group relative flex items-center gap-2 px-3.5 py-2 rounded-full border border-slate-200 bg-white/90 hover:bg-white text-slate-700 backdrop-blur-md transition-all shadow-md cursor-pointer select-none" title="Ganti Mode Tema" aria-label="Ganti Mode Tema">
-        <span id="login-theme-icon-wrapper" class="flex items-center justify-center transition-transform duration-300">
-          <i id="login-theme-icon" class="ph-bold ph-sun text-amber-500 text-base"></i>
-        </span>
-        <span id="login-theme-text" class="text-xs font-bold tracking-tight">Siang</span>
-      </button>
-    </div>
+  <!-- VIEW 1: HALAMAN LOGIN SENAPATI EXAM (RESPONSIF LAPTOP & HP) -->
+  <div id="login-view" class="flex-1 w-full min-h-screen flex flex-col justify-center bg-gradient-to-br from-[#1E3A8A] via-[#1D4ED8] to-[#1E40AF] relative overflow-x-hidden selection:bg-blue-300 selection:text-blue-900">
+    
+    <!-- Ornamen Latar Belakang Cahaya Halus -->
+    <div class="absolute -top-32 -left-32 w-96 h-96 bg-sky-400/20 rounded-full blur-3xl pointer-events-none"></div>
+    <div class="absolute -bottom-32 -right-32 w-96 h-96 bg-blue-400/20 rounded-full blur-3xl pointer-events-none"></div>
 
-    <!-- Ornamen Latar Belakang -->
-    <div class="absolute -top-24 -left-24 w-96 h-96 bg-blue-300/30 rounded-full blur-3xl pointer-events-none"></div>
-    <div class="absolute -bottom-24 -right-24 w-96 h-96 bg-emerald-300/30 rounded-full blur-3xl pointer-events-none"></div>
+    <!-- ======================================================== -->
+    <!-- TAMPILAN LAPTOP / DESKTOP (Tampil di Layar Lebar: lg ke atas) -->
+    <!-- ======================================================== -->
+    <div class="hidden lg:flex w-full max-w-7xl mx-auto items-center justify-between p-8 xl:p-14 gap-12 relative z-10">
+      
+      <!-- SISI KIRI: BRANDING, FITUR, ILUSTRASI 3D ISOMETRIK LAPTOP -->
+      <div class="flex-1 flex flex-col justify-between max-w-xl text-white py-4">
+        <div>
+          <!-- Header Dua Logo Berdampingan -->
+          <div class="flex items-center gap-3.5 mb-5">
+            <!-- Logo 1: Perisai Emas Merah Hijau (Shield) -->
+            <div class="w-12 h-12 rounded-2xl bg-white/10 backdrop-blur-md p-1.5 flex items-center justify-center border border-white/20 shadow-lg shrink-0">
+              <svg viewBox="0 0 64 64" class="w-full h-full drop-shadow-sm">
+                <defs>
+                  <linearGradient id="shieldGoldDk" x1="0%" y1="0%" x2="100%" y2="100%">
+                    <stop offset="0%" stop-color="#FCD34D"/>
+                    <stop offset="50%" stop-color="#F59E0B"/>
+                    <stop offset="100%" stop-color="#D97706"/>
+                  </linearGradient>
+                  <linearGradient id="shieldRedDk" x1="0%" y1="0%" x2="0%" y2="100%">
+                    <stop offset="0%" stop-color="#EF4444"/>
+                    <stop offset="100%" stop-color="#B91C1C"/>
+                  </linearGradient>
+                </defs>
+                <path d="M32 4 C44 4, 56 10, 56 16 C56 36, 44 54, 32 60 C20 54, 8 36, 8 16 C8 10, 20 4, 32 4 Z" fill="url(#shieldGoldDk)"/>
+                <path d="M32 7 C42 7, 52 12, 52 17 C52 35, 42 50, 32 56 C22 50, 12 35, 12 17 C12 12, 22 7, 32 7 Z" fill="url(#shieldRedDk)"/>
+                <path d="M18 42 C24 48, 40 48, 46 42 L48 48 C40 54, 24 54, 16 48 Z" fill="#10B981"/>
+                <polygon points="32,18 35,26 44,26 37,32 39,40 32,35 25,40 27,32 20,26 29,26" fill="#FDE047"/>
+                <circle cx="32" cy="29" r="3.5" fill="#F59E0B"/>
+              </svg>
+            </div>
 
-    <div class="w-full max-w-4xl grid grid-cols-1 lg:grid-cols-12 glass-panel rounded-3xl shadow-xl overflow-hidden border border-white">
-      <!-- Sisi Kiri: Ilustrasi Maskot & Branding -->
-      <div class="lg:col-span-6 hero-banner-gradient p-8 flex flex-col justify-between relative overflow-hidden">
-        <div class="relative z-10">
-          <div class="inline-flex items-center gap-2.5 bg-white/90 backdrop-blur px-3.5 py-1.5 rounded-2xl shadow-sm mb-6">
-            <img id="login-logo-img" src="" alt="Logo" class="w-7 h-7 rounded-lg object-contain hidden" />
-            <span id="login-logo-emoji" class="text-2xl">🐦</span>
+            <!-- Logo 2: Bola Dunia di atas Buku Terbuka (Globe on Book) -->
+            <div class="w-12 h-12 rounded-2xl bg-white/10 backdrop-blur-md p-1.5 flex items-center justify-center border border-white/20 shadow-lg shrink-0">
+              <svg viewBox="0 0 64 64" class="w-full h-full drop-shadow-sm">
+                <defs>
+                  <linearGradient id="globeGradDk" x1="0%" y1="0%" x2="100%" y2="100%">
+                    <stop offset="0%" stop-color="#60A5FA"/>
+                    <stop offset="50%" stop-color="#3B82F6"/>
+                    <stop offset="100%" stop-color="#1D4ED8"/>
+                  </linearGradient>
+                  <linearGradient id="goldRingDk" x1="0%" y1="0%" x2="100%" y2="100%">
+                    <stop offset="0%" stop-color="#FDE047"/>
+                    <stop offset="100%" stop-color="#D97706"/>
+                  </linearGradient>
+                </defs>
+                <path d="M10 46 C20 42, 30 44, 32 48 C34 44, 44 42, 54 46 L54 54 C44 50, 34 52, 32 56 C30 52, 20 50, 10 54 Z" fill="#F8FAFC" stroke="#CBD5E1" stroke-width="1.2"/>
+                <path d="M12 48 C20 44, 29 46, 31 49 L31 54 C29 51, 20 49, 12 53 Z" fill="#E2E8F0"/>
+                <path d="M52 48 C44 44, 35 46, 33 49 L33 54 C35 51, 44 49, 52 53 Z" fill="#E2E8F0"/>
+                <path d="M8 53 C18 49, 30 51, 32 57 C34 51, 46 49, 56 53 L56 56 C46 52, 34 54, 32 60 C30 54, 18 52, 8 56 Z" fill="url(#goldRingDk)"/>
+                <path d="M30 40 L34 40 L34 47 L30 47 Z" fill="#D97706"/>
+                <path d="M20 28 A14 14 0 0 1 44 28" fill="none" stroke="url(#goldRingDk)" stroke-width="2.5" stroke-linecap="round"/>
+                <circle cx="32" cy="24" r="14" fill="url(#globeGradDk)"/>
+                <ellipse cx="32" cy="24" rx="7" ry="14" fill="none" stroke="#93C5FD" stroke-width="1" stroke-opacity="0.8"/>
+                <line x1="18" y1="24" x2="46" y2="24" stroke="#93C5FD" stroke-width="1" stroke-opacity="0.8"/>
+                <line x1="21" y1="18" x2="43" y2="18" stroke="#93C5FD" stroke-width="1" stroke-opacity="0.6"/>
+                <line x1="21" y1="30" x2="43" y2="30" stroke="#93C5FD" stroke-width="1" stroke-opacity="0.6"/>
+                <circle cx="28" cy="19" r="2.5" fill="#34D399" opacity="0.9"/>
+                <circle cx="36" cy="26" r="3" fill="#34D399" opacity="0.9"/>
+              </svg>
+            </div>
+
             <div>
-              <h1 id="login-app-name" class="font-extrabold text-slate-900 text-base leading-none">EDU CBT SENAPATI</h1>
-              <p class="text-[10px] font-semibold text-blue-600 tracking-wider uppercase">Google Sheets CBT Engine</p>
+              <span class="inline-block px-2.5 py-0.5 rounded-full bg-blue-500/40 border border-blue-300/30 text-[10px] font-black uppercase tracking-widest text-sky-200">
+                Official Portal
+              </span>
             </div>
           </div>
-          <h2 class="text-2xl sm:text-3xl font-extrabold text-slate-900 leading-tight mb-3">
-            Ujian & Belajar Lebih Praktis & Akurat! 👋
-          </h2>
-          <p id="login-school-name" class="text-sm font-medium text-slate-700">
-            Portal Evaluasi & Pembelajaran Terpadu berbasis Google Spreadsheet Database.
-          </p>
-        </div>
 
-        <!-- Ilustrasi Burung Maskot Senapati Style (SVG) -->
-        <div class="my-6 flex justify-center relative z-10">
-          <div class="w-40 h-40 rounded-full bg-white/40 backdrop-blur-sm flex items-center justify-center shadow-inner border border-white/60">
-            <svg viewBox="0 0 120 120" class="w-28 h-28 drop-shadow-md">
-              <ellipse cx="60" cy="68" rx="34" ry="36" fill="#1D63FF" />
-              <ellipse cx="60" cy="74" rx="22" ry="25" fill="#EFF6FF" />
-              <path d="M26 62 C14 50, 14 78, 28 82 Z" fill="#2563EB" />
-              <path d="M94 62 C106 50, 106 78, 92 82 Z" fill="#2563EB" />
-              <circle cx="47" cy="52" r="9" fill="#FFFFFF" />
-              <circle cx="73" cy="52" r="9" fill="#FFFFFF" />
-              <circle cx="49" cy="52" r="4.5" fill="#0F172A" />
-              <circle cx="71" cy="52" r="4.5" fill="#0F172A" />
-              <circle cx="50.5" cy="50.5" r="1.5" fill="#FFFFFF" />
-              <circle cx="72.5" cy="50.5" r="1.5" fill="#FFFFFF" />
-              <polygon points="55,58 65,58 60,66" fill="#F59E0B" />
-              <path d="M36 72 Q60 80 84 72 L86 79 Q60 87 34 79 Z" fill="#FBBF24" />
-              <path d="M72 76 L82 94 L72 95 Z" fill="#F59E0B" />
-              <rect x="38" y="30" width="20" height="12" rx="6" fill="#78350F" stroke="#FBBF24" stroke-width="2" />
-              <rect x="62" y="30" width="20" height="12" rx="6" fill="#78350F" stroke="#FBBF24" stroke-width="2" />
-            </svg>
+          <!-- Judul & Subjudul -->
+          <h1 id="login-app-name-desktop" class="text-4xl xl:text-5xl font-black text-white tracking-tight leading-none mb-3">
+            SENAPATI EXAM
+          </h1>
+          <p class="text-base font-bold text-sky-200 tracking-wide mb-3">
+            Sistem Evaluasi dan Pembelajaran Berbasis Digital
+          </p>
+          <p id="login-school-name-desktop" class="text-sm text-blue-100/90 leading-relaxed max-w-lg mb-6">
+            Platform ujian online untuk mendukung proses pembelajaran yang lebih efektif, transparan dan terukur.
+          </p>
+
+          <!-- 3 Feature Badges -->
+          <div class="flex flex-wrap items-center gap-2.5 mb-8">
+            <span class="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-white/10 backdrop-blur-md border border-white/20 text-xs font-bold text-white shadow-sm">
+              <span>🛡️</span> Aman & Terpercaya
+            </span>
+            <span class="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-white/10 backdrop-blur-md border border-white/20 text-xs font-bold text-white shadow-sm">
+              <span>⚡</span> Mudah Digunakan
+            </span>
+            <span class="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-white/10 backdrop-blur-md border border-white/20 text-xs font-bold text-white shadow-sm">
+              <span>📈</span> Hasil Akurat
+            </span>
           </div>
         </div>
 
-        <div class="relative z-10 flex items-center justify-between text-xs font-semibold text-slate-700 bg-white/60 backdrop-blur px-4 py-2.5 rounded-2xl">
-          <span>📊 Google Sheets</span>
-          <span>🛡️ Anti-Curang</span>
-          <span>🏆 Realtime Score</span>
+        <!-- Ilustrasi 3D Isometrik Laptop, Topi Toga & Buku -->
+        <div class="my-4 flex justify-center xl:justify-start pr-6">
+          <svg viewBox="0 0 540 280" class="w-full max-w-md drop-shadow-2xl overflow-visible">
+            <defs>
+              <linearGradient id="isoBase" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" stop-color="#3B82F6" stop-opacity="0.3"/>
+                <stop offset="100%" stop-color="#1E3A8A" stop-opacity="0.05"/>
+              </linearGradient>
+              <linearGradient id="laptopScreen" x1="0%" y1="0%" x2="0%" y2="100%">
+                <stop offset="0%" stop-color="#0284C7"/>
+                <stop offset="100%" stop-color="#0369A1"/>
+              </linearGradient>
+              <linearGradient id="laptopMetal" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" stop-color="#E2E8F0"/>
+                <stop offset="100%" stop-color="#94A3B8"/>
+              </linearGradient>
+              <linearGradient id="bookOrange" x1="0%" y1="0%" x2="100%" y2="0%">
+                <stop offset="0%" stop-color="#F97316"/>
+                <stop offset="100%" stop-color="#EA580C"/>
+              </linearGradient>
+              <linearGradient id="bookGreen" x1="0%" y1="0%" x2="100%" y2="0%">
+                <stop offset="0%" stop-color="#10B981"/>
+                <stop offset="100%" stop-color="#059669"/>
+              </linearGradient>
+              <linearGradient id="potGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" stop-color="#F1F5F9"/>
+                <stop offset="100%" stop-color="#CBD5E1"/>
+              </linearGradient>
+            </defs>
+
+            <!-- Bayangan Dasar Isometrik -->
+            <ellipse cx="270" cy="245" rx="230" ry="24" fill="url(#isoBase)"/>
+
+            <!-- Stack Buku di Sisi Kiri Depan -->
+            <g transform="translate(45, 145)">
+              <!-- Buku 1 Bawah (Biru) -->
+              <path d="M20 50 L90 20 L130 38 L60 68 Z" fill="#2563EB"/>
+              <path d="M20 50 L20 62 L60 80 L60 68 Z" fill="#1D4ED8"/>
+              <path d="M60 80 L130 50 L130 38 L60 68 Z" fill="#F8FAFC"/>
+              <!-- Buku 2 Tengah (Orange) -->
+              <path d="M24 38 L92 10 L128 26 L60 54 Z" fill="url(#bookOrange)"/>
+              <path d="M24 38 L24 49 L60 65 L60 54 Z" fill="#C2410C"/>
+              <path d="M60 65 L128 37 L128 26 L60 54 Z" fill="#F8FAFC"/>
+              <!-- Buku 3 Atas (Hijau) -->
+              <path d="M28 26 L94 0 L126 14 L60 40 Z" fill="url(#bookGreen)"/>
+              <path d="M28 26 L28 36 L60 50 L60 40 Z" fill="#047857"/>
+              <path d="M60 50 L126 24 L126 14 L60 40 Z" fill="#F8FAFC"/>
+            </g>
+
+            <!-- Laptop Isometrik Terbuka -->
+            <g transform="translate(160, 40)">
+              <!-- Keyboard Base / Bottom Chassis -->
+              <path d="M30 170 L190 100 L320 160 L160 230 Z" fill="url(#laptopMetal)"/>
+              <path d="M30 170 L30 182 L160 242 L160 230 Z" fill="#64748B"/>
+              <path d="M160 242 L320 172 L320 160 L160 230 Z" fill="#475569"/>
+
+              <!-- Trackpad & Keyboard Grid Area -->
+              <path d="M70 165 L180 115 L280 160 L170 210 Z" fill="#334155" opacity="0.25"/>
+              <path d="M135 195 L185 172 L205 182 L155 205 Z" fill="#FFFFFF" opacity="0.5"/>
+
+              <!-- Screen Lid (Upright Angle) -->
+              <path d="M80 30 L220 5 L220 120 L80 145 Z" fill="#1E293B"/>
+              <path d="M86 36 L214 13 L214 114 L86 137 Z" fill="url(#laptopScreen)"/>
+
+              <!-- Konten Layar: Topi Toga (Mortarboard) & Bintang -->
+              <g transform="translate(110, 45)">
+                <!-- Belah Ketupat Topi -->
+                <polygon points="40,15 70,5 40,-5 10,5" fill="#0F172A"/>
+                <polygon points="40,13 65,5 40,-3 15,5" fill="#1E293B"/>
+                <!-- Kopiah Bawah Topi -->
+                <path d="M25 8 L25 18 C25 24, 55 24, 55 18 L55 8 Z" fill="#0F172A"/>
+                <!-- Tali Rumbai (Tassel) Kuning Emas -->
+                <path d="M40 5 C52 8, 58 14, 60 24" fill="none" stroke="#FBBF24" stroke-width="2" stroke-linecap="round"/>
+                <circle cx="60" cy="24" r="2.5" fill="#F59E0B"/>
+                <!-- Bintang Kecil / Kilauan Cahaya -->
+                <path d="M15 25 L17 20 L22 20 L18 27 L20 32 L15 29 L10 32 L12 27 L8 20 L13 20 Z" fill="#FDE047" transform="scale(0.5)"/>
+                <circle cx="68" cy="8" r="1.5" fill="#FFFFFF" opacity="0.8"/>
+                <circle cx="12" cy="12" r="2" fill="#BAE6FD" opacity="0.9"/>
+              </g>
+            </g>
+
+            <!-- Pot Tanaman Sukulen di Sisi Kanan -->
+            <g transform="translate(420, 160)">
+              <!-- Pot Keramik Segi Enam -->
+              <polygon points="25,50 55,50 65,75 15,75" fill="url(#potGrad)"/>
+              <ellipse cx="40" cy="50" rx="16" ry="6" fill="#78350F"/>
+              <!-- Daun-daun Sukulen -->
+              <ellipse cx="40" cy="42" rx="6" ry="12" fill="#10B981"/>
+              <ellipse cx="32" cy="45" rx="5" ry="10" transform="rotate(-25 32 45)" fill="#34D399"/>
+              <ellipse cx="48" cy="45" rx="5" ry="10" transform="rotate(25 48 45)" fill="#059669"/>
+              <circle cx="40" cy="40" r="4" fill="#6EE7B7"/>
+            </g>
+
+            <!-- Partikel Cahaya Ambien -->
+            <circle cx="110" cy="80" r="3" fill="#BAE6FD" opacity="0.6"/>
+            <circle cx="460" cy="110" r="4" fill="#FDE047" opacity="0.7"/>
+            <circle cx="360" cy="45" r="2.5" fill="#FFFFFF" opacity="0.8"/>
+          </svg>
+        </div>
+
+        <!-- Footer Copyright Desktop: 2026 -->
+        <div class="pt-6 border-t border-white/10 text-xs text-blue-200/80 font-medium">
+          © 2026 SENAPATI EXAM. Semua hak dilindungi.
         </div>
       </div>
 
-      <!-- Sisi Kanan: Form Hybrid Login -->
-      <div class="lg:col-span-6 p-6 sm:p-8 flex flex-col justify-center bg-white/90">
-        <div class="mb-5">
-          <h3 class="text-xl font-extrabold text-slate-900">Selamat Datang</h3>
-          <p class="text-xs text-slate-500 mt-0.5">Silakan pilih akses akun untuk masuk ke aplikasi.</p>
+      <!-- SISI KANAN: KARTU LOGIN PUTIH MODERN (FLOATING CARD) -->
+      <div class="w-full max-w-md bg-white dark:bg-slate-900 rounded-3xl shadow-2xl p-8 xl:p-9 border border-white/80 dark:border-slate-800 transition-colors relative z-20">
+        
+        <!-- Baris Atas Kartu: Tombol Ganti Tema Mode Terang / Gelap -->
+        <div class="flex items-center justify-between mb-5">
+          <div class="flex items-center gap-2">
+            <span class="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse"></span>
+            <span class="text-[11px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">CBT Server Online</span>
+          </div>
+
+          <button type="button" onclick="window.app.toggleTheme()" class="theme-toggle-btn login-theme-btn flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700/80 text-slate-700 dark:text-slate-200 transition-all text-xs font-bold shadow-sm cursor-pointer" title="Ganti Tema">
+            <i class="login-theme-icon ph-bold ph-sun text-amber-500 text-sm"></i>
+            <span class="login-theme-text text-xs">Mode Terang</span>
+          </button>
         </div>
 
-        <!-- Role Switcher Tabs -->
-        <div class="grid grid-cols-2 gap-2 p-1.5 bg-slate-100 rounded-2xl mb-5">
-          <button type="button" id="tab-login-siswa" onclick="window.app.switchLoginTab('siswa')" class="py-2.5 px-4 rounded-xl text-xs font-bold transition-all bg-white text-blue-600 shadow-sm flex items-center justify-center gap-2">
-            <i class="ph-fill ph-student text-base"></i> Peserta / Siswa
-          </button>
-          <button type="button" id="tab-login-admin" onclick="window.app.switchLoginTab('admin')" class="py-2.5 px-4 rounded-xl text-xs font-bold transition-all text-slate-600 hover:text-slate-900 flex items-center justify-center gap-2">
-            <i class="ph-fill ph-shield-check text-base"></i> Guru / Admin
-          </button>
+        <!-- Header Kartu: 2 Logo & Title SENAPATI EXAM -->
+        <div class="text-center mb-6">
+          <div class="flex items-center justify-center gap-3 mb-2.5">
+            <!-- Shield Logo Mini -->
+            <div class="w-10 h-10 rounded-xl bg-slate-50 dark:bg-slate-800 p-1 flex items-center justify-center border border-slate-100 dark:border-slate-700 shadow-sm">
+              <svg viewBox="0 0 64 64" class="w-full h-full">
+                <path d="M32 4 C44 4, 56 10, 56 16 C56 36, 44 54, 32 60 C20 54, 8 36, 8 16 C8 10, 20 4, 32 4 Z" fill="#F59E0B"/>
+                <path d="M32 7 C42 7, 52 12, 52 17 C52 35, 42 50, 32 56 C22 50, 12 35, 12 17 C12 12, 22 7, 32 7 Z" fill="#EF4444"/>
+                <path d="M18 42 C24 48, 40 48, 46 42 L48 48 C40 54, 24 54, 16 48 Z" fill="#10B981"/>
+                <polygon points="32,18 35,26 44,26 37,32 39,40 32,35 25,40 27,32 20,26 29,26" fill="#FDE047"/>
+              </svg>
+            </div>
+            <!-- Globe Logo Mini -->
+            <div class="w-10 h-10 rounded-xl bg-slate-50 dark:bg-slate-800 p-1 flex items-center justify-center border border-slate-100 dark:border-slate-700 shadow-sm">
+              <svg viewBox="0 0 64 64" class="w-full h-full">
+                <path d="M10 46 C20 42, 30 44, 32 48 C34 44, 44 42, 54 46 L54 54 C44 50, 34 52, 32 56 C30 52, 20 50, 10 54 Z" fill="#F8FAFC" stroke="#CBD5E1" stroke-width="1.2"/>
+                <path d="M8 53 C18 49, 30 51, 32 57 C34 51, 46 49, 56 53 L56 56 C46 52, 34 54, 32 60 C30 54, 18 52, 8 56 Z" fill="#D97706"/>
+                <path d="M20 28 A14 14 0 0 1 44 28" fill="none" stroke="#D97706" stroke-width="2" stroke-linecap="round"/>
+                <circle cx="32" cy="24" r="14" fill="#3B82F6"/>
+                <circle cx="28" cy="19" r="2.5" fill="#34D399"/>
+                <circle cx="36" cy="26" r="3" fill="#34D399"/>
+              </svg>
+            </div>
+          </div>
+          <h2 id="login-app-name" class="text-2xl font-black text-slate-900 dark:text-white tracking-tight">SENAPATI EXAM</h2>
+          <p id="login-school-name" class="text-xs text-slate-500 dark:text-slate-400 font-medium mt-0.5">Sistem Evaluasi dan Pembelajaran Berbasis Digital</p>
         </div>
 
-        <!-- Form Login Siswa (Validasi Spreadsheet) -->
-        <form id="form-login-siswa" onsubmit="window.app.handleLoginSiswa(event)" class="space-y-4">
+        <div class="mb-4">
+          <h3 class="text-sm font-extrabold text-slate-800 dark:text-slate-200">Login ke Akun Anda</h3>
+        </div>
+
+        <!-- Form Login Desktop (Unified NISN & Username) -->
+        <form id="form-login-desktop" onsubmit="window.app.handleUnifiedLogin(event)" class="space-y-4">
           <div>
-            <label class="block text-xs font-bold text-slate-700 mb-1.5">NISN / Nomor Peserta</label>
+            <label class="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5">NISN / Username</label>
             <div class="relative">
-              <i class="ph ph-identification-card absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 text-lg"></i>
-              <input type="text" id="siswa-nisn" required placeholder="Masukkan nomor NISN Anda" class="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition" />
+              <i class="ph ph-user absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 text-base"></i>
+              <input type="text" id="login-identifier" required placeholder="Masukkan NISN atau username" autocomplete="username" class="w-full pl-10 pr-4 py-3 bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded-2xl text-sm text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white dark:focus:bg-slate-800 transition" />
             </div>
           </div>
+
           <div>
-            <label class="block text-xs font-bold text-slate-700 mb-1.5">Password Ujian</label>
+            <label class="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5">Password</label>
             <div class="relative">
-              <i class="ph ph-lock-key absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 text-lg"></i>
-              <input type="password" id="siswa-password" required placeholder="Masukkan password siswa" class="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition" />
+              <i class="ph ph-lock-key absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 text-base"></i>
+              <input type="password" id="login-password" required placeholder="Masukkan password" autocomplete="current-password" class="login-password-input w-full pl-10 pr-11 py-3 bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded-2xl text-sm text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white dark:focus:bg-slate-800 transition" />
+              <button type="button" onclick="window.app.togglePasswordVisibility('login-password', 'login-pwd-eye')" class="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 p-1 transition" title="Lihat/Sembunyikan Password">
+                <i id="login-pwd-eye" class="ph-bold ph-eye text-base"></i>
+              </button>
             </div>
           </div>
-          <button type="submit" id="btn-submit-siswa" class="w-full py-3.5 bg-blue-600 hover:bg-blue-700 active:scale-[0.99] text-white font-bold text-sm rounded-2xl shadow-lg shadow-blue-500/25 transition flex items-center justify-center gap-2">
-            <span>Masuk Ruang Ujian</span>
+
+          <!-- Tombol Masuk Biru -->
+          <button type="submit" id="btn-submit-unified" class="w-full py-3.5 bg-blue-600 hover:bg-blue-700 active:scale-[0.99] text-white font-bold text-sm rounded-2xl shadow-lg shadow-blue-500/25 transition flex items-center justify-center gap-2 cursor-pointer">
+            <span>Masuk</span>
             <i class="ph-bold ph-arrow-right"></i>
           </button>
         </form>
 
-        <!-- Form Login Guru & Admin (Validasi Database Pengguna) -->
-        <form id="form-login-admin" onsubmit="window.app.handleLoginAdmin(event)" class="space-y-4 hidden">
-          <div>
-            <label class="block text-xs font-bold text-slate-700 mb-1.5">Username / Email Akun</label>
-            <div class="relative">
-              <i class="ph ph-user absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 text-lg"></i>
-              <input type="text" id="admin-identifier" required placeholder="Masukkan username atau email" class="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition" />
-            </div>
-          </div>
-          <div>
-            <label class="block text-xs font-bold text-slate-700 mb-1.5">Password</label>
-            <div class="relative">
-              <i class="ph ph-key absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 text-lg"></i>
-              <input type="password" id="admin-password" required placeholder="Masukkan password" class="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition" />
-            </div>
-          </div>
-          <button type="submit" id="btn-submit-admin" class="w-full py-3.5 bg-slate-900 hover:bg-slate-800 active:scale-[0.99] text-white font-bold text-sm rounded-2xl shadow-lg transition flex items-center justify-center gap-2">
-            <span>Masuk Panel Guru / Admin</span>
-            <i class="ph-bold ph-shield-check"></i>
-          </button>
-        </form>
+        <!-- Pesan Keamanan Resmi -->
+        <div class="mt-4 p-3 rounded-2xl bg-blue-50/90 dark:bg-blue-950/40 border border-blue-100 dark:border-blue-900/50 flex items-start gap-2 text-xs text-blue-700 dark:text-blue-300 font-medium">
+          <i class="ph-fill ph-shield-check text-blue-600 dark:text-blue-400 text-base shrink-0 mt-0.5"></i>
+          <span>Pastikan Anda menggunakan akun yang sudah terdaftar di sekolah.</span>
+        </div>
 
-        <!-- Footer Keamanan Bersih & Profesional -->
-        <div class="mt-6 pt-4 border-t border-slate-100 flex items-center justify-between text-xs text-slate-400">
-          <span class="flex items-center gap-1.5"><i class="ph-fill ph-shield-check text-emerald-500 text-sm"></i> Portal Resmi Ujian Sekolah</span>
-          <span class="text-[11px] font-medium text-slate-400">EduCBT Online</span>
+        <!-- Link Bantuan & Reset Password -->
+        <div class="mt-5 pt-4 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between text-xs font-semibold text-slate-500 dark:text-slate-400">
+          <button type="button" onclick="window.app.showForgotPasswordModal()" class="hover:text-blue-600 dark:hover:text-blue-400 transition flex items-center gap-1 cursor-pointer">
+            <i class="ph-bold ph-key"></i> Lupa Password?
+          </button>
+          <button type="button" onclick="window.app.showContactAdminModal()" class="hover:text-blue-600 dark:hover:text-blue-400 transition flex items-center gap-1 cursor-pointer">
+            <i class="ph-bold ph-headset"></i> Hubungi Admin
+          </button>
+        </div>
+
+      </div>
+
+    </div>
+
+    <!-- ======================================================== -->
+    <!-- TAMPILAN SMARTPHONE / HP (Tampil di Layar Mobile: < lg)   -->
+    <!-- ======================================================== -->
+    <div class="flex lg:hidden flex-col min-h-screen w-full justify-between relative z-10">
+      
+      <!-- HEADER ATAS MOBILE (BIRU DENGAN 2 LOGO DAN JUDUL) -->
+      <div class="pt-10 pb-6 px-6 text-center text-white shrink-0">
+        <!-- 2 Logo Berdampingan -->
+        <div class="flex items-center justify-center gap-3 mb-3">
+          <!-- Shield Logo Mobile -->
+          <div class="w-12 h-12 rounded-2xl bg-white/10 backdrop-blur-md p-1.5 flex items-center justify-center border border-white/20 shadow-md">
+            <svg viewBox="0 0 64 64" class="w-full h-full drop-shadow-sm">
+              <path d="M32 4 C44 4, 56 10, 56 16 C56 36, 44 54, 32 60 C20 54, 8 36, 8 16 C8 10, 20 4, 32 4 Z" fill="#F59E0B"/>
+              <path d="M32 7 C42 7, 52 12, 52 17 C52 35, 42 50, 32 56 C22 50, 12 35, 12 17 C12 12, 22 7, 32 7 Z" fill="#EF4444"/>
+              <path d="M18 42 C24 48, 40 48, 46 42 L48 48 C40 54, 24 54, 16 48 Z" fill="#10B981"/>
+              <polygon points="32,18 35,26 44,26 37,32 39,40 32,35 25,40 27,32 20,26 29,26" fill="#FDE047"/>
+              <circle cx="32" cy="29" r="3.5" fill="#F59E0B"/>
+            </svg>
+          </div>
+          <!-- Globe Logo Mobile -->
+          <div class="w-12 h-12 rounded-2xl bg-white/10 backdrop-blur-md p-1.5 flex items-center justify-center border border-white/20 shadow-md">
+            <svg viewBox="0 0 64 64" class="w-full h-full drop-shadow-sm">
+              <path d="M10 46 C20 42, 30 44, 32 48 C34 44, 44 42, 54 46 L54 54 C44 50, 34 52, 32 56 C30 52, 20 50, 10 54 Z" fill="#F8FAFC" stroke="#CBD5E1" stroke-width="1.2"/>
+              <path d="M8 53 C18 49, 30 51, 32 57 C34 51, 46 49, 56 53 L56 56 C46 52, 34 54, 32 60 C30 54, 18 52, 8 56 Z" fill="#D97706"/>
+              <path d="M20 28 A14 14 0 0 1 44 28" fill="none" stroke="#D97706" stroke-width="2.5" stroke-linecap="round"/>
+              <circle cx="32" cy="24" r="14" fill="#3B82F6"/>
+              <circle cx="28" cy="19" r="2.5" fill="#34D399"/>
+              <circle cx="36" cy="26" r="3" fill="#34D399"/>
+            </svg>
+          </div>
+        </div>
+
+        <!-- Judul & Subjudul Mobile -->
+        <h1 class="text-2xl font-black text-white tracking-tight leading-tight">
+          SENAPATI EXAM
+        </h1>
+        <p class="text-xs font-semibold text-blue-100 mt-1">
+          Sistem Evaluasi dan Pembelajaran Berbasis Digital
+        </p>
+      </div>
+
+      <!-- BOTTOM SHEET KARTU PUTIH DENGAN ROUNDED TOP LEKUK INDAH -->
+      <div class="bg-white dark:bg-slate-900 rounded-t-[36px] shadow-2xl px-6 pt-6 pb-4 border-t border-white/70 dark:border-slate-800 flex-1 flex flex-col justify-between transition-colors">
+        <div>
+          <!-- Baris Kontrol Tema Mobile -->
+          <div class="flex items-center justify-between mb-4">
+            <span class="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider flex items-center gap-1.5">
+              <span class="w-2 h-2 rounded-full bg-emerald-500 inline-block"></span> Portal CBT
+            </span>
+
+            <button type="button" onclick="window.app.toggleTheme()" class="theme-toggle-btn login-theme-btn flex items-center gap-1.5 px-3 py-1 rounded-full border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 transition-all text-xs font-bold shadow-sm cursor-pointer" title="Ganti Tema">
+              <i class="login-theme-icon ph-bold ph-sun text-amber-500 text-sm"></i>
+              <span class="login-theme-text text-xs">Mode Terang</span>
+            </button>
+          </div>
+
+          <h3 class="text-base font-extrabold text-slate-900 dark:text-white mb-3">Login ke Akun Anda</h3>
+
+          <!-- Form Login Smartphone (Unified NISN & Username) -->
+          <form id="form-login-mobile" onsubmit="window.app.handleUnifiedLogin(event)" class="space-y-3.5">
+            <div>
+              <label class="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">NISN / Username</label>
+              <div class="relative">
+                <i class="ph ph-user absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 text-base"></i>
+                <input type="text" id="mobile-login-identifier" required placeholder="Masukkan NISN atau username" autocomplete="username" class="w-full pl-10 pr-4 py-2.5 bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded-xl text-sm text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white dark:focus:bg-slate-800 transition" />
+              </div>
+            </div>
+
+            <div>
+              <label class="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">Password</label>
+              <div class="relative">
+                <i class="ph ph-lock-key absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 text-base"></i>
+                <input type="password" id="mobile-login-password" required placeholder="Masukkan password" autocomplete="current-password" class="login-password-input w-full pl-10 pr-11 py-2.5 bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded-xl text-sm text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white dark:focus:bg-slate-800 transition" />
+                <button type="button" onclick="window.app.togglePasswordVisibility('mobile-login-password', 'mobile-login-pwd-eye')" class="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 p-1 transition" title="Lihat/Sembunyikan Password">
+                  <i id="mobile-login-pwd-eye" class="ph-bold ph-eye text-base"></i>
+                </button>
+              </div>
+            </div>
+
+            <!-- Tombol Masuk Biru Mobile -->
+            <button type="submit" id="btn-submit-mobile" class="w-full py-3 bg-blue-600 hover:bg-blue-700 active:scale-[0.99] text-white font-bold text-sm rounded-xl shadow-lg shadow-blue-500/25 transition flex items-center justify-center gap-2 cursor-pointer mt-1">
+              <span>Masuk</span>
+              <i class="ph-bold ph-arrow-right"></i>
+            </button>
+          </form>
+
+          <!-- Pesan Keamanan Mobile -->
+          <div class="mt-3.5 p-2.5 rounded-xl bg-blue-50/90 dark:bg-blue-950/40 border border-blue-100 dark:border-blue-900/50 flex items-start gap-2 text-xs text-blue-700 dark:text-blue-300 font-medium">
+            <i class="ph-fill ph-shield-check text-blue-600 dark:text-blue-400 text-sm shrink-0 mt-0.5"></i>
+            <span class="text-[11px] leading-tight">Pastikan Anda menggunakan akun yang sudah terdaftar di sekolah.</span>
+          </div>
+
+          <!-- Link Bantuan Mobile -->
+          <div class="mt-4 pt-3 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between text-xs font-semibold text-slate-500 dark:text-slate-400">
+            <button type="button" onclick="window.app.showForgotPasswordModal()" class="hover:text-blue-600 dark:hover:text-blue-400 transition flex items-center gap-1 cursor-pointer">
+              <i class="ph-bold ph-key"></i> Lupa Password?
+            </button>
+            <button type="button" onclick="window.app.showContactAdminModal()" class="hover:text-blue-600 dark:hover:text-blue-400 transition flex items-center gap-1 cursor-pointer">
+              <i class="ph-bold ph-headset"></i> Hubungi Admin
+            </button>
+          </div>
+        </div>
+
+        <!-- FOOTER GELOMBANG & COPYRIGHT 2026 MOBILE -->
+        <div class="mt-6 pt-3 text-center">
+          <p class="text-[11px] text-slate-400 dark:text-slate-500 font-medium">
+            © 2026 SENAPATI EXAM. Semua hak dilindungi.
+          </p>
         </div>
       </div>
+
     </div>
+
   </div>
 
   <!-- VIEW 2: DASHBOARD & WORKSPACE APLIKASI UTAMA -->
@@ -1823,30 +2105,22 @@
       tooltip.textContent = isDark ? 'Aktifkan Mode Siang' : 'Aktifkan Mode Malam';
     }
 
-    // 2. Tombol Tema di Halaman Login
-    const loginIcon = document.getElementById('login-theme-icon');
-    const loginIconWrapper = document.getElementById('login-theme-icon-wrapper');
-    const loginText = document.getElementById('login-theme-text');
-    const loginBtn = document.querySelector('#login-view .theme-toggle-btn');
-
-    if (loginBtn) {
+    // 2. Tombol Tema di Halaman Login (Desktop & Mobile)
+    document.querySelectorAll('.login-theme-text').forEach(el => {
+      el.textContent = isDark ? 'Mode Gelap' : 'Mode Terang';
+    });
+    document.querySelectorAll('.login-theme-icon').forEach(el => {
+      el.className = isDark ? 'login-theme-icon ph-bold ph-moon text-sky-400 text-sm' : 'login-theme-icon ph-bold ph-sun text-amber-500 text-sm';
+    });
+    document.querySelectorAll('.login-theme-btn').forEach(btn => {
       if (isDark) {
-        loginBtn.classList.add('bg-slate-800/90', 'border-slate-700', 'text-sky-300');
-        loginBtn.classList.remove('bg-white/90', 'border-slate-200', 'text-slate-700');
+        btn.classList.add('bg-slate-800', 'border-slate-700', 'text-sky-300');
+        btn.classList.remove('bg-slate-50', 'border-slate-200', 'text-slate-700');
       } else {
-        loginBtn.classList.add('bg-white/90', 'border-slate-200', 'text-slate-700');
-        loginBtn.classList.remove('bg-slate-800/90', 'border-slate-700', 'text-sky-300');
+        btn.classList.add('bg-slate-50', 'border-slate-200', 'text-slate-700');
+        btn.classList.remove('bg-slate-800', 'border-slate-700', 'text-sky-300');
       }
-    }
-    if (loginIcon) {
-      loginIcon.className = isDark ? 'ph-bold ph-moon text-sky-400 text-base' : 'ph-bold ph-sun text-amber-500 text-base';
-    }
-    if (loginIconWrapper) {
-      loginIconWrapper.style.transform = isDark ? 'rotate(360deg)' : 'rotate(0deg)';
-    }
-    if (loginText) {
-      loginText.textContent = isDark ? 'Malam' : 'Siang';
-    }
+    });
 
     // 3. Ikon Tema di Header Mobile & Drawer Menu
     document.querySelectorAll('.theme-icon-sync').forEach(el => {
@@ -1978,8 +2252,14 @@
       }
     }
 
-    document.getElementById('login-app-name').textContent = p.nama_aplikasi || 'EDU CBT SENAPATI';
-    document.getElementById('login-school-name').textContent = p.nama_sekolah || 'Portal CBT Sekolah';
+    const loginApp = document.getElementById('login-app-name');
+    if (loginApp) loginApp.textContent = p.nama_aplikasi || 'SENAPATI EXAM';
+    const loginAppDk = document.getElementById('login-app-name-desktop');
+    if (loginAppDk) loginAppDk.textContent = p.nama_aplikasi || 'SENAPATI EXAM';
+    const loginSchool = document.getElementById('login-school-name');
+    if (loginSchool) loginSchool.textContent = p.nama_sekolah || 'Sistem Evaluasi dan Pembelajaran Berbasis Digital';
+    const loginSchoolDk = document.getElementById('login-school-name-desktop');
+    if (loginSchoolDk) loginSchoolDk.textContent = p.nama_sekolah ? `Platform Ujian & Evaluasi Pembelajaran ${p.nama_sekolah}` : 'Platform ujian online untuk mendukung proses pembelajaran yang lebih efektif, transparan dan terukur.';
     const sidebarAppName = document.getElementById('sidebar-app-name');
     if (sidebarAppName) {
       sidebarAppName.innerHTML = '<span class="text-white">EDU CBT </span><span class="text-amber-400">SENAPATI</span>';
@@ -2373,6 +2653,230 @@
       _isSubmittingAuth = false;
       setSubmitButtonLoading('btn-submit-siswa', false);
     }
+  }
+
+  // ============================================================================
+  // UNIFIED AUTHENTICATION ENGINE (SENAPATI EXAM)
+  // Mendukung login otomatis Siswa (NISN) & Guru/Admin (Username) dari satu form
+  // ============================================================================
+  async function handleUnifiedLogin(e) {
+    if (e) e.preventDefault();
+    if (_isSubmittingAuth) return;
+
+    const form = e ? e.target : null;
+    const identifierInput = (form && form.querySelector('input[type="text"]')) ||
+                            document.getElementById('login-identifier') ||
+                            document.getElementById('mobile-login-identifier');
+    const passwordInput = (form && form.querySelector('.login-password-input')) ||
+                          (form && form.querySelector('input[type="password"]')) ||
+                          document.getElementById('login-password') ||
+                          document.getElementById('mobile-login-password');
+
+    const identifier = identifierInput ? identifierInput.value.trim() : '';
+    const password = passwordInput ? passwordInput.value.trim() : '';
+
+    if (!identifier || !password) {
+      showToast('Harap masukkan NISN/Username dan Password!', 'warning');
+      return;
+    }
+
+    _isSubmittingAuth = true;
+    const submitBtn = (form && form.querySelector('button[type="submit"]')) ||
+                      document.getElementById('btn-submit-unified') ||
+                      document.getElementById('btn-submit-mobile');
+    const origBtnHtml = submitBtn ? submitBtn.innerHTML : null;
+    if (submitBtn) {
+      submitBtn.disabled = true;
+      submitBtn.classList.add('opacity-80', 'cursor-not-allowed');
+      submitBtn.innerHTML = `<i class="ph-bold ph-spinner animate-spin text-base"></i><span>Memverifikasi...</span>`;
+    }
+
+    showToast('Memverifikasi akun ke database sekolah...');
+
+    const isDigitsOnly = /^\d+$/.test(identifier);
+
+    function finalizeLogin(user, token, roleLabel, welcomeMsg) {
+      state.user = user;
+      if (token) {
+        localStorage.setItem(AUTH_TOKEN_KEY, token);
+      } else {
+        localStorage.setItem(AUTH_TOKEN_KEY, 'demo_token_' + btoa(JSON.stringify(user)));
+      }
+      localStorage.setItem(SAVED_MENU_KEY, 'dashboard');
+      enterApplication();
+      showToast(welcomeMsg || `Selamat datang, ${user.nama}!`);
+      loadAllDataFromGAS().catch(err => {
+        console.warn('Sinkronisasi latar belakang:', err);
+      });
+    }
+
+    try {
+      if (isDigitsOnly) {
+        // 1. Coba login Siswa terlebih dahulu via GAS
+        try {
+          const res = await callGAS('loginSiswa', { nisn: identifier, password });
+          if (res && res.user) {
+            finalizeLogin(res.user, res.token, 'Siswa', `Selamat belajar, ${res.user.nama}!`);
+            return;
+          }
+        } catch (errSiswa) {
+          // Jika gagal, coba barangkali username staf/guru berupa angka
+          try {
+            const resAdmin = await callGAS('loginAdmin', {
+              identifier,
+              username: identifier,
+              email: identifier,
+              password
+            });
+            if (resAdmin && resAdmin.user) {
+              const role = resAdmin.user.role === 'admin' ? 'Administrator' : 'Guru';
+              finalizeLogin(resAdmin.user, resAdmin.token, role, `Selamat datang ${role}, ${resAdmin.user.nama}!`);
+              return;
+            }
+          } catch (errAdmin) {
+            throw errSiswa;
+          }
+        }
+      } else {
+        // 2. Coba login Admin / Guru terlebih dahulu via GAS
+        try {
+          const resAdmin = await callGAS('loginAdmin', {
+            identifier,
+            username: identifier,
+            email: identifier,
+            password
+          });
+          if (resAdmin && resAdmin.user) {
+            const role = resAdmin.user.role === 'admin' ? 'Administrator' : 'Guru';
+            finalizeLogin(resAdmin.user, resAdmin.token, role, `Selamat datang ${role}, ${resAdmin.user.nama}!`);
+            return;
+          }
+        } catch (errAdmin) {
+          // Fallback coba login Siswa jika ada NISN dengan format alfanumerik
+          try {
+            const resSiswa = await callGAS('loginSiswa', { nisn: identifier, password });
+            if (resSiswa && resSiswa.user) {
+              finalizeLogin(resSiswa.user, resSiswa.token, 'Siswa', `Selamat belajar, ${resSiswa.user.nama}!`);
+              return;
+            }
+          } catch (errSiswa) {
+            throw errAdmin;
+          }
+        }
+      }
+    } catch (gasErr) {
+      // 3. Fallback ke Local Cache jika koneksi offline / belum terhubung
+      const foundSiswa = (state.siswa || []).find(s =>
+        String(s.nisn).trim().toLowerCase() === identifier.toLowerCase() &&
+        String(s.password).trim() === password
+      );
+      if (foundSiswa) {
+        finalizeLogin({
+          id: foundSiswa.id,
+          role: 'siswa',
+          nama: foundSiswa.nama_lengkap,
+          nisn: foundSiswa.nisn,
+          kelas_id: foundSiswa.kelas_id,
+          poin: foundSiswa.poin || 100
+        }, null, 'Siswa', `Selamat belajar, ${foundSiswa.nama_lengkap}!`);
+        return;
+      }
+
+      const foundAdmin = (state.pengguna || []).find(u =>
+        (String(u.username || '').toLowerCase() === identifier.toLowerCase() || String(u.email || '').toLowerCase() === identifier.toLowerCase()) &&
+        String(u.password || '') === password
+      );
+      if (foundAdmin) {
+        const role = foundAdmin.role || 'guru';
+        finalizeLogin({
+          id: foundAdmin.id,
+          role: role,
+          nama: foundAdmin.nama_lengkap || foundAdmin.username,
+          username: foundAdmin.username,
+          email: foundAdmin.email,
+          poin: 999
+        }, null, role, `Selamat datang, ${foundAdmin.nama_lengkap || foundAdmin.username}!`);
+        return;
+      }
+
+      showToast('Login Gagal: ' + (gasErr.message || 'Kombinasi identitas dan password tidak cocok'), 'error');
+    } finally {
+      _isSubmittingAuth = false;
+      if (submitBtn) {
+        submitBtn.disabled = false;
+        submitBtn.classList.remove('opacity-80', 'cursor-not-allowed');
+        if (origBtnHtml) submitBtn.innerHTML = origBtnHtml;
+      }
+    }
+  }
+
+  function togglePasswordVisibility(inputId, iconId) {
+    const input = document.getElementById(inputId);
+    const icon = document.getElementById(iconId);
+    if (!input) return;
+    if (input.type === 'password') {
+      input.type = 'text';
+      if (icon) icon.className = 'ph-bold ph-eye-slash text-blue-600 dark:text-blue-400 text-base';
+    } else {
+      input.type = 'password';
+      if (icon) icon.className = 'ph-bold ph-eye text-slate-400 text-base';
+    }
+  }
+
+  function showForgotPasswordModal() {
+    openModal('Lupa Password Akun', `
+      <div class="space-y-4 text-xs text-slate-700 dark:text-slate-200">
+        <div class="p-4 rounded-2xl bg-blue-50 dark:bg-slate-800 border border-blue-100 dark:border-slate-700 flex items-start gap-3">
+          <i class="ph-fill ph-info text-blue-600 dark:text-sky-400 text-xl shrink-0 mt-0.5"></i>
+          <div class="space-y-1">
+            <p class="font-bold text-slate-900 dark:text-white text-sm">Pemulihan Akun Siswa & Guru</p>
+            <p class="text-slate-600 dark:text-slate-300 leading-relaxed">
+              Untuk menjaga integritas dan keamanan data ujian, pengaturan ulang kata sandi dilakukan secara terpusat oleh Proktor atau Administrator CBT di sekolah.
+            </p>
+          </div>
+        </div>
+        <div class="space-y-2">
+          <p class="font-bold text-slate-800 dark:text-slate-200">Petunjuk Pemulihan:</p>
+          <ul class="list-disc list-inside space-y-1.5 text-slate-600 dark:text-slate-300 pl-1">
+            <li>Hubungi <b>Proktor Ujian</b> atau <b>Admin CBT Sekolah</b> Anda.</li>
+            <li>Sebutkan <b>NISN</b> (untuk siswa) atau <b>Username</b> (untuk guru/pengawas).</li>
+            <li>Admin dapat melihat atau mereset password melalui menu <b>Data Siswa</b> atau <b>Data Pengguna</b>.</li>
+          </ul>
+        </div>
+        <button type="button" onclick="closeModal()" class="w-full py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs shadow-md transition">
+          Mengerti
+        </button>
+      </div>
+    `);
+  }
+
+  function showContactAdminModal() {
+    openModal('Bantuan & Kontak Proktor', `
+      <div class="space-y-4 text-xs text-slate-700 dark:text-slate-200">
+        <div class="p-4 rounded-2xl bg-emerald-50 dark:bg-slate-800 border border-emerald-100 dark:border-slate-700 flex items-start gap-3">
+          <i class="ph-fill ph-headset text-emerald-600 dark:text-emerald-400 text-xl shrink-0 mt-0.5"></i>
+          <div class="space-y-1">
+            <p class="font-bold text-slate-900 dark:text-white text-sm">Helpdesk SENAPATI EXAM</p>
+            <p class="text-slate-600 dark:text-slate-300 leading-relaxed">
+              Jika mengalami kendala teknis jaringan, token ujian, atau sesi terputus, segera laporkan ke tim pengawas / proktor.
+            </p>
+          </div>
+        </div>
+        <div class="p-3.5 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 space-y-2">
+          <div class="flex items-center justify-between">
+            <span class="text-slate-500 dark:text-slate-400">Pusat Layanan:</span>
+            <span class="font-bold text-slate-800 dark:text-white">Ruang Server CBT / Lab Komputer</span>
+          </div>
+          <div class="flex items-center justify-between">
+            <span class="text-slate-500 dark:text-slate-400">Jam Operasional:</span>
+            <span class="font-bold text-slate-800 dark:text-white">Senin - Sabtu (07.00 - 16.00 WIB)</span>
+          </div>
+        </div>
+        <button type="button" onclick="closeModal()" class="w-full py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs shadow-md transition">
+          Tutup
+        </button>
+      </div>
+    `);
   }
 
   function quickLogin(role) {
@@ -7742,6 +8246,10 @@
     switchLoginTab,
     handleLoginAdmin,
     handleLoginSiswa,
+    handleUnifiedLogin,
+    togglePasswordVisibility,
+    showForgotPasswordModal,
+    showContactAdminModal,
     quickLogin,
     handleLogout,
     navigateMenu,
