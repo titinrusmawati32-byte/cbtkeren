@@ -222,7 +222,7 @@ function doPost(e) {
         return jsonResponse({ status: 'success', allData: fetchAllDatabase() });
       }
 
-      // 6. CRUD SOAL
+      // 6. CRUD SOAL & BULK ACTIONS & UPLOAD MEDIA
       case 'saveSoal': {
         const sheet = ss.getSheetByName(SHEETS.SOAL);
         const id = payload.id || 'soal-' + Utilities.getUuid();
@@ -231,23 +231,133 @@ function doPost(e) {
           payload.jadwal_id,
           payload.pertanyaan,
           payload.gambar_url || '',
-          payload.opsi_a,
-          payload.opsi_b,
-          payload.opsi_c,
+          payload.opsi_a || '-',
+          payload.opsi_b || '-',
+          payload.opsi_c || '-',
           payload.opsi_d || '-',
           payload.opsi_e || '-',
           payload.kunci_jawaban || 'A',
           Number(payload.bobot || 10),
+          payload.jenis_soal || 'PILIHAN_GANDA',
+          payload.pembahasan || '',
+          payload.kode_soal || '',
           new Date().toISOString()
         ];
         upsertRowById(sheet, id, row);
         return jsonResponse({ status: 'success', id: id, allData: fetchAllDatabase() });
       }
 
+      case 'saveBulkSoal': {
+        const sheet = ss.getSheetByName(SHEETS.SOAL);
+        const list = payload.soalList || [];
+        const existingData = sheet.getDataRange().getValues();
+        const idMap = new Map();
+        for (let i = 1; i < existingData.length; i++) {
+          idMap.set(String(existingData[i][0]), i + 1);
+        }
+
+        const rowsToAppend = [];
+        list.forEach(item => {
+          const id = item.id || 'soal-' + Utilities.getUuid();
+          const row = [
+            id,
+            item.jadwal_id,
+            item.pertanyaan,
+            item.gambar_url || '',
+            item.opsi_a || '-',
+            item.opsi_b || '-',
+            item.opsi_c || '-',
+            item.opsi_d || '-',
+            item.opsi_e || '-',
+            item.kunci_jawaban || 'A',
+            Number(item.bobot || 10),
+            item.jenis_soal || 'PILIHAN_GANDA',
+            item.pembahasan || '',
+            item.kode_soal || '',
+            new Date().toISOString()
+          ];
+
+          if (idMap.has(String(id))) {
+            const rowIndex = idMap.get(String(id));
+            sheet.getRange(rowIndex, 1, 1, row.length).setValues([row]);
+          } else {
+            rowsToAppend.push(row);
+          }
+        });
+
+        if (rowsToAppend.length > 0) {
+          sheet.getRange(sheet.getLastRow() + 1, 1, rowsToAppend.length, rowsToAppend[0].length).setValues(rowsToAppend);
+        }
+
+        return jsonResponse({ status: 'success', count: list.length, allData: fetchAllDatabase() });
+      }
+
+      case 'deleteBulkSoal': {
+        const sheet = ss.getSheetByName(SHEETS.SOAL);
+        const ids = new Set((payload.ids || []).map(String));
+        const data = sheet.getDataRange().getValues();
+        for (let i = data.length - 1; i >= 1; i--) {
+          if (ids.has(String(data[i][0]))) {
+            sheet.deleteRow(i + 1);
+          }
+        }
+        return jsonResponse({ status: 'success', allData: fetchAllDatabase() });
+      }
+
       case 'deleteSoal': {
         const sheet = ss.getSheetByName(SHEETS.SOAL);
         deleteRowById(sheet, payload.id);
         return jsonResponse({ status: 'success', allData: fetchAllDatabase() });
+      }
+
+      case 'uploadImage': {
+        try {
+          const base64Data = payload.base64;
+          const fileName = payload.fileName || ('soal_img_' + Date.now() + '.jpg');
+          const mimeType = payload.mimeType || 'image/jpeg';
+
+          if (!base64Data) {
+            return jsonResponse({ status: 'error', message: 'Data gambar base64 kosong' });
+          }
+
+          const folderName = 'EduCBT_Media';
+          let folder;
+          const folders = DriveApp.getFoldersByName(folderName);
+          if (folders.hasNext()) {
+            folder = folders.next();
+          } else {
+            folder = DriveApp.createFolder(folderName);
+          }
+
+          let cleanBase64 = base64Data;
+          if (cleanBase64.indexOf(',') > -1) {
+            cleanBase64 = cleanBase64.split(',')[1];
+          }
+
+          const decoded = Utilities.base64Decode(cleanBase64);
+          const blob = Utilities.newBlob(decoded, mimeType, fileName);
+          const file = folder.createFile(blob);
+          file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
+
+          const fileId = file.getId();
+          const directUrl = 'https://drive.google.com/thumbnail?id=' + fileId + '&sz=w1200';
+          const webUrl = 'https://drive.google.com/uc?export=view&id=' + fileId;
+
+          return jsonResponse({
+            status: 'success',
+            fileId: fileId,
+            url: directUrl,
+            webUrl: webUrl,
+            fileName: fileName
+          });
+        } catch (err) {
+          return jsonResponse({
+            status: 'success',
+            fileId: 'local-' + Date.now(),
+            url: payload.base64,
+            message: 'Fallback Data URI: ' + err.toString()
+          });
+        }
       }
 
       // 7. SUBMIT UJIAN & REKAP NILAI
@@ -404,10 +514,10 @@ function initDatabaseSheets() {
     },
     {
       name: SHEETS.SOAL,
-      headers: ['id', 'jadwal_id', 'pertanyaan', 'gambar_url', 'opsi_a', 'opsi_b', 'opsi_c', 'opsi_d', 'opsi_e', 'kunci_jawaban', 'bobot', 'created_at'],
+      headers: ['id', 'jadwal_id', 'pertanyaan', 'gambar_url', 'opsi_a', 'opsi_b', 'opsi_c', 'opsi_d', 'opsi_e', 'kunci_jawaban', 'bobot', 'jenis_soal', 'pembahasan', 'kode_soal', 'created_at'],
       initial: [
-        ['soal-1', 'jdw-1', 'Hasil turunan pertama dari fungsi f(x) = 3x² + 5x - 7 adalah...', '', '6x + 5', '3x + 5', '6x - 7', '6x² + 5', '3x² + 5', 'A', 50, new Date().toISOString()],
-        ['soal-2', 'jdw-1', 'Nilai dari integral tentu ∫(2x) dx dengan batas bawah 1 hingga batas atas 3 adalah...', '', '6', '8', '9', '10', '12', 'B', 50, new Date().toISOString()]
+        ['soal-1', 'jdw-1', 'Hasil turunan pertama dari fungsi f(x) = 3x² + 5x - 7 adalah...', '', '6x + 5', '3x + 5', '6x - 7', '6x² + 5', '3x² + 5', 'A', 50, 'PILIHAN_GANDA', 'Gunakan rumus turunan d/dx(ax^n) = n*a*x^(n-1). Turunan dari 3x² adalah 6x, 5x adalah 5, konstanta -7 adalah 0.', 'MAT-001', new Date().toISOString()],
+        ['soal-2', 'jdw-1', 'Nilai dari integral tentu ∫(2x) dx dengan batas bawah 1 hingga batas atas 3 adalah...', '', '6', '8', '9', '10', '12', 'B', 50, 'PILIHAN_GANDA', 'Anti-turunan dari 2x adalah x². Masukkan batas atas 3² = 9, batas bawah 1² = 1. Selisihnya 9 - 1 = 8.', 'MAT-002', new Date().toISOString()]
       ]
     },
     {

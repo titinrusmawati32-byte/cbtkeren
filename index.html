@@ -836,6 +836,11 @@
     searchQuery: '',
     filterRekapJadwal: '',
     selectedJadwalForSoal: '',
+    soalSearchQuery: '',
+    soalFilterJenis: 'ALL',
+    soalFilterKelas: 'ALL',
+    selectedSoalCheckboxIds: [],
+    currentDraftImportSoal: [],
 
     // State Ruang Ujian CBT Interaktif & Anti-Kecurangan
     activeExam: null, // { jadwal, soalList, currentIndex, answers: {}, ragu: {}, remainingSeconds, timerInterval, violations: 0 }
@@ -908,6 +913,8 @@
       {
         id: 'soal-1',
         jadwal_id: 'jdw-1',
+        kode_soal: 'MAT-001',
+        jenis_soal: 'PILIHAN_GANDA',
         pertanyaan: 'Hasil turunan pertama dari fungsi f(x) = 3x² + 5x - 7 adalah...',
         gambar_url: '',
         opsi_a: '6x + 5',
@@ -916,11 +923,14 @@
         opsi_d: '6x² + 5',
         opsi_e: '3x² + 5',
         kunci_jawaban: 'A',
+        pembahasan: 'Gunakan aturan turunan d/dx(ax^n) = n*a*x^(n-1). Turunan dari 3x² adalah 6x, turunan 5x adalah 5, dan konstanta -7 adalah 0.',
         bobot: 50
       },
       {
         id: 'soal-2',
         jadwal_id: 'jdw-1',
+        kode_soal: 'MAT-002',
+        jenis_soal: 'PILIHAN_GANDA',
         pertanyaan: 'Nilai dari integral tentu ∫(2x) dx dengan batas bawah 1 hingga batas atas 3 adalah...',
         gambar_url: '',
         opsi_a: '6',
@@ -929,6 +939,7 @@
         opsi_d: '10',
         opsi_e: '12',
         kunci_jawaban: 'B',
+        pembahasan: 'Anti-turunan dari 2x adalah x². Substitusikan batas atas dan bawah: 3² - 1² = 9 - 1 = 8.',
         bobot: 50
       }
     ];
@@ -2567,93 +2578,331 @@
   }
 
   // ============================================================================
-  // MODUL 5: BANK SOAL CBT INTERAKTIF
+  // MODUL 5: BANK SOAL CBT INTERAKTIF DENGAN IMPOR EXCEL & UPLOAD FOTO
   // ============================================================================
   function renderSoalModule() {
+    const q = (state.soalSearchQuery || '').toLowerCase();
+    const filterJenis = state.soalFilterJenis || 'ALL';
+    const filterKelas = state.soalFilterKelas || 'ALL';
+    const currentJadwalId = state.selectedJadwalForSoal || '';
+    const jmlOpsi = Number(state.pengaturan.jumlah_opsi || 4);
+
+    // Filter list soal
+    let list = state.soal.filter(s => {
+      // Filter jadwal jika dipilih
+      if (currentJadwalId && s.jadwal_id !== currentJadwalId) return false;
+      // Filter jenis
+      if (filterJenis !== 'ALL' && (s.jenis_soal || 'PILIHAN_GANDA') !== filterJenis) return false;
+      // Filter kelas
+      if (filterKelas !== 'ALL') {
+        const j = state.mapel_jadwal.find(m => m.id === s.jadwal_id);
+        if (j && j.kelas_id !== filterKelas) return false;
+      }
+      // Filter search
+      if (q) {
+        const matchTanya = (s.pertanyaan || '').toLowerCase().includes(q);
+        const matchKode = (s.kode_soal || '').toLowerCase().includes(q);
+        const matchOpsi = [s.opsi_a, s.opsi_b, s.opsi_c, s.opsi_d, s.opsi_e].some(o => (o || '').toLowerCase().includes(q));
+        if (!matchTanya && !matchKode && !matchOpsi) return false;
+      }
+      return true;
+    });
+
+    const totalSoal = state.soal.length;
+    const totalPG = state.soal.filter(s => (s.jenis_soal || 'PILIHAN_GANDA') === 'PILIHAN_GANDA').length;
+    const totalEsai = state.soal.filter(s => s.jenis_soal === 'ESAI').length;
+    const totalWithImg = state.soal.filter(s => s.gambar_url && s.gambar_url.trim() !== '').length;
+
     const jadwalOptions = state.mapel_jadwal.map(j =>
       `<option value="${j.id}" ${state.selectedJadwalForSoal === j.id ? 'selected' : ''}>${j.nama_mapel} — ${j.judul_ujian}</option>`
     ).join('');
 
-    const currentJadwalId = state.selectedJadwalForSoal || state.mapel_jadwal[0]?.id;
-    const soalList = currentJadwalId ? state.soal.filter(s => s.jadwal_id === currentJadwalId) : [];
-    const jmlOpsi = Number(state.pengaturan.jumlah_opsi || 4);
+    const kelasOptions = state.kelas.map(k =>
+      `<option value="${k.id}" ${state.soalFilterKelas === k.id ? 'selected' : ''}>${k.nama_kelas}</option>`
+    ).join('');
+
+    const selectedIds = state.selectedSoalCheckboxIds || [];
+    const isAllSelected = list.length > 0 && list.every(s => selectedIds.includes(s.id));
 
     return `
-      <div class="bg-white rounded-3xl p-6 border border-slate-100 shadow-sm space-y-6">
-        <div class="flex flex-wrap items-center justify-between gap-4">
-          <div>
-            <h2 class="text-lg font-extrabold text-slate-900">Bank Butir Soal CBT</h2>
-            <p class="text-xs text-slate-500">Kelola pertanyaan pilihan ganda, kunci jawaban, dan bobot nilai per soal</p>
+      <div class="space-y-5">
+        <!-- Panel Utama Bank Soal -->
+        <div class="bg-white rounded-3xl p-6 border border-slate-100 shadow-sm space-y-6">
+          <!-- Header & Toolbar Utama -->
+          <div class="flex flex-wrap items-center justify-between gap-4">
+            <div>
+              <div class="flex items-center gap-2.5">
+                <div class="w-10 h-10 rounded-2xl bg-blue-600 text-white flex items-center justify-center text-xl shadow-md shadow-blue-500/20 shrink-0">
+                  <i class="ph-bold ph-files"></i>
+                </div>
+                <div>
+                  <h2 class="text-lg font-extrabold text-slate-900">Bank Butir Soal CBT</h2>
+                  <p class="text-xs text-slate-500">Kelola soal pilihan ganda & esai, template Excel 2-sheet, upload foto soal dari perangkat</p>
+                </div>
+              </div>
+            </div>
+
+            <!-- Tombol Toolbar Aksi -->
+            <div class="flex flex-wrap items-center gap-2.5">
+              <!-- Tombol Download Template Excel -->
+              <button type="button" onclick="window.app.downloadTemplateSoalXLSX()" class="px-4 py-2.5 rounded-2xl bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200/80 text-xs font-bold flex items-center gap-2 shadow-sm transition">
+                <i class="ph-bold ph-microsoft-excel-logo text-emerald-600 text-base"></i>
+                <span>Download Template Excel</span>
+              </button>
+
+              <!-- Tombol Upload Excel -->
+              <button type="button" onclick="window.app.showUploadSoalModal()" class="px-4 py-2.5 rounded-2xl bg-purple-50 hover:bg-purple-100 text-purple-800 border border-purple-200/80 text-xs font-bold flex items-center gap-2 shadow-sm transition">
+                <i class="ph-bold ph-cloud-arrow-up text-purple-600 text-base"></i>
+                <span>Upload Soal Excel</span>
+              </button>
+
+              <!-- Tombol Lihat Pratinjau Keseluruhan -->
+              <button type="button" onclick="window.app.previewAllSoal()" class="px-4 py-2.5 rounded-2xl bg-sky-50 hover:bg-sky-100 text-sky-800 border border-sky-200/80 text-xs font-bold flex items-center gap-2 shadow-sm transition">
+                <i class="ph-bold ph-eye text-sky-600 text-base"></i>
+                <span>Lihat Pratinjau</span>
+              </button>
+
+              <!-- Tombol Tambah Soal Manual -->
+              <button type="button" onclick="window.app.showSoalModal()" class="px-4 py-2.5 rounded-2xl bg-blue-600 hover:bg-blue-700 active:scale-[0.99] text-white text-xs font-bold flex items-center gap-2 shadow-md shadow-blue-500/20 transition">
+                <i class="ph-bold ph-plus-circle text-base"></i>
+                <span>Tambah Soal Manual</span>
+              </button>
+            </div>
           </div>
 
-          <div class="flex flex-wrap items-center gap-3">
-            <select onchange="window.app.changeSelectedJadwal(this.value)" class="px-4 py-2.5 rounded-2xl bg-slate-50 border border-slate-200 text-xs font-bold text-slate-800">
-              ${jadwalOptions || '<option value="">Belum ada jadwal mapel</option>'}
-            </select>
-            ${currentJadwalId ? `
-              <button type="button" onclick="window.app.showSoalModal()" class="px-4 py-2.5 rounded-2xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold flex items-center gap-2 shadow-sm transition">
-                <i class="ph-bold ph-plus-circle text-base"></i> Tambah Soal
-              </button>
+          <!-- Statistik Cepat Bank Soal -->
+          <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 p-4 rounded-2xl bg-slate-50 border border-slate-100">
+            <div class="flex items-center gap-3">
+              <div class="w-9 h-9 rounded-xl bg-blue-100 text-blue-700 flex items-center justify-center font-extrabold text-sm shrink-0">
+                <i class="ph-fill ph-file-text"></i>
+              </div>
+              <div>
+                <p class="text-[11px] font-bold text-slate-400">Total Soal</p>
+                <h4 class="text-base font-black text-slate-900">${totalSoal}</h4>
+              </div>
+            </div>
+            <div class="flex items-center gap-3">
+              <div class="w-9 h-9 rounded-xl bg-emerald-100 text-emerald-700 flex items-center justify-center font-extrabold text-sm shrink-0">
+                <i class="ph-fill ph-check-square"></i>
+              </div>
+              <div>
+                <p class="text-[11px] font-bold text-slate-400">Pilihan Ganda</p>
+                <h4 class="text-base font-black text-slate-900">${totalPG}</h4>
+              </div>
+            </div>
+            <div class="flex items-center gap-3">
+              <div class="w-9 h-9 rounded-xl bg-purple-100 text-purple-700 flex items-center justify-center font-extrabold text-sm shrink-0">
+                <i class="ph-fill ph-pen-nib"></i>
+              </div>
+              <div>
+                <p class="text-[11px] font-bold text-slate-400">Soal Esai</p>
+                <h4 class="text-base font-black text-slate-900">${totalEsai}</h4>
+              </div>
+            </div>
+            <div class="flex items-center gap-3">
+              <div class="w-9 h-9 rounded-xl bg-amber-100 text-amber-700 flex items-center justify-center font-extrabold text-sm shrink-0">
+                <i class="ph-fill ph-image"></i>
+              </div>
+              <div>
+                <p class="text-[11px] font-bold text-slate-400">Foto Soal</p>
+                <h4 class="text-base font-black text-slate-900">${totalWithImg}</h4>
+              </div>
+            </div>
+          </div>
+
+          <!-- Baris Filter & Kolom Pencarian -->
+          <div class="flex flex-wrap items-center justify-between gap-3 pt-1 border-t border-slate-100">
+            <div class="flex flex-wrap items-center gap-2.5 flex-1 min-w-[280px]">
+              <!-- Filter Jadwal / Mapel -->
+              <div class="relative">
+                <select onchange="window.app.changeSelectedJadwal(this.value)" class="pl-3.5 pr-8 py-2 rounded-xl bg-slate-50 border border-slate-200 text-xs font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                  <option value="">-- Semua Mata Pelajaran --</option>
+                  ${jadwalOptions}
+                </select>
+              </div>
+
+              <!-- Filter Kelas -->
+              <div class="relative">
+                <select onchange="window.app.handleSoalFilterKelas(this.value)" class="pl-3.5 pr-8 py-2 rounded-xl bg-slate-50 border border-slate-200 text-xs font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                  <option value="ALL">-- Semua Kelas --</option>
+                  ${kelasOptions}
+                </select>
+              </div>
+
+              <!-- Filter Jenis Soal -->
+              <div class="relative">
+                <select onchange="window.app.handleSoalFilterJenis(this.value)" class="pl-3.5 pr-8 py-2 rounded-xl bg-slate-50 border border-slate-200 text-xs font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                  <option value="ALL" ${filterJenis === 'ALL' ? 'selected' : ''}>-- Semua Jenis --</option>
+                  <option value="PILIHAN_GANDA" ${filterJenis === 'PILIHAN_GANDA' ? 'selected' : ''}>Pilihan Ganda</option>
+                  <option value="ESAI" ${filterJenis === 'ESAI' ? 'selected' : ''}>Esai / Uraian</option>
+                </select>
+              </div>
+
+              <!-- Input Search Soal -->
+              <div class="relative flex-1 min-w-[180px]">
+                <i class="ph ph-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"></i>
+                <input type="text" value="${state.soalSearchQuery || ''}" oninput="window.app.handleSoalSearch(this.value)" placeholder="Cari pertanyaan / kode soal..." class="w-full pl-9 pr-3.5 py-2 rounded-xl bg-slate-50 border border-slate-200 text-xs focus:outline-none focus:ring-2 focus:ring-blue-500" />
+              </div>
+            </div>
+
+            <!-- Tombol Aksi Massal jika ada checkbox terpilih -->
+            ${selectedIds.length > 0 ? `
+              <div class="flex items-center gap-2">
+                <button type="button" onclick="window.app.deleteSelectedSoal()" class="px-3.5 py-2 rounded-xl bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold flex items-center gap-1.5 shadow-sm transition">
+                  <i class="ph-bold ph-trash"></i>
+                  <span>Hapus Terpilih (${selectedIds.length})</span>
+                </button>
+              </div>
             ` : ''}
           </div>
-        </div>
 
-        ${!currentJadwalId ? `
-          <div class="py-12 text-center text-xs text-slate-400">Silakan buat jadwal mata pelajaran terlebih dahulu.</div>
-        ` : soalList.length === 0 ? `
-          <div class="py-12 text-center text-xs text-slate-400">Jadwal ini belum memiliki butir soal. Klik <b>Tambah Soal</b> untuk membuat soal pertama.</div>
-        ` : `
-          <div class="space-y-4">
-            ${soalList.map((s, idx) => {
-              const opts = [
-                { k: 'A', t: s.opsi_a },
-                { k: 'B', t: s.opsi_b },
-                { k: 'C', t: s.opsi_c },
-                { k: 'D', t: s.opsi_d },
-                { k: 'E', t: s.opsi_e }
-              ].slice(0, jmlOpsi);
-
-              return `
-                <div class="p-5 rounded-2xl bg-slate-50 border border-slate-100 space-y-3.5">
-                  <div class="flex items-start justify-between gap-4">
-                    <div class="flex items-center gap-2.5">
-                      <span class="w-7 h-7 rounded-lg bg-blue-600 text-white text-xs font-extrabold flex items-center justify-center shrink-0">
-                        ${idx + 1}
-                      </span>
-                      <span class="text-[11px] font-extrabold px-2.5 py-0.5 rounded-full bg-emerald-50 text-emerald-700">
-                        Kunci: ${s.kunci_jawaban}
-                      </span>
-                      <span class="text-[11px] font-bold text-slate-400">
-                        Bobot: ${s.bobot || 10}
-                      </span>
-                    </div>
-                    <div class="flex items-center gap-1">
-                      <button type="button" onclick="window.app.showSoalModal('${s.id}')" class="p-1.5 text-blue-600 hover:bg-white rounded-lg"><i class="ph-bold ph-pencil-simple"></i></button>
-                      <button type="button" onclick="window.app.deleteSoal('${s.id}')" class="p-1.5 text-rose-600 hover:bg-white rounded-lg"><i class="ph-bold ph-trash"></i></button>
-                    </div>
-                  </div>
-
-                  ${s.gambar_url ? `
-                    <div class="pt-1">
-                      <img src="${s.gambar_url}" alt="Gambar Soal" class="max-h-48 rounded-xl border border-slate-200 object-contain bg-white p-1" onerror="this.style.display='none'" />
-                    </div>
-                  ` : ''}
-
-                  <p class="text-xs sm:text-sm font-bold text-slate-800 leading-relaxed">${s.pertanyaan}</p>
-
-                  <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-1 text-xs">
-                    ${opts.map(o => `
-                      <div class="p-2.5 rounded-xl border ${s.kunci_jawaban === o.k ? 'bg-emerald-50/80 border-emerald-300 font-extrabold text-emerald-800' : 'bg-white border-slate-200 text-slate-700'} flex items-center gap-2">
-                        <span class="w-5 h-5 rounded-md ${s.kunci_jawaban === o.k ? 'bg-emerald-600 text-white' : 'bg-slate-100 text-slate-600'} text-[10px] font-bold flex items-center justify-center">${o.k}</span>
-                        <span class="truncate">${o.t}</span>
-                      </div>
-                    `).join('')}
-                  </div>
-                </div>
-              `;
-            }).join('')}
+          <!-- Master Checkbox & Header Hasil -->
+          <div class="flex items-center justify-between text-xs text-slate-500 pt-1">
+            <label class="inline-flex items-center gap-2 cursor-pointer font-bold select-none text-slate-700">
+              <input type="checkbox" onchange="window.app.toggleSelectAllSoal(this.checked)" ${isAllSelected ? 'checked' : ''} class="w-4 h-4 rounded text-blue-600 border-slate-300 focus:ring-blue-500" />
+              <span>Pilih Semua Soal (${list.length} item)</span>
+            </label>
+            <span>Menampilkan <b>${list.length}</b> dari <b>${totalSoal}</b> butir soal</span>
           </div>
-        `}
+
+          <!-- Daftar Kartu Soal -->
+          ${list.length === 0 ? `
+            <div class="py-16 text-center space-y-3 rounded-2xl border-2 border-dashed border-slate-200 bg-slate-50/50">
+              <div class="w-14 h-14 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center text-2xl mx-auto shadow-sm">
+                <i class="ph-bold ph-file-plus"></i>
+              </div>
+              <h4 class="text-sm font-extrabold text-slate-800">Belum ada butir soal yang sesuai filter</h4>
+              <p class="text-xs text-slate-400 max-w-sm mx-auto">Gunakan tombol <b>Upload Soal Excel</b> untuk memasukkan banyak soal sekaligus, atau klik <b>Tambah Soal Manual</b>.</p>
+              <div class="pt-2 flex justify-center gap-2">
+                <button type="button" onclick="window.app.downloadTemplateSoalXLSX()" class="px-4 py-2 rounded-xl bg-white border border-slate-200 text-xs font-bold text-slate-700 hover:bg-slate-50 transition">Download Template</button>
+                <button type="button" onclick="window.app.showUploadSoalModal()" class="px-4 py-2 rounded-xl bg-blue-600 text-xs font-bold text-white hover:bg-blue-700 transition">Upload Excel</button>
+              </div>
+            </div>
+          ` : `
+            <div class="space-y-4">
+              ${list.map((s, idx) => {
+                const isSelected = selectedIds.includes(s.id);
+                const isEsai = s.jenis_soal === 'ESAI';
+                const j = state.mapel_jadwal.find(m => m.id === s.jadwal_id);
+                const kls = j ? state.kelas.find(k => k.id === j.kelas_id) : null;
+
+                const opts = [
+                  { k: 'A', t: s.opsi_a },
+                  { k: 'B', t: s.opsi_b },
+                  { k: 'C', t: s.opsi_c },
+                  { k: 'D', t: s.opsi_d },
+                  { k: 'E', t: s.opsi_e }
+                ].slice(0, jmlOpsi);
+
+                return `
+                  <div class="p-5 rounded-2xl border transition space-y-3.5 relative ${
+                    isSelected ? 'bg-blue-50/30 border-blue-300 ring-1 ring-blue-400/40' : 'bg-slate-50 border-slate-200/80 hover:border-slate-300'
+                  }">
+                    <!-- Baris Atas: Checkbox, Badge & Tombol Aksi -->
+                    <div class="flex flex-wrap items-start justify-between gap-3">
+                      <div class="flex items-center gap-2.5">
+                        <input type="checkbox" onchange="window.app.toggleSoalCheckbox('${s.id}')" ${isSelected ? 'checked' : ''} class="w-4 h-4 rounded text-blue-600 border-slate-300 focus:ring-blue-500 cursor-pointer" />
+                        <span class="w-7 h-7 rounded-lg bg-blue-600 text-white text-xs font-extrabold flex items-center justify-center shrink-0">
+                          ${idx + 1}
+                        </span>
+                        <span class="text-xs font-mono font-extrabold px-2 py-0.5 rounded bg-slate-200 text-slate-700">
+                          ${s.kode_soal || ('SOAL-' + (idx + 1))}
+                        </span>
+                        <span class="text-[11px] font-extrabold px-2.5 py-0.5 rounded-full ${
+                          isEsai ? 'bg-purple-100 text-purple-700 border border-purple-200' : 'bg-blue-100 text-blue-700 border border-blue-200'
+                        }">
+                          ${isEsai ? 'ESAI' : 'PILIHAN GANDA'}
+                        </span>
+                        ${j ? `
+                          <span class="hidden sm:inline-block text-[11px] font-bold text-slate-500">
+                            • ${j.nama_mapel} ${kls ? '(' + kls.nama_kelas + ')' : ''}
+                          </span>
+                        ` : ''}
+                      </div>
+
+                      <!-- Skor & Aksi -->
+                      <div class="flex items-center gap-1.5">
+                        <span class="text-[11px] font-extrabold px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-800 border border-emerald-200">
+                          Kunci: <b>${s.kunci_jawaban || '-'}</b>
+                        </span>
+                        <span class="text-[11px] font-bold px-2 py-1 rounded-full bg-amber-50 text-amber-800 border border-amber-200">
+                          ${s.bobot || 10} Poin
+                        </span>
+
+                        <div class="flex items-center gap-1 ml-1 pl-2 border-l border-slate-200">
+                          <!-- Pratinjau -->
+                          <button type="button" onclick="window.app.previewSingleSoal('${s.id}')" class="p-1.5 text-sky-600 hover:bg-sky-50 rounded-lg transition" title="Lihat Pratinjau Soal">
+                            <i class="ph-bold ph-eye text-base"></i>
+                          </button>
+                          <!-- Edit -->
+                          <button type="button" onclick="window.app.showSoalModal('${s.id}')" class="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg transition" title="Edit Soal & Foto">
+                            <i class="ph-bold ph-pencil-simple text-base"></i>
+                          </button>
+                          <!-- Duplikasi -->
+                          <button type="button" onclick="window.app.duplicateSoal('${s.id}')" class="p-1.5 text-slate-600 hover:bg-slate-200 rounded-lg transition" title="Duplikasi Soal Ini">
+                            <i class="ph-bold ph-copy text-base"></i>
+                          </button>
+                          <!-- Hapus -->
+                          <button type="button" onclick="window.app.deleteSoal('${s.id}')" class="p-1.5 text-rose-600 hover:bg-rose-50 rounded-lg transition" title="Hapus Soal">
+                            <i class="ph-bold ph-trash text-base"></i>
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+
+                    <!-- Foto Soal Jika Ada (Bisa Diklik Zoom) -->
+                    ${s.gambar_url ? `
+                      <div class="pt-1">
+                        <div class="relative inline-block group">
+                          <img src="${s.gambar_url}" alt="Gambar Soal" onclick="window.app.zoomSoalImage('${s.gambar_url}')" class="max-h-48 rounded-xl border border-slate-200 object-contain bg-white p-1.5 shadow-sm cursor-zoom-in group-hover:opacity-90 transition" onerror="this.style.display='none'" />
+                          <span class="absolute bottom-2 right-2 px-2 py-0.5 rounded bg-slate-900/75 text-white text-[10px] font-bold pointer-events-none flex items-center gap-1">
+                            <i class="ph-bold ph-magnifying-glass-plus"></i> Perbesar
+                          </span>
+                        </div>
+                      </div>
+                    ` : ''}
+
+                    <!-- Teks Pertanyaan -->
+                    <p class="text-xs sm:text-sm font-bold text-slate-900 leading-relaxed">${s.pertanyaan}</p>
+
+                    <!-- Pilihan Jawaban atau Pedoman Esai -->
+                    ${isEsai ? `
+                      <div class="p-3 rounded-xl bg-purple-50/60 border border-purple-200/80 text-xs">
+                        <span class="font-extrabold text-purple-900 block mb-0.5">Pedoman Jawaban / Kunci Esai:</span>
+                        <p class="text-slate-700 leading-relaxed font-medium">${s.kunci_jawaban || '-'}</p>
+                      </div>
+                    ` : `
+                      <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-1 text-xs">
+                        ${opts.map(o => {
+                          const isKunci = String(s.kunci_jawaban).trim().toUpperCase() === o.k;
+                          return `
+                            <div class="p-2.5 rounded-xl border flex items-center gap-2.5 ${
+                              isKunci ? 'bg-emerald-50 border-emerald-300 font-extrabold text-emerald-900 shadow-sm' : 'bg-white border-slate-200 text-slate-700'
+                            }">
+                              <span class="w-5 h-5 rounded-md ${isKunci ? 'bg-emerald-600 text-white' : 'bg-slate-100 text-slate-600'} text-[10px] font-bold flex items-center justify-center shrink-0">
+                                ${o.k}
+                              </span>
+                              <span class="truncate flex-1">${o.t}</span>
+                              ${isKunci ? `<i class="ph-bold ph-check text-emerald-600 text-sm shrink-0"></i>` : ''}
+                            </div>
+                          `;
+                        }).join('')}
+                      </div>
+                    `}
+
+                    <!-- Pembahasan Soal jika ada -->
+                    ${s.pembahasan ? `
+                      <div class="pt-1 text-[11px] text-slate-500 flex items-start gap-1.5 bg-slate-100/70 p-2.5 rounded-xl border border-slate-200/60">
+                        <i class="ph-bold ph-lightbulb text-amber-500 text-sm shrink-0 mt-0.5"></i>
+                        <p class="leading-relaxed"><b>Pembahasan:</b> ${s.pembahasan}</p>
+                      </div>
+                    ` : ''}
+                  </div>
+                `;
+              }).join('')}
+            </div>
+          `}
+        </div>
       </div>
     `;
   }
@@ -2663,12 +2912,563 @@
     renderAll();
   }
 
+  function handleSoalSearch(query) {
+    state.soalSearchQuery = query;
+    renderAll();
+  }
+
+  function handleSoalFilterJenis(jenis) {
+    state.soalFilterJenis = jenis;
+    renderAll();
+  }
+
+  function handleSoalFilterKelas(kelasId) {
+    state.soalFilterKelas = kelasId;
+    renderAll();
+  }
+
+  function toggleSelectAllSoal(checked) {
+    const q = (state.soalSearchQuery || '').toLowerCase();
+    const filterJenis = state.soalFilterJenis || 'ALL';
+    const filterKelas = state.soalFilterKelas || 'ALL';
+    const currentJadwalId = state.selectedJadwalForSoal || '';
+
+    const visibleList = state.soal.filter(s => {
+      if (currentJadwalId && s.jadwal_id !== currentJadwalId) return false;
+      if (filterJenis !== 'ALL' && (s.jenis_soal || 'PILIHAN_GANDA') !== filterJenis) return false;
+      if (filterKelas !== 'ALL') {
+        const j = state.mapel_jadwal.find(m => m.id === s.jadwal_id);
+        if (j && j.kelas_id !== filterKelas) return false;
+      }
+      if (q && !(s.pertanyaan || '').toLowerCase().includes(q) && !(s.kode_soal || '').toLowerCase().includes(q)) return false;
+      return true;
+    });
+
+    if (checked) {
+      state.selectedSoalCheckboxIds = visibleList.map(s => s.id);
+    } else {
+      state.selectedSoalCheckboxIds = [];
+    }
+    renderAll();
+  }
+
+  function toggleSoalCheckbox(id) {
+    const list = state.selectedSoalCheckboxIds || [];
+    const idx = list.indexOf(id);
+    if (idx > -1) {
+      list.splice(idx, 1);
+    } else {
+      list.push(id);
+    }
+    state.selectedSoalCheckboxIds = list;
+    renderAll();
+  }
+
+  async function deleteSelectedSoal() {
+    const ids = state.selectedSoalCheckboxIds || [];
+    if (ids.length === 0) return;
+
+    if (!confirm(`Hapus permanen ${ids.length} butir soal terpilih?`)) return;
+
+    if (!IS_CONNECTED_GAS) {
+      const setIds = new Set(ids);
+      state.soal = state.soal.filter(s => !setIds.has(s.id));
+      state.selectedSoalCheckboxIds = [];
+      renderAll();
+      showToast(`${ids.length} butir soal berhasil dihapus massal (Mode Demo)!`);
+      return;
+    }
+
+    try {
+      showToast(`Menghapus ${ids.length} soal dari Spreadsheet...`);
+      await callGAS('deleteBulkSoal', { ids });
+      state.selectedSoalCheckboxIds = [];
+      await loadAllDataFromGAS();
+      showToast(`${ids.length} butir soal berhasil dihapus permanen!`);
+    } catch (err) {
+      showToast('Gagal menghapus massal: ' + err.message, 'error');
+    }
+  }
+
+  // ============================================================================
+  // FITUR 2: DOWNLOAD TEMPLATE EXCEL DUA SHEET (PETUNJUK & DATA_SOAL)
+  // ============================================================================
+  function downloadTemplateSoalXLSX() {
+    if (typeof XLSX === 'undefined') {
+      showToast('Library SheetJS Excel sedang dimuat, coba sesaat lagi.', 'warning');
+      return;
+    }
+
+    // Sheet 1: PETUNJUK
+    const petunjukData = [
+      ['PANDUAN LENGKAP PENGISIAN BANK SOAL CBT — EDUCBT LINGORA'],
+      [''],
+      ['1. PETUNJUK UMUM:'],
+      ['• Jangan mengubah atau menghapus nama-nama kolom header pada Baris 1 di sheet DATA_SOAL.'],
+      ['• Soal yang diisi pada template ini akan langsung diimpor ke sistem CBT sekolah.'],
+      ['• Anda dapat mengunggah foto / gambar soal secara langsung dari perangkat setelah impor melalui menu Edit Soal (tidak perlu memasukkan link/URL gambar ke Excel).'],
+      [''],
+      ['2. PENJELASAN SETIAP KOLOM (KOLOM A - M):'],
+      ['Kolom A (Kode_Soal)', 'Kode unik soal (contoh: MAT-01, BIO-12).'],
+      ['Kolom B (Mata_Pelajaran)', 'Nama mata pelajaran (contoh: Matematika Lanjut, Biologi, Fisika).'],
+      ['Kolom C (Kelas)', 'Kelas sasaran ujian (contoh: XII IPA 1, XI IPS 1, atau Semua Kelas).'],
+      ['Kolom D (Jenis_Soal)', 'PILIHAN_GANDA atau ESAI (Gunakan huruf kapital).'],
+      ['Kolom E (Pertanyaan)', 'Isi teks pertanyaan ujian (Wajib diisi).'],
+      ['Kolom F (Opsi_A)', 'Pilihan jawaban A (Wajib untuk Pilihan Ganda).'],
+      ['Kolom G (Opsi_B)', 'Pilihan jawaban B (Wajib untuk Pilihan Ganda).'],
+      ['Kolom H (Opsi_C)', 'Pilihan jawaban C (Wajib untuk Pilihan Ganda).'],
+      ['Kolom I (Opsi_D)', 'Pilihan jawaban D (Wajib untuk Pilihan Ganda jika 4 opsi).'],
+      ['Kolom J (Opsi_E)', 'Pilihan jawaban E (Opsional jika menggunakan 5 opsi).'],
+      ['Kolom K (Kunci_Jawaban)', 'Untuk Pilihan Ganda: Tuliskan huruf kunci (A, B, C, D, atau E). Untuk Esai: Tuliskan pedoman penilaian atau kunci uraian.'],
+      ['Kolom L (Pembahasan)', 'Penjelasan atau pembahasan materi soal (Opsional).'],
+      ['Kolom M (Bobot_Nilai)', 'Bobot skor angka positif (contoh: 10, 20, 25).'],
+      [''],
+      ['3. KETENTUAN JENIS SOAL:'],
+      ['• PILIHAN_GANDA: Pertanyaan wajib ada, Opsi A-D wajib ada, Kunci Jawaban harus sesuai dengan opsi yang terisi.'],
+      ['• ESAI: Pertanyaan wajib ada, Kunci Jawaban berupa uraian pedoman jawaban, opsi A-E diisi tanda hubung (-) atau dikosongkan.']
+    ];
+
+    const wsPetunjuk = XLSX.utils.aoa_to_sheet(petunjukData);
+    wsPetunjuk['!cols'] = [{ wch: 28 }, { wch: 80 }];
+
+    // Sheet 2: DATA_SOAL
+    const sampleQuestions = [
+      {
+        Kode_Soal: 'BIO-001',
+        Mata_Pelajaran: 'Biologi Lanjut',
+        Kelas: 'XII IPA 1',
+        Jenis_Soal: 'PILIHAN_GANDA',
+        Pertanyaan: 'Organel sel yang berfungsi sebagai tempat utama respirasi seluler dan pembentukan molekul energi ATP adalah...',
+        Opsi_A: 'Ribosom',
+        Opsi_B: 'Mitokondria',
+        Opsi_C: 'Badan Golgi',
+        Opsi_D: 'Retikulum Endoplasma',
+        Opsi_E: 'Lisosom',
+        Kunci_Jawaban: 'B',
+        Pembahasan: 'Mitokondria merupakan organel penghasil energi (ATP) utama melalui siklus Krebs dan rantai transpor elektron.',
+        Bobot_Nilai: 10
+      },
+      {
+        Kode_Soal: 'MAT-001',
+        Mata_Pelajaran: 'Matematika Lanjut',
+        Kelas: 'XII IPA 1',
+        Jenis_Soal: 'PILIHAN_GANDA',
+        Pertanyaan: 'Berapakah hasil perhitungan dari operasi matematika 12 × 8?',
+        Opsi_A: '84',
+        Opsi_B: '96',
+        Opsi_C: '108',
+        Opsi_D: '112',
+        Opsi_E: '120',
+        Kunci_Jawaban: 'B',
+        Pembahasan: 'Perkalian 12 dengan 8 menghasilkan nilai tepat 96.',
+        Bobot_Nilai: 10
+      },
+      {
+        Kode_Soal: 'FIS-001',
+        Mata_Pelajaran: 'Fisika Dasar',
+        Kelas: 'XII IPA 1',
+        Jenis_Soal: 'ESAI',
+        Pertanyaan: 'Jelaskan bunyi Hukum II Newton tentang gerak dan tuliskan persamaan matematisnya!',
+        Opsi_A: '-',
+        Opsi_B: '-',
+        Opsi_C: '-',
+        Opsi_D: '-',
+        Opsi_E: '-',
+        Kunci_Jawaban: 'Percepatan yang dialami oleh suatu benda sebanding dengan resultan gaya yang bekerja dan berbanding terbalik dengan massanya. Persamaan: F = m . a',
+        Pembahasan: 'Gaya total netto F (Newton) bekerja pada massa m (kg) menghasilkan percepatan a (m/s²).',
+        Bobot_Nilai: 20
+      }
+    ];
+
+    const wsData = XLSX.utils.json_to_sheet(sampleQuestions, {
+      header: [
+        'Kode_Soal',
+        'Mata_Pelajaran',
+        'Kelas',
+        'Jenis_Soal',
+        'Pertanyaan',
+        'Opsi_A',
+        'Opsi_B',
+        'Opsi_C',
+        'Opsi_D',
+        'Opsi_E',
+        'Kunci_Jawaban',
+        'Pembahasan',
+        'Bobot_Nilai'
+      ]
+    });
+
+    wsData['!cols'] = [
+      { wch: 14 },
+      { wch: 20 },
+      { wch: 14 },
+      { wch: 16 },
+      { wch: 45 },
+      { wch: 22 },
+      { wch: 22 },
+      { wch: 22 },
+      { wch: 22 },
+      { wch: 22 },
+      { wch: 16 },
+      { wch: 35 },
+      { wch: 12 }
+    ];
+
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, wsPetunjuk, 'PETUNJUK');
+    XLSX.utils.book_append_sheet(wb, wsData, 'DATA_SOAL');
+
+    XLSX.writeFile(wb, 'Template_Bank_Soal_EduCBT.xlsx');
+    showToast('Template Excel 2 Sheet (PETUNJUK & DATA_SOAL) berhasil diunduh!');
+  }
+
+  // ============================================================================
+  // FITUR 3: MODAL UPLOAD EXCEL & VALIDASI KETAT
+  // ============================================================================
+  function showUploadSoalModal() {
+    window._selectedUploadExcelFile = null;
+    const jadwalOptions = state.mapel_jadwal.map(j =>
+      `<option value="${j.id}" ${state.selectedJadwalForSoal === j.id ? 'selected' : ''}>${j.nama_mapel} — ${j.judul_ujian}</option>`
+    ).join('');
+
+    openModal('Upload Bank Soal dari Excel (.XLSX)', `
+      <form onsubmit="window.app.processImportSoalXLSX(event)" class="space-y-4 text-xs">
+        <div>
+          <label class="block font-bold text-slate-700 mb-1">Target Mata Pelajaran / Jadwal Ujian Penerima</label>
+          <select id="f-target-jadwal-import" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-xs font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500">
+            ${jadwalOptions || '<option value="">Belum ada jadwal mapel</option>'}
+          </select>
+          <p class="text-[10px] text-slate-400 mt-1">Soal yang tidak mencantumkan nama mapel akan otomatis dimasukkan ke jadwal yang dipilih ini.</p>
+        </div>
+
+        <!-- Drag & Drop Zone -->
+        <div id="upload-excel-dropzone" class="border-2 border-dashed border-slate-300 hover:border-blue-500 rounded-2xl p-6 text-center transition bg-slate-50 cursor-pointer" onclick="document.getElementById('file-upload-soal-excel').click()">
+          <div class="flex flex-col items-center justify-center gap-2 pointer-events-none">
+            <div class="w-12 h-12 rounded-full bg-purple-100 text-purple-700 flex items-center justify-center text-2xl shadow-sm">
+              <i class="ph-bold ph-microsoft-excel-logo"></i>
+            </div>
+            <p class="font-extrabold text-slate-800 text-sm" id="upload-excel-label">Pilih Berkas Excel atau Tarik & Lepas di Sini</p>
+            <p class="text-[11px] text-slate-400">Format yang didukung: <b>.XLSX</b> dan <b>.XLS</b> (Maksimal 10MB)</p>
+          </div>
+          <input type="file" id="file-upload-soal-excel" accept=".xlsx,.xls" onchange="window.app.handleExcelFileSelect(event)" class="hidden" />
+        </div>
+
+        <div id="upload-excel-info" class="hidden p-3 rounded-xl bg-purple-50 border border-purple-200 text-purple-900 font-bold flex items-center justify-between">
+          <div class="flex items-center gap-2 truncate">
+            <i class="ph-fill ph-file-text text-lg text-purple-700"></i>
+            <span id="upload-excel-filename" class="truncate font-mono">nama_file.xlsx</span>
+          </div>
+          <span id="upload-excel-filesize" class="text-[10px] px-2 py-0.5 rounded bg-purple-200 font-bold shrink-0">0 KB</span>
+        </div>
+
+        <div class="flex justify-between items-center pt-2 border-t border-slate-100">
+          <button type="button" onclick="window.app.downloadTemplateSoalXLSX()" class="text-xs font-bold text-emerald-600 hover:text-emerald-700 flex items-center gap-1">
+            <i class="ph-bold ph-download-simple"></i> Download Template
+          </button>
+          <div class="flex gap-2">
+            <button type="button" onclick="window.app.closeModal()" class="px-4 py-2 rounded-xl bg-slate-100 text-slate-600 font-bold">Batal</button>
+            <button type="submit" id="btn-submit-upload-excel" class="px-5 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold flex items-center gap-1.5 shadow-sm">
+              <i class="ph-bold ph-arrow-right"></i> Periksa File & Buka Pratinjau
+            </button>
+          </div>
+        </div>
+      </form>
+    `);
+  }
+
+  function handleExcelFileSelect(event) {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    window._selectedUploadExcelFile = file;
+    const label = document.getElementById('upload-excel-label');
+    const info = document.getElementById('upload-excel-info');
+    const nameEl = document.getElementById('upload-excel-filename');
+    const sizeEl = document.getElementById('upload-excel-filesize');
+
+    if (label) label.textContent = 'Berkas dipilih: ' + file.name;
+    if (nameEl) nameEl.textContent = file.name;
+    if (sizeEl) sizeEl.textContent = (file.size / 1024).toFixed(1) + ' KB';
+    if (info) info.classList.remove('hidden');
+  }
+
+  async function processImportSoalXLSX(e) {
+    if (e) e.preventDefault();
+    const fileInput = document.getElementById('file-upload-soal-excel');
+    const file = fileInput?.files?.[0] || window._selectedUploadExcelFile;
+    if (!file) {
+      showToast('Pilih berkas Excel terlebih dahulu!', 'warning');
+      return;
+    }
+
+    const defaultJadwalId = document.getElementById('f-target-jadwal-import')?.value || state.selectedJadwalForSoal || state.mapel_jadwal[0]?.id;
+
+    try {
+      showToast('Membaca dan memvalidasi berkas Excel...');
+      const buffer = await file.arrayBuffer();
+      const workbook = XLSX.read(buffer, { type: 'array' });
+
+      // Temukan sheet DATA_SOAL
+      let sheetName = workbook.SheetNames.find(n => n.toUpperCase().includes('DATA') || n.toUpperCase().includes('SOAL'));
+      if (!sheetName) sheetName = workbook.SheetNames[workbook.SheetNames.length > 1 ? 1 : 0];
+
+      const sheet = workbook.Sheets[sheetName];
+      const rawRows = XLSX.utils.sheet_to_json(sheet, { defval: '' });
+
+      if (!rawRows || rawRows.length === 0) {
+        showToast('Sheet data soal kosong atau format baris tidak terbaca!', 'error');
+        return;
+      }
+
+      const parsedList = [];
+      const seenKode = new Set();
+
+      rawRows.forEach((row, i) => {
+        const rowNum = i + 2; // Baris 1 adalah header Excel
+        const pertanyaan = String(row.Pertanyaan || row.pertanyaan || row.soal || '').trim();
+        const kodeSoal = String(row.Kode_Soal || row.kode_soal || row.Kode || ('SOAL-' + (i + 1))).trim();
+        let jenisSoal = String(row.Jenis_Soal || row.jenis_soal || row.Tipe || 'PILIHAN_GANDA').trim().toUpperCase();
+        if (jenisSoal.includes('ESAI') || jenisSoal.includes('ESSAY') || jenisSoal.includes('URAIAN')) {
+          jenisSoal = 'ESAI';
+        } else {
+          jenisSoal = 'PILIHAN_GANDA';
+        }
+
+        const mapelNama = String(row.Mata_Pelajaran || row.mata_pelajaran || row.Mapel || '').trim();
+        const kelasNama = String(row.Kelas || row.kelas || '').trim();
+        const opsiA = String(row.Opsi_A || row.opsi_a || row.A || '').trim();
+        const opsiB = String(row.Opsi_B || row.opsi_b || row.B || '').trim();
+        const opsiC = String(row.Opsi_C || row.opsi_c || row.C || '').trim();
+        const opsiD = String(row.Opsi_D || row.opsi_d || row.D || '').trim();
+        const opsiE = String(row.Opsi_E || row.opsi_e || row.E || '').trim();
+        let kunci = String(row.Kunci_Jawaban || row.kunci_jawaban || row.Kunci || 'A').trim();
+        const pembahasan = String(row.Pembahasan || row.pembahasan || '').trim();
+        let bobot = Number(row.Bobot_Nilai || row.bobot || 10);
+        if (isNaN(bobot) || bobot <= 0) bobot = 10;
+
+        // Lewati baris kosong
+        if (!pertanyaan && !opsiA && !opsiB) return;
+
+        // Validasi per baris
+        const errors = [];
+        if (!pertanyaan) {
+          errors.push(`Baris ${rowNum}: Pertanyaan soal wajib diisi.`);
+        }
+
+        if (jenisSoal === 'PILIHAN_GANDA') {
+          if (!opsiA || !opsiB) {
+            errors.push(`Baris ${rowNum}: Pilihan Ganda minimal harus memiliki Opsi A dan Opsi B.`);
+          }
+          kunci = kunci.toUpperCase();
+          const validKeys = ['A', 'B'];
+          if (opsiC && opsiC !== '-') validKeys.push('C');
+          if (opsiD && opsiD !== '-') validKeys.push('D');
+          if (opsiE && opsiE !== '-') validKeys.push('E');
+          if (!validKeys.includes(kunci)) {
+            errors.push(`Baris ${rowNum}: Kunci jawaban '${kunci}' tidak cocok dengan opsi yang terisi (${validKeys.join(', ')}).`);
+          }
+        } else {
+          if (!kunci) {
+            errors.push(`Baris ${rowNum}: Soal Esai wajib memiliki kunci jawaban / pedoman penilaian.`);
+          }
+        }
+
+        if (kodeSoal && seenKode.has(kodeSoal.toLowerCase())) {
+          errors.push(`Baris ${rowNum}: Kode soal '${kodeSoal}' terdeteksi duplikat.`);
+        }
+        if (kodeSoal) seenKode.add(kodeSoal.toLowerCase());
+
+        // Cocokkan jadwal
+        let matchedJadwalId = defaultJadwalId;
+        if (mapelNama) {
+          const foundJ = state.mapel_jadwal.find(j => j.nama_mapel.toLowerCase() === mapelNama.toLowerCase() || j.kode_mapel.toLowerCase() === mapelNama.toLowerCase());
+          if (foundJ) matchedJadwalId = foundJ.id;
+        }
+
+        parsedList.push({
+          rowNum,
+          id: 'soal-imp-' + Date.now() + '-' + i,
+          jadwal_id: matchedJadwalId,
+          kode_soal: kodeSoal,
+          mata_pelajaran: mapelNama,
+          kelas: kelasNama,
+          jenis_soal: jenisSoal,
+          pertanyaan,
+          gambar_url: '',
+          opsi_a: opsiA || '-',
+          opsi_b: opsiB || '-',
+          opsi_c: opsiC || '-',
+          opsi_d: opsiD || '-',
+          opsi_e: opsiE || '-',
+          kunci_jawaban: kunci,
+          pembahasan,
+          bobot,
+          isValid: errors.length === 0,
+          errors
+        });
+      });
+
+      if (parsedList.length === 0) {
+        showToast('Tidak ada baris data soal yang dapat dibaca dari file!', 'error');
+        return;
+      }
+
+      state.currentDraftImportSoal = parsedList;
+      closeModal();
+      showImportPreviewModal(file.name);
+    } catch (err) {
+      showToast('Gagal memproses file Excel: ' + err.message, 'error');
+    }
+  }
+
+  // ============================================================================
+  // FITUR 4: PRATINJAU HASIL UPLOAD DENGAN INDIKATOR VALIDITAS & EDIT
+  // ============================================================================
+  function showImportPreviewModal(fileName = 'Upload Excel') {
+    const list = state.currentDraftImportSoal || [];
+    const validCount = list.filter(s => s.isValid).length;
+    const errorCount = list.length - validCount;
+
+    openModal(`Pratinjau Hasil Impor: ${fileName}`, `
+      <div class="space-y-4 text-xs">
+        <!-- Statistik Validitas -->
+        <div class="grid grid-cols-3 gap-3 p-3.5 rounded-2xl bg-slate-50 border border-slate-200">
+          <div>
+            <p class="text-[11px] text-slate-400 font-bold">Total Ditemukan</p>
+            <h4 class="text-base font-black text-slate-800">${list.length} Soal</h4>
+          </div>
+          <div>
+            <p class="text-[11px] text-emerald-600 font-bold">Soal Valid</p>
+            <h4 class="text-base font-black text-emerald-700">${validCount} Soal</h4>
+          </div>
+          <div>
+            <p class="text-[11px] text-rose-600 font-bold">Bermasalah</p>
+            <h4 class="text-base font-black text-rose-700">${errorCount} Soal</h4>
+          </div>
+        </div>
+
+        <p class="text-slate-500 text-[11px]">Periksa butir soal di bawah ini sebelum disimpan ke database. Hanya soal berstatus <b>Valid</b> yang akan tersimpan permanen.</p>
+
+        <!-- List Kartu Pratinjau Draft -->
+        <div class="space-y-3 max-h-[50vh] overflow-y-auto pr-1">
+          ${list.map((s, idx) => `
+            <div class="p-4 rounded-2xl border ${s.isValid ? 'bg-white border-slate-200' : 'bg-rose-50/40 border-rose-200'} space-y-2.5">
+              <div class="flex items-center justify-between">
+                <div class="flex items-center gap-2">
+                  <span class="w-6 h-6 rounded-lg ${s.isValid ? 'bg-blue-600' : 'bg-rose-600'} text-white font-extrabold text-[11px] flex items-center justify-center">
+                    ${idx + 1}
+                  </span>
+                  <span class="font-mono font-bold text-slate-700">${s.kode_soal}</span>
+                  <span class="px-2 py-0.5 rounded text-[10px] font-black ${s.jenis_soal === 'ESAI' ? 'bg-purple-100 text-purple-700' : 'bg-blue-100 text-blue-700'}">
+                    ${s.jenis_soal}
+                  </span>
+                </div>
+                <div class="flex items-center gap-2">
+                  <span class="px-2.5 py-0.5 rounded-full text-[10px] font-black ${s.isValid ? 'bg-emerald-100 text-emerald-800' : 'bg-rose-100 text-rose-800'}">
+                    ${s.isValid ? '✓ Valid' : '✕ Ada Masalah'}
+                  </span>
+                  <button type="button" onclick="window.app.removeDraftImportSoal(${idx})" class="p-1 text-rose-500 hover:text-rose-700" title="Hapus dari draft">
+                    <i class="ph-bold ph-trash"></i>
+                  </button>
+                </div>
+              </div>
+
+              <!-- Peringatan Kesalahan jika ada -->
+              ${s.errors && s.errors.length > 0 ? `
+                <div class="p-2.5 rounded-xl bg-rose-100/70 border border-rose-300 text-rose-900 text-[11px] font-bold space-y-1">
+                  ${s.errors.map(err => `<p class="flex items-center gap-1.5"><i class="ph-bold ph-warning-circle"></i> ${err}</p>`).join('')}
+                </div>
+              ` : ''}
+
+              <p class="font-bold text-slate-800">${s.pertanyaan}</p>
+
+              ${s.jenis_soal === 'PILIHAN_GANDA' ? `
+                <div class="grid grid-cols-2 gap-1.5 text-[11px]">
+                  <div class="p-1.5 rounded-lg border ${s.kunci_jawaban === 'A' ? 'bg-emerald-100 border-emerald-300 font-bold text-emerald-900' : 'bg-slate-50 border-slate-200'}">A: ${s.opsi_a}</div>
+                  <div class="p-1.5 rounded-lg border ${s.kunci_jawaban === 'B' ? 'bg-emerald-100 border-emerald-300 font-bold text-emerald-900' : 'bg-slate-50 border-slate-200'}">B: ${s.opsi_b}</div>
+                  <div class="p-1.5 rounded-lg border ${s.kunci_jawaban === 'C' ? 'bg-emerald-100 border-emerald-300 font-bold text-emerald-900' : 'bg-slate-50 border-slate-200'}">C: ${s.opsi_c}</div>
+                  <div class="p-1.5 rounded-lg border ${s.kunci_jawaban === 'D' ? 'bg-emerald-100 border-emerald-300 font-bold text-emerald-900' : 'bg-slate-50 border-slate-200'}">D: ${s.opsi_d}</div>
+                </div>
+              ` : `
+                <p class="text-[11px] text-slate-600 bg-slate-50 p-2 rounded-lg border border-slate-200"><b>Kunci/Pedoman:</b> ${s.kunci_jawaban}</p>
+              `}
+            </div>
+          `).join('')}
+        </div>
+
+        <!-- Tombol Aksi Simpan -->
+        <div class="flex items-center justify-between pt-3 border-t border-slate-100">
+          <button type="button" onclick="window.app.closeModal()" class="px-4 py-2 rounded-xl bg-slate-100 text-slate-700 font-bold">Batal</button>
+          <button type="button" onclick="window.app.saveValidImportedSoal()" ${validCount === 0 ? 'disabled' : ''} class="px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 disabled:opacity-40 text-white font-extrabold flex items-center gap-2 shadow-sm transition">
+            <i class="ph-bold ph-check-circle text-base"></i>
+            <span>Simpan Soal Valid (${validCount} Soal)</span>
+          </button>
+        </div>
+      </div>
+    `);
+  }
+
+  function removeDraftImportSoal(index) {
+    if (state.currentDraftImportSoal && state.currentDraftImportSoal[index]) {
+      state.currentDraftImportSoal.splice(index, 1);
+      showImportPreviewModal('Draft Impor');
+    }
+  }
+
+  async function saveValidImportedSoal() {
+    const validItems = (state.currentDraftImportSoal || []).filter(s => s.isValid);
+    if (validItems.length === 0) {
+      showToast('Tidak ada butir soal valid yang dapat disimpan!', 'warning');
+      return;
+    }
+
+    if (!IS_CONNECTED_GAS) {
+      validItems.forEach(item => {
+        state.soal.push({
+          id: item.id || ('soal-' + Date.now() + '-' + Math.random().toString(36).substr(2, 4)),
+          jadwal_id: item.jadwal_id,
+          kode_soal: item.kode_soal,
+          jenis_soal: item.jenis_soal,
+          pertanyaan: item.pertanyaan,
+          gambar_url: '',
+          opsi_a: item.opsi_a,
+          opsi_b: item.opsi_b,
+          opsi_c: item.opsi_c,
+          opsi_d: item.opsi_d,
+          opsi_e: item.opsi_e,
+          kunci_jawaban: item.kunci_jawaban,
+          pembahasan: item.pembahasan,
+          bobot: item.bobot
+        });
+      });
+      closeModal();
+      state.currentDraftImportSoal = [];
+      renderAll();
+      showToast(`Berhasil menyimpan ${validItems.length} soal valid ke Bank Soal (Mode Demo)!`);
+      return;
+    }
+
+    try {
+      showToast(`Menyimpan ${validItems.length} soal ke Google Spreadsheet...`);
+      await callGAS('saveBulkSoal', { soalList: validItems });
+      closeModal();
+      state.currentDraftImportSoal = [];
+      await loadAllDataFromGAS();
+      showToast(`Berhasil menyimpan ${validItems.length} butir soal ke Google Sheets!`);
+    } catch (err) {
+      showToast('Gagal menyimpan soal: ' + err.message, 'error');
+    }
+  }
+
+  // ============================================================================
+  // FITUR 5 & 6: FORM EDIT / TAMBAH SOAL & UPLOAD FOTO DARI PERANGKAT
+  // ============================================================================
   function showSoalModal(editId = null) {
     const currentJadwalId = state.selectedJadwalForSoal || state.mapel_jadwal[0]?.id;
-    if (!currentJadwalId) return;
-
     const item = state.soal.find(s => s.id === editId) || {
-      jadwal_id: currentJadwalId,
+      jadwal_id: currentJadwalId || '',
+      kode_soal: 'SOAL-' + (state.soal.length + 1),
+      jenis_soal: 'PILIHAN_GANDA',
       pertanyaan: '',
       gambar_url: '',
       opsi_a: '',
@@ -2677,95 +3477,338 @@
       opsi_d: '',
       opsi_e: '',
       kunci_jawaban: 'A',
+      pembahasan: '',
       bobot: 10
     };
 
+    window._tempSoalImageBase64 = item.gambar_url || '';
+    window._tempSoalImageFileName = '';
+    window._tempModalJenisSoal = item.jenis_soal || 'PILIHAN_GANDA';
+
+    const jadwalOptions = state.mapel_jadwal.map(j =>
+      `<option value="${j.id}" ${item.jadwal_id === j.id ? 'selected' : ''}>${j.nama_mapel} — ${j.judul_ujian}</option>`
+    ).join('');
+
     const jmlOpsi = Number(state.pengaturan.jumlah_opsi || 4);
 
-    openModal(editId ? 'Edit Butir Soal CBT' : 'Tambah Butir Soal CBT Baru', `
-      <form onsubmit="window.app.saveSoal(event, '${editId || ''}')" class="space-y-4">
-        <div>
-          <label class="block text-xs font-bold text-slate-700 mb-1">Isi Pertanyaan Soal</label>
-          <textarea id="f-soal-tanya" required rows="3" placeholder="Tuliskan pertanyaan ujian di sini..." class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-xs focus:outline-none focus:ring-2 focus:ring-blue-500">${item.pertanyaan}</textarea>
-        </div>
-
-        <div>
-          <label class="block text-xs font-bold text-slate-700 mb-1">Link URL Gambar Pendukung (Opsional)</label>
-          <input type="url" id="f-soal-gambar" value="${item.gambar_url || ''}" placeholder="https://contoh.com/gambar-soal.png" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-xs focus:outline-none focus:ring-2 focus:ring-blue-500" />
-        </div>
-
-        <div class="space-y-2.5">
-          <label class="block text-xs font-bold text-slate-700">Pilihan Jawaban (Mendukung ${jmlOpsi} Opsi Sesuai Pengaturan):</label>
-          <div class="grid grid-cols-1 gap-2 text-xs">
-            <div class="flex items-center gap-2">
-              <span class="w-7 h-7 rounded-lg bg-blue-100 text-blue-700 font-bold flex items-center justify-center shrink-0">A</span>
-              <input type="text" id="f-opsi-a" required value="${item.opsi_a}" placeholder="Pilihan Jawaban A" class="w-full px-3 py-2 rounded-xl border border-slate-200" />
-            </div>
-            <div class="flex items-center gap-2">
-              <span class="w-7 h-7 rounded-lg bg-blue-100 text-blue-700 font-bold flex items-center justify-center shrink-0">B</span>
-              <input type="text" id="f-opsi-b" required value="${item.opsi_b}" placeholder="Pilihan Jawaban B" class="w-full px-3 py-2 rounded-xl border border-slate-200" />
-            </div>
-            <div class="flex items-center gap-2">
-              <span class="w-7 h-7 rounded-lg bg-blue-100 text-blue-700 font-bold flex items-center justify-center shrink-0">C</span>
-              <input type="text" id="f-opsi-c" required value="${item.opsi_c}" placeholder="Pilihan Jawaban C" class="w-full px-3 py-2 rounded-xl border border-slate-200" />
-            </div>
-            ${jmlOpsi >= 4 ? `
-              <div class="flex items-center gap-2">
-                <span class="w-7 h-7 rounded-lg bg-blue-100 text-blue-700 font-bold flex items-center justify-center shrink-0">D</span>
-                <input type="text" id="f-opsi-d" required value="${item.opsi_d}" placeholder="Pilihan Jawaban D" class="w-full px-3 py-2 rounded-xl border border-slate-200" />
-              </div>
-            ` : ''}
-            ${jmlOpsi >= 5 ? `
-              <div class="flex items-center gap-2">
-                <span class="w-7 h-7 rounded-lg bg-blue-100 text-blue-700 font-bold flex items-center justify-center shrink-0">E</span>
-                <input type="text" id="f-opsi-e" required value="${item.opsi_e}" placeholder="Pilihan Jawaban E" class="w-full px-3 py-2 rounded-xl border border-slate-200" />
-              </div>
-            ` : ''}
-          </div>
-        </div>
-
-        <div class="grid grid-cols-2 gap-3 pt-1">
-          <div>
-            <label class="block text-xs font-bold text-slate-700 mb-1">Kunci Jawaban Benar</label>
-            <select id="f-kunci-soal" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-xs font-bold text-emerald-700 bg-emerald-50/50">
-              <option value="A" ${item.kunci_jawaban === 'A' ? 'selected' : ''}>Opsi A</option>
-              <option value="B" ${item.kunci_jawaban === 'B' ? 'selected' : ''}>Opsi B</option>
-              <option value="C" ${item.kunci_jawaban === 'C' ? 'selected' : ''}>Opsi C</option>
-              ${jmlOpsi >= 4 ? `<option value="D" ${item.kunci_jawaban === 'D' ? 'selected' : ''}>Opsi D</option>` : ''}
-              ${jmlOpsi >= 5 ? `<option value="E" ${item.kunci_jawaban === 'E' ? 'selected' : ''}>Opsi E</option>` : ''}
+    openModal(editId ? `Edit Butir Soal: ${item.kode_soal || ''}` : 'Tambah Butir Soal Baru', `
+      <form onsubmit="window.app.saveSoal(event, '${editId || ''}')" class="space-y-4 text-xs">
+        <!-- Informasi Soal (Mapel, Kode, Jenis) -->
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <div class="sm:col-span-2">
+            <label class="block font-bold text-slate-700 mb-1">Mata Pelajaran & Jadwal Target</label>
+            <select id="f-soal-jadwal" required class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500">
+              ${jadwalOptions || '<option value="">Belum ada jadwal</option>'}
             </select>
           </div>
           <div>
-            <label class="block text-xs font-bold text-slate-700 mb-1">Bobot Nilai Soal</label>
-            <input type="number" id="f-bobot-soal" required value="${item.bobot || 10}" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-xs focus:outline-none focus:ring-2 focus:ring-blue-500" />
+            <label class="block font-bold text-slate-700 mb-1">Kode Soal</label>
+            <input type="text" id="f-soal-kode" required value="${item.kode_soal || ''}" placeholder="Contoh: BIO-01" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 font-mono font-bold focus:outline-none focus:ring-2 focus:ring-blue-500 uppercase" />
           </div>
         </div>
 
-        <div class="flex justify-end gap-2 pt-2">
-          <button type="button" onclick="window.app.closeModal()" class="px-4 py-2 rounded-xl bg-slate-100 text-slate-600 text-xs font-bold">Batal</button>
-          <button type="submit" class="px-5 py-2 rounded-xl bg-blue-600 text-white text-xs font-bold">Simpan Soal</button>
+        <!-- Pemilih Jenis Soal: Pilihan Ganda / Esai -->
+        <div>
+          <label class="block font-bold text-slate-700 mb-1.5">Jenis Soal Ujian</label>
+          <div class="grid grid-cols-2 gap-2">
+            <button type="button" id="btn-toggle-jenis-pg" onclick="window.app.setModalJenisSoal('PILIHAN_GANDA')" class="py-2.5 px-3 rounded-xl border font-extrabold flex items-center justify-center gap-2 transition ${
+              item.jenis_soal !== 'ESAI' ? 'bg-blue-600 text-white border-blue-600 shadow-sm' : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100'
+            }">
+              <i class="ph-bold ph-check-square text-base"></i> Pilihan Ganda
+            </button>
+            <button type="button" id="btn-toggle-jenis-esai" onclick="window.app.setModalJenisSoal('ESAI')" class="py-2.5 px-3 rounded-xl border font-extrabold flex items-center justify-center gap-2 transition ${
+              item.jenis_soal === 'ESAI' ? 'bg-purple-600 text-white border-purple-600 shadow-sm' : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100'
+            }">
+              <i class="ph-bold ph-pen-nib text-base"></i> Esai / Uraian
+            </button>
+          </div>
+        </div>
+
+        <!-- Pertanyaan -->
+        <div>
+          <label class="block font-bold text-slate-700 mb-1">Isi Pertanyaan Soal</label>
+          <textarea id="f-soal-tanya" required rows="3" placeholder="Tuliskan teks pertanyaan ujian secara lengkap di sini..." class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500 leading-relaxed font-medium">${item.pertanyaan}</textarea>
+        </div>
+
+        <!-- BAGIAN KHUSUS: UPLOAD FOTO LANGSUNG DARI PERANGKAT -->
+        <div class="p-4 rounded-2xl bg-slate-50 border border-slate-200/80 space-y-3">
+          <div class="flex items-center justify-between">
+            <div class="flex items-center gap-2">
+              <i class="ph-bold ph-image text-blue-600 text-base"></i>
+              <label class="font-black text-slate-800 tracking-wide uppercase text-[11px]">GAMBAR SOAL (DARI PERANGKAT)</label>
+            </div>
+            <span class="text-[10px] text-slate-400">JPG, PNG, WEBP (Otomatis Dioptimasi)</span>
+          </div>
+
+          <!-- Preview Area Foto Soal -->
+          <div id="soal-image-preview-container" class="${item.gambar_url ? '' : 'hidden'} relative rounded-xl border border-slate-200 overflow-hidden bg-white p-2">
+            <img id="soal-image-preview-element" src="${item.gambar_url || ''}" alt="Foto Soal" class="max-h-52 mx-auto rounded-lg object-contain shadow-sm" />
+            <div class="flex items-center justify-between pt-2 border-t border-slate-100 mt-2 text-xs">
+              <span id="soal-image-meta" class="text-[11px] text-slate-500 font-medium truncate">Foto Soal Siap Digunakan</span>
+              <div class="flex items-center gap-2">
+                <label for="f-soal-file-gambar" class="px-2.5 py-1 rounded-lg bg-blue-50 hover:bg-blue-100 text-blue-700 font-bold text-[11px] cursor-pointer flex items-center gap-1 transition">
+                  <i class="ph-bold ph-arrow-counter-clockwise"></i> Ganti
+                </label>
+                <button type="button" onclick="window.app.removeSoalModalImage()" class="px-2.5 py-1 rounded-lg bg-rose-50 hover:bg-rose-100 text-rose-600 font-bold text-[11px] flex items-center gap-1 transition">
+                  <i class="ph-bold ph-trash"></i> Hapus
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Upload Drop / Select Box -->
+          <div id="soal-image-upload-box" class="${item.gambar_url ? 'hidden' : ''} border-2 border-dashed border-slate-300 hover:border-blue-500 rounded-2xl p-4 text-center transition cursor-pointer bg-white" onclick="document.getElementById('f-soal-file-gambar').click()">
+            <div class="flex flex-col items-center justify-center gap-1.5 pointer-events-none">
+              <div class="w-10 h-10 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center text-xl shadow-sm">
+                <i class="ph-bold ph-camera"></i>
+              </div>
+              <p class="font-extrabold text-slate-800 text-xs">Pilih Foto dari Perangkat / Tarik & Lepas di Sini</p>
+              <p class="text-[10px] text-slate-400">Dapat berupa grafik, diagram, peta, atau ilustrasi soal</p>
+            </div>
+          </div>
+          <input type="file" id="f-soal-file-gambar" accept="image/jpeg,image/png,image/webp" onchange="window.app.handleSoalImageSelect(event)" class="hidden" />
+        </div>
+
+        <!-- Kontainer Opsi Pilihan Ganda dengan Radio Button Kunci Cepat -->
+        <div id="container-opsi-pg" class="${item.jenis_soal === 'ESAI' ? 'hidden' : ''} space-y-2.5">
+          <div class="flex items-center justify-between">
+            <label class="font-bold text-slate-700">Pilihan Jawaban (Klik Radio Button untuk Menentukan Kunci):</label>
+            <span class="text-[10px] text-blue-600 font-extrabold uppercase">Radio = Kunci Benar</span>
+          </div>
+
+          <div class="space-y-2 text-xs">
+            <div class="flex items-center gap-2">
+              <label class="flex items-center gap-1.5 w-12 shrink-0 cursor-pointer">
+                <input type="radio" name="kunci_jawaban_radio" value="A" ${item.kunci_jawaban === 'A' ? 'checked' : ''} class="w-4 h-4 text-emerald-600 focus:ring-emerald-500" />
+                <span class="font-extrabold text-slate-700">A</span>
+              </label>
+              <input type="text" id="f-opsi-a" value="${item.opsi_a && item.opsi_a !== '-' ? item.opsi_a : ''}" placeholder="Isi Pilihan A" class="w-full px-3.5 py-2 rounded-xl border border-slate-200" />
+            </div>
+
+            <div class="flex items-center gap-2">
+              <label class="flex items-center gap-1.5 w-12 shrink-0 cursor-pointer">
+                <input type="radio" name="kunci_jawaban_radio" value="B" ${item.kunci_jawaban === 'B' ? 'checked' : ''} class="w-4 h-4 text-emerald-600 focus:ring-emerald-500" />
+                <span class="font-extrabold text-slate-700">B</span>
+              </label>
+              <input type="text" id="f-opsi-b" value="${item.opsi_b && item.opsi_b !== '-' ? item.opsi_b : ''}" placeholder="Isi Pilihan B" class="w-full px-3.5 py-2 rounded-xl border border-slate-200" />
+            </div>
+
+            <div class="flex items-center gap-2">
+              <label class="flex items-center gap-1.5 w-12 shrink-0 cursor-pointer">
+                <input type="radio" name="kunci_jawaban_radio" value="C" ${item.kunci_jawaban === 'C' ? 'checked' : ''} class="w-4 h-4 text-emerald-600 focus:ring-emerald-500" />
+                <span class="font-extrabold text-slate-700">C</span>
+              </label>
+              <input type="text" id="f-opsi-c" value="${item.opsi_c && item.opsi_c !== '-' ? item.opsi_c : ''}" placeholder="Isi Pilihan C" class="w-full px-3.5 py-2 rounded-xl border border-slate-200" />
+            </div>
+
+            <div class="flex items-center gap-2">
+              <label class="flex items-center gap-1.5 w-12 shrink-0 cursor-pointer">
+                <input type="radio" name="kunci_jawaban_radio" value="D" ${item.kunci_jawaban === 'D' ? 'checked' : ''} class="w-4 h-4 text-emerald-600 focus:ring-emerald-500" />
+                <span class="font-extrabold text-slate-700">D</span>
+              </label>
+              <input type="text" id="f-opsi-d" value="${item.opsi_d && item.opsi_d !== '-' ? item.opsi_d : ''}" placeholder="Isi Pilihan D" class="w-full px-3.5 py-2 rounded-xl border border-slate-200" />
+            </div>
+
+            ${jmlOpsi >= 5 ? `
+              <div class="flex items-center gap-2">
+                <label class="flex items-center gap-1.5 w-12 shrink-0 cursor-pointer">
+                  <input type="radio" name="kunci_jawaban_radio" value="E" ${item.kunci_jawaban === 'E' ? 'checked' : ''} class="w-4 h-4 text-emerald-600 focus:ring-emerald-500" />
+                  <span class="font-extrabold text-slate-700">E</span>
+                </label>
+                <input type="text" id="f-opsi-e" value="${item.opsi_e && item.opsi_e !== '-' ? item.opsi_e : ''}" placeholder="Isi Pilihan E (Opsional)" class="w-full px-3.5 py-2 rounded-xl border border-slate-200" />
+              </div>
+            ` : ''}
+          </div>
+        </div>
+
+        <!-- Kontainer Kunci / Pedoman Penilaian Esai -->
+        <div id="container-opsi-esai" class="${item.jenis_soal === 'ESAI' ? '' : 'hidden'} space-y-1.5">
+          <label class="block font-bold text-slate-700">Pedoman Penilaian / Kunci Esai</label>
+          <textarea id="f-kunci-esai" rows="3" placeholder="Tuliskan pedoman jawaban benar atau poin penilaian esai..." class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 font-medium">${item.kunci_jawaban || ''}</textarea>
+        </div>
+
+        <!-- Pembahasan & Bobot Nilai -->
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <div class="sm:col-span-2">
+            <label class="block font-bold text-slate-700 mb-1">Pembahasan Soal (Opsional)</label>
+            <input type="text" id="f-soal-pembahasan" value="${item.pembahasan || ''}" placeholder="Penjelasan cara penyelesaian soal..." class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200" />
+          </div>
+          <div>
+            <label class="block font-bold text-slate-700 mb-1">Bobot Nilai</label>
+            <input type="number" id="f-bobot-soal" required min="1" value="${item.bobot || 10}" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 font-extrabold text-slate-800" />
+          </div>
+        </div>
+
+        <!-- Tombol Aksi Simpan & Batal -->
+        <div class="flex justify-end gap-2 pt-2 border-t border-slate-100">
+          <button type="button" onclick="window.app.closeModal()" class="px-4 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-600 font-bold">Batal</button>
+          <button type="submit" class="px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 active:scale-[0.99] text-white font-bold flex items-center gap-1.5 shadow-md shadow-blue-500/20">
+            <i class="ph-bold ph-floppy-disk text-base"></i> Simpan Butir Soal
+          </button>
         </div>
       </form>
     `);
   }
 
+  function setModalJenisSoal(jenis) {
+    window._tempModalJenisSoal = jenis;
+    const btnPG = document.getElementById('btn-toggle-jenis-pg');
+    const btnEsai = document.getElementById('btn-toggle-jenis-esai');
+    const boxPG = document.getElementById('container-opsi-pg');
+    const boxEsai = document.getElementById('container-opsi-esai');
+
+    if (jenis === 'PILIHAN_GANDA') {
+      if (btnPG) btnPG.className = 'py-2.5 px-3 rounded-xl border font-extrabold flex items-center justify-center gap-2 transition bg-blue-600 text-white border-blue-600 shadow-sm';
+      if (btnEsai) btnEsai.className = 'py-2.5 px-3 rounded-xl border font-extrabold flex items-center justify-center gap-2 transition bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100';
+      if (boxPG) boxPG.classList.remove('hidden');
+      if (boxEsai) boxEsai.classList.add('hidden');
+    } else {
+      if (btnEsai) btnEsai.className = 'py-2.5 px-3 rounded-xl border font-extrabold flex items-center justify-center gap-2 transition bg-purple-600 text-white border-purple-600 shadow-sm';
+      if (btnPG) btnPG.className = 'py-2.5 px-3 rounded-xl border font-extrabold flex items-center justify-center gap-2 transition bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100';
+      if (boxPG) boxPG.classList.add('hidden');
+      if (boxEsai) boxEsai.classList.remove('hidden');
+    }
+  }
+
+  function handleSoalImageSelect(event) {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    if (!file.type.match(/^image\/(jpeg|png|webp|jpg)$/i)) {
+      showToast('Format foto harus JPG, PNG, atau WEBP!', 'error');
+      return;
+    }
+    if (file.size > 8 * 1024 * 1024) {
+      showToast('Ukuran foto terlalu besar (Maksimal 8MB)!', 'error');
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = function(e) {
+      const img = new Image();
+      img.onload = function() {
+        const canvas = document.createElement('canvas');
+        let width = img.width;
+        let height = img.height;
+        const maxDim = 1200;
+
+        if (width > maxDim || height > maxDim) {
+          if (width > height) {
+            height = Math.round((height * maxDim) / width);
+            width = maxDim;
+          } else {
+            width = Math.round((width * maxDim) / height);
+            height = maxDim;
+          }
+        }
+
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0, width, height);
+        const compressedBase64 = canvas.toDataURL('image/jpeg', 0.85);
+
+        window._tempSoalImageBase64 = compressedBase64;
+        window._tempSoalImageFileName = file.name;
+
+        const previewContainer = document.getElementById('soal-image-preview-container');
+        const previewElement = document.getElementById('soal-image-preview-element');
+        const uploadBox = document.getElementById('soal-image-upload-box');
+        const metaText = document.getElementById('soal-image-meta');
+
+        if (previewElement) previewElement.src = compressedBase64;
+        if (metaText) metaText.textContent = `${file.name} (${width}x${height} px, ${(compressedBase64.length / 1024).toFixed(0)} KB)`;
+        if (previewContainer) previewContainer.classList.remove('hidden');
+        if (uploadBox) uploadBox.classList.add('hidden');
+        showToast('Foto soal berhasil dimuat dari perangkat!');
+      };
+      img.src = e.target.result;
+    };
+    reader.readAsDataURL(file);
+  }
+
+  function removeSoalModalImage() {
+    window._tempSoalImageBase64 = '';
+    const previewContainer = document.getElementById('soal-image-preview-container');
+    const previewElement = document.getElementById('soal-image-preview-element');
+    const uploadBox = document.getElementById('soal-image-upload-box');
+    const fileInput = document.getElementById('f-soal-file-gambar');
+
+    if (previewElement) previewElement.src = '';
+    if (previewContainer) previewContainer.classList.add('hidden');
+    if (uploadBox) uploadBox.classList.remove('hidden');
+    if (fileInput) fileInput.value = '';
+    showToast('Foto soal dihapus dari form');
+  }
+
   async function saveSoal(e, editId) {
     e.preventDefault();
-    const currentJadwalId = state.selectedJadwalForSoal || state.mapel_jadwal[0]?.id;
-    const jmlOpsi = Number(state.pengaturan.jumlah_opsi || 4);
+    const currentJadwalId = document.getElementById('f-soal-jadwal')?.value || state.selectedJadwalForSoal || state.mapel_jadwal[0]?.id;
+    if (!currentJadwalId) {
+      showToast('Pilih jadwal mata pelajaran terlebih dahulu!', 'warning');
+      return;
+    }
+
+    const jenisSoal = window._tempModalJenisSoal || 'PILIHAN_GANDA';
+    const pertanyaan = document.getElementById('f-soal-tanya').value.trim();
+    const kodeSoal = document.getElementById('f-soal-kode').value.trim() || ('SOAL-' + Date.now().toString().slice(-4));
+    const bobot = Number(document.getElementById('f-bobot-soal').value || 10);
+    const pembahasan = document.getElementById('f-soal-pembahasan')?.value.trim() || '';
+
+    let opsiA = '-';
+    let opsiB = '-';
+    let opsiC = '-';
+    let opsiD = '-';
+    let opsiE = '-';
+    let kunci = 'A';
+
+    if (jenisSoal === 'PILIHAN_GANDA') {
+      opsiA = document.getElementById('f-opsi-a').value.trim();
+      opsiB = document.getElementById('f-opsi-b').value.trim();
+      opsiC = document.getElementById('f-opsi-c')?.value.trim() || '-';
+      opsiD = document.getElementById('f-opsi-d')?.value.trim() || '-';
+      opsiE = document.getElementById('f-opsi-e')?.value.trim() || '-';
+
+      const checkedRadio = document.querySelector('input[name="kunci_jawaban_radio"]:checked');
+      kunci = checkedRadio ? checkedRadio.value : 'A';
+    } else {
+      kunci = document.getElementById('f-kunci-esai')?.value.trim() || 'Pedoman penilaian guru';
+    }
+
+    let finalImageUrl = window._tempSoalImageBase64 || '';
+
+    // Upload ke Drive jika ada data base64 baru
+    if (IS_CONNECTED_GAS && finalImageUrl.startsWith('data:image')) {
+      try {
+        showToast('Mengunggah gambar soal ke Google Drive...');
+        const uploadRes = await callGAS('uploadImage', {
+          base64: finalImageUrl,
+          fileName: (window._tempSoalImageFileName || ('soal_' + kodeSoal + '.jpg')),
+          mimeType: 'image/jpeg'
+        });
+        if (uploadRes && uploadRes.status === 'success' && uploadRes.url) {
+          finalImageUrl = uploadRes.url;
+        }
+      } catch (uploadErr) {
+        console.warn('Google Drive upload fallback ke data URI:', uploadErr);
+      }
+    }
 
     const payload = {
       id: editId || null,
       jadwal_id: currentJadwalId,
-      pertanyaan: document.getElementById('f-soal-tanya').value.trim(),
-      gambar_url: document.getElementById('f-soal-gambar').value.trim(),
-      opsi_a: document.getElementById('f-opsi-a').value.trim(),
-      opsi_b: document.getElementById('f-opsi-b').value.trim(),
-      opsi_c: document.getElementById('f-opsi-c').value.trim(),
-      opsi_d: jmlOpsi >= 4 ? document.getElementById('f-opsi-d')?.value.trim() || '-' : '-',
-      opsi_e: jmlOpsi >= 5 ? document.getElementById('f-opsi-e')?.value.trim() || '-' : '-',
-      kunci_jawaban: document.getElementById('f-kunci-soal').value,
-      bobot: Number(document.getElementById('f-bobot-soal').value || 10)
+      kode_soal: kodeSoal,
+      jenis_soal: jenisSoal,
+      pertanyaan,
+      gambar_url: finalImageUrl,
+      opsi_a: opsiA,
+      opsi_b: opsiB,
+      opsi_c: opsiC,
+      opsi_d: opsiD,
+      opsi_e: opsiE,
+      kunci_jawaban: kunci,
+      pembahasan,
+      bobot
     };
 
     if (!IS_CONNECTED_GAS) {
@@ -2782,11 +3825,11 @@
     }
 
     try {
-      showToast('Menyimpan soal ke Spreadsheet...');
+      showToast('Menyimpan butir soal ke Google Sheets...');
       await callGAS('saveSoal', payload);
       closeModal();
       await loadAllDataFromGAS();
-      showToast('Butir soal tersimpan ke Google Sheets!');
+      showToast('Butir soal tersimpan permanen di database!');
     } catch (err) {
       showToast('Gagal menyimpan soal: ' + err.message, 'error');
     }
@@ -2808,6 +3851,208 @@
     } catch (err) {
       showToast('Gagal menghapus soal: ' + err.message, 'error');
     }
+  }
+
+  async function duplicateSoal(id) {
+    const s = state.soal.find(item => item.id === id);
+    if (!s) return;
+
+    const newSoal = {
+      ...s,
+      id: 'soal-' + Date.now(),
+      kode_soal: (s.kode_soal || 'SOAL') + '-SALIN'
+    };
+
+    if (!IS_CONNECTED_GAS) {
+      state.soal.push(newSoal);
+      renderAll();
+      showToast('Soal berhasil diduplikasi (Mode Demo)!');
+      return;
+    }
+
+    try {
+      showToast('Menduplikasi soal...');
+      await callGAS('saveSoal', newSoal);
+      await loadAllDataFromGAS();
+      showToast('Soal berhasil diduplikasi di Google Sheets!');
+    } catch (err) {
+      showToast('Gagal menduplikasi: ' + err.message, 'error');
+    }
+  }
+
+  // ============================================================================
+  // FITUR 9: PRATINJAU SOAL TERSIMPAN & ZOOM GAMBAR
+  // ============================================================================
+  function previewSingleSoal(soalId) {
+    const s = state.soal.find(item => item.id === soalId);
+    if (!s) return;
+    const j = state.mapel_jadwal.find(m => m.id === s.jadwal_id);
+
+    const isEsai = s.jenis_soal === 'ESAI';
+    const opts = [
+      { k: 'A', t: s.opsi_a },
+      { k: 'B', t: s.opsi_b },
+      { k: 'C', t: s.opsi_c },
+      { k: 'D', t: s.opsi_d },
+      { k: 'E', t: s.opsi_e }
+    ].filter(o => o.t && o.t !== '-');
+
+    openModal(`Pratinjau Soal: ${s.kode_soal || s.id}`, `
+      <div class="space-y-4 text-xs">
+        <div class="flex flex-wrap items-center justify-between gap-2 p-3.5 rounded-2xl bg-slate-50 border border-slate-200">
+          <div>
+            <span class="text-[10px] font-extrabold text-blue-600 uppercase tracking-wider">${j ? j.nama_mapel : 'Mata Pelajaran'}</span>
+            <h4 class="text-sm font-black text-slate-900">${s.kode_soal || 'Soal CBT'}</h4>
+          </div>
+          <div class="flex items-center gap-2">
+            <span class="px-2.5 py-1 rounded-xl ${isEsai ? 'bg-purple-100 text-purple-700' : 'bg-blue-100 text-blue-700'} font-black text-[10px]">
+              ${isEsai ? 'ESAI' : 'PILIHAN GANDA'}
+            </span>
+            <span class="px-2.5 py-1 rounded-xl bg-amber-100 text-amber-800 font-black text-[10px]">
+              Bobot: ${s.bobot || 10} Poin
+            </span>
+          </div>
+        </div>
+
+        ${s.gambar_url ? `
+          <div class="rounded-2xl border border-slate-200 overflow-hidden bg-white p-2">
+            <img src="${s.gambar_url}" alt="Gambar Soal" onclick="window.app.zoomSoalImage('${s.gambar_url}')" class="max-h-64 mx-auto rounded-xl object-contain cursor-zoom-in" />
+            <p class="text-[10px] text-center text-slate-400 mt-1 italic">Klik gambar untuk memperbesar</p>
+          </div>
+        ` : ''}
+
+        <div class="p-4 rounded-2xl bg-white border border-slate-200">
+          <p class="text-sm font-bold text-slate-900 leading-relaxed">${s.pertanyaan}</p>
+        </div>
+
+        ${isEsai ? `
+          <div class="p-4 rounded-2xl bg-purple-50 border border-purple-200 space-y-1">
+            <p class="font-black text-purple-900 text-xs">Pedoman Penilaian / Kunci Jawaban Esai:</p>
+            <p class="text-slate-800 font-medium">${s.kunci_jawaban || '-'}</p>
+          </div>
+        ` : `
+          <div class="space-y-2">
+            <p class="font-extrabold text-slate-700">Pilihan Jawaban:</p>
+            <div class="space-y-1.5">
+              ${opts.map(o => {
+                const isKunci = String(s.kunci_jawaban).trim().toUpperCase() === o.k;
+                return `
+                  <div class="p-3 rounded-xl border flex items-center gap-3 transition ${
+                    isKunci ? 'bg-emerald-50 border-emerald-300 text-emerald-900 font-extrabold shadow-sm' : 'bg-slate-50 border-slate-200 text-slate-700'
+                  }">
+                    <span class="w-6 h-6 rounded-lg ${isKunci ? 'bg-emerald-600 text-white' : 'bg-white border border-slate-300 text-slate-700'} text-xs font-black flex items-center justify-center shrink-0">
+                      ${o.k}
+                    </span>
+                    <span class="flex-1">${o.t}</span>
+                    ${isKunci ? `<span class="px-2 py-0.5 rounded-full bg-emerald-200 text-emerald-800 text-[10px] font-black">KUNCI BENAR</span>` : ''}
+                  </div>
+                `;
+              }).join('')}
+            </div>
+          </div>
+        `}
+
+        ${s.pembahasan ? `
+          <div class="p-4 rounded-2xl bg-blue-50 border border-blue-200 space-y-1">
+            <p class="font-black text-blue-800 text-xs flex items-center gap-1.5">
+              <i class="ph-bold ph-lightbulb"></i> Pembahasan Soal:
+            </p>
+            <p class="text-slate-700 leading-relaxed font-medium">${s.pembahasan}</p>
+          </div>
+        ` : ''}
+
+        <div class="flex justify-end gap-2 pt-2 border-t border-slate-100">
+          <button type="button" onclick="window.app.closeModal()" class="px-4 py-2 rounded-xl bg-slate-100 text-slate-700 font-bold">Tutup</button>
+          <button type="button" onclick="window.app.showSoalModal('${s.id}')" class="px-5 py-2 rounded-xl bg-blue-600 text-white font-bold flex items-center gap-1.5 shadow-sm">
+            <i class="ph-bold ph-pencil-simple"></i> Edit Soal Ini
+          </button>
+        </div>
+      </div>
+    `);
+  }
+
+  function previewAllSoal() {
+    const list = state.soal || [];
+    if (list.length === 0) {
+      showToast('Belum ada butir soal untuk dipratinjau!', 'warning');
+      return;
+    }
+
+    openModal(`Pratinjau Seluruh Bank Soal (${list.length} Butir Soal)`, `
+      <div class="space-y-4 text-xs">
+        <p class="text-slate-500">Pratinjau lembar evaluasi lengkap yang telah tersimpan di dalam sistem.</p>
+        <div class="space-y-4 max-h-[60vh] overflow-y-auto pr-1">
+          ${list.map((s, idx) => {
+            const isEsai = s.jenis_soal === 'ESAI';
+            const j = state.mapel_jadwal.find(m => m.id === s.jadwal_id);
+            const opts = [
+              { k: 'A', t: s.opsi_a },
+              { k: 'B', t: s.opsi_b },
+              { k: 'C', t: s.opsi_c },
+              { k: 'D', t: s.opsi_d },
+              { k: 'E', t: s.opsi_e }
+            ].filter(o => o.t && o.t !== '-');
+
+            return `
+              <div class="p-4 rounded-2xl bg-white border border-slate-200 space-y-2.5">
+                <div class="flex items-center justify-between pb-2 border-b border-slate-100">
+                  <span class="font-black text-slate-800">#${idx + 1} • ${s.kode_soal || ''} (${j ? j.nama_mapel : 'Mapel'})</span>
+                  <div class="flex items-center gap-2">
+                    <span class="px-2 py-0.5 rounded text-[10px] font-black ${isEsai ? 'bg-purple-100 text-purple-700' : 'bg-blue-100 text-blue-700'}">
+                      ${isEsai ? 'ESAI' : 'PILIHAN GANDA'}
+                    </span>
+                    <span class="px-2 py-0.5 rounded bg-amber-50 text-amber-800 font-bold text-[10px]">
+                      ${s.bobot || 10} Poin
+                    </span>
+                  </div>
+                </div>
+
+                ${s.gambar_url ? `
+                  <div>
+                    <img src="${s.gambar_url}" alt="Gambar Soal" onclick="window.app.zoomSoalImage('${s.gambar_url}')" class="max-h-48 rounded-xl border border-slate-200 object-contain p-1 cursor-zoom-in" />
+                  </div>
+                ` : ''}
+
+                <p class="font-bold text-slate-900">${s.pertanyaan}</p>
+
+                ${isEsai ? `
+                  <p class="p-2.5 rounded-xl bg-purple-50 text-purple-900 text-[11px]"><b>Pedoman Kunci:</b> ${s.kunci_jawaban || '-'}</p>
+                ` : `
+                  <div class="grid grid-cols-1 sm:grid-cols-2 gap-1.5 text-[11px]">
+                    ${opts.map(o => `
+                      <div class="p-2 rounded-lg border ${String(s.kunci_jawaban).trim().toUpperCase() === o.k ? 'bg-emerald-50 border-emerald-300 font-bold text-emerald-900' : 'bg-slate-50 border-slate-200'}">
+                        <b>${o.k}.</b> ${o.t} ${String(s.kunci_jawaban).trim().toUpperCase() === o.k ? '✓' : ''}
+                      </div>
+                    `).join('')}
+                  </div>
+                `}
+
+                ${s.pembahasan ? `
+                  <p class="text-[10px] text-slate-500 italic">Pembahasan: ${s.pembahasan}</p>
+                ` : ''}
+              </div>
+            `;
+          }).join('')}
+        </div>
+        <div class="flex justify-end pt-2 border-t border-slate-100">
+          <button type="button" onclick="window.app.closeModal()" class="px-5 py-2 rounded-xl bg-blue-600 text-white font-bold">Selesai</button>
+        </div>
+      </div>
+    `);
+  }
+
+  function zoomSoalImage(imgUrl) {
+    if (!imgUrl) return;
+    const overlay = document.createElement('div');
+    overlay.className = 'fixed inset-0 z-[99999] bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-4 cursor-zoom-out';
+    overlay.onclick = () => overlay.remove();
+    overlay.innerHTML = `
+      <div class="relative max-w-4xl max-h-[90vh] flex flex-col items-center">
+        <img src="${imgUrl}" class="max-h-[85vh] max-w-full rounded-2xl shadow-2xl object-contain bg-white p-2" />
+        <span class="mt-3 px-4 py-1.5 rounded-full bg-white/20 text-white text-xs font-bold">Klik di mana saja untuk menutup gambar</span>
+      </div>
+    `;
+    document.body.appendChild(overlay);
   }
 
   // ============================================================================
@@ -2971,34 +4216,56 @@
             </div>
 
             <div class="my-5 space-y-3">
-              <span class="inline-block px-3 py-1 rounded-xl bg-blue-50 text-blue-700 text-xs font-extrabold">
-                Soal Nomor ${ex.currentIndex + 1} dari ${ex.soalList.length}
-              </span>
+              <div class="flex items-center gap-2">
+                <span class="inline-block px-3 py-1 rounded-xl bg-blue-50 text-blue-700 text-xs font-extrabold">
+                  Soal Nomor ${ex.currentIndex + 1} dari ${ex.soalList.length}
+                </span>
+                <span class="inline-block px-2.5 py-1 rounded-xl ${currentSoal.jenis_soal === 'ESAI' ? 'bg-purple-100 text-purple-700' : 'bg-emerald-100 text-emerald-700'} text-[11px] font-extrabold">
+                  ${currentSoal.jenis_soal === 'ESAI' ? 'ESAI / URAIAN' : 'PILIHAN GANDA'}
+                </span>
+                <span class="inline-block px-2.5 py-1 rounded-xl bg-amber-50 text-amber-800 text-[11px] font-bold">
+                  Bobot: ${currentSoal.bobot || 10} Poin
+                </span>
+              </div>
+
               ${currentSoal.gambar_url ? `
-                <div>
-                  <img src="${currentSoal.gambar_url}" alt="Ilustrasi Soal" class="max-h-64 rounded-2xl border border-slate-200 object-contain bg-slate-50 p-1.5" onerror="this.style.display='none'" />
+                <div class="pt-1">
+                  <div class="relative inline-block group">
+                    <img src="${currentSoal.gambar_url}" alt="Ilustrasi Soal" onclick="window.app.zoomSoalImage('${currentSoal.gambar_url}')" class="max-h-72 rounded-2xl border border-slate-200 object-contain bg-slate-50 p-1.5 cursor-zoom-in group-hover:opacity-95 transition shadow-sm" onerror="this.style.display='none'" />
+                    <span class="absolute bottom-2 right-2 px-2.5 py-1 rounded-xl bg-slate-900/80 text-white text-[10px] font-bold pointer-events-none flex items-center gap-1">
+                      <i class="ph-bold ph-magnifying-glass-plus"></i> Klik untuk memperbesar
+                    </span>
+                  </div>
                 </div>
               ` : ''}
               <p class="text-base font-bold text-slate-800 leading-relaxed">${currentSoal.pertanyaan}</p>
             </div>
 
-            <div class="space-y-2.5">
-              ${options.map(opt => {
-                const active = selectedAns === opt.key;
-                return `
-                  <button type="button" onclick="window.app.selectExamOption('${currentSoal.id}', '${opt.key}')" class="w-full p-4 rounded-2xl border text-left transition flex items-center gap-3.5 ${
-                    active
-                      ? 'bg-blue-600 text-white border-blue-600 shadow-md shadow-blue-500/20'
-                      : 'bg-slate-50/80 hover:bg-blue-50/50 border-slate-200 text-slate-800'
-                  }">
-                    <span class="w-8 h-8 rounded-xl font-extrabold text-xs flex items-center justify-center shrink-0 ${
-                      active ? 'bg-white text-blue-600' : 'bg-white border border-slate-200 text-slate-700'
-                    }">${opt.key}</span>
-                    <span class="text-xs sm:text-sm font-semibold">${opt.text}</span>
-                  </button>
-                `;
-              }).join('')}
-            </div>
+            ${currentSoal.jenis_soal === 'ESAI' ? `
+              <div class="space-y-3">
+                <label class="block font-extrabold text-slate-800 text-sm">Lembar Jawaban Esai:</label>
+                <textarea oninput="window.app.saveExamEssayAnswer('${currentSoal.id}', this.value)" rows="6" placeholder="Ketikkan jawaban uraian / esai Anda secara lengkap di sini..." class="w-full p-4 rounded-2xl border border-slate-200 bg-white font-medium text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500 leading-relaxed text-sm shadow-inner">${selectedAns}</textarea>
+                <p class="text-[11px] text-slate-400">Jawaban esai Anda tersimpan otomatis. Gunakan tombol 'Selanjutnya' atau peta nomor soal untuk beralih.</p>
+              </div>
+            ` : `
+              <div class="space-y-2.5">
+                ${options.map(opt => {
+                  const active = selectedAns === opt.key;
+                  return `
+                    <button type="button" onclick="window.app.selectExamOption('${currentSoal.id}', '${opt.key}')" class="w-full p-4 rounded-2xl border text-left transition flex items-center gap-3.5 ${
+                      active
+                        ? 'bg-blue-600 text-white border-blue-600 shadow-md shadow-blue-500/20'
+                        : 'bg-slate-50/80 hover:bg-blue-50/50 border-slate-200 text-slate-800'
+                    }">
+                      <span class="w-8 h-8 rounded-xl font-extrabold text-xs flex items-center justify-center shrink-0 ${
+                        active ? 'bg-white text-blue-600' : 'bg-white border border-slate-200 text-slate-700'
+                      }">${opt.key}</span>
+                      <span class="text-xs sm:text-sm font-semibold">${opt.text}</span>
+                    </button>
+                  `;
+                }).join('')}
+              </div>
+            `}
           </div>
 
           <div class="flex flex-wrap items-center justify-between gap-3 pt-4 border-t border-slate-100">
@@ -3075,6 +4342,11 @@
     renderAll();
   }
 
+  function saveExamEssayAnswer(soalId, val) {
+    if (!state.activeExam) return;
+    state.activeExam.answers[soalId] = val;
+  }
+
   function toggleExamRagu(soalId) {
     if (!state.activeExam) return;
     state.activeExam.ragu[soalId] = !state.activeExam.ragu[soalId];
@@ -3110,11 +4382,25 @@
     ex.soalList.forEach(s => {
       const bobot = Number(s.bobot || 10);
       totalBobot += bobot;
-      if (ex.answers[s.id] === s.kunci_jawaban) {
-        totalBenar++;
-        totalSkor += bobot;
+      if (s.jenis_soal === 'ESAI') {
+        const studentAns = String(ex.answers[s.id] || '').trim().toLowerCase();
+        const keyAns = String(s.kunci_jawaban || '').trim().toLowerCase();
+        if (studentAns.length > 0 && keyAns.length > 0 && (studentAns === keyAns || studentAns.includes(keyAns) || keyAns.includes(studentAns))) {
+          totalBenar++;
+          totalSkor += bobot;
+        } else if (studentAns.length > 0) {
+          totalBenar++;
+          totalSkor += Math.round(bobot * 0.75);
+        } else {
+          totalSalah++;
+        }
       } else {
-        totalSalah++;
+        if (String(ex.answers[s.id] || '').trim().toUpperCase() === String(s.kunci_jawaban || '').trim().toUpperCase()) {
+          totalBenar++;
+          totalSkor += bobot;
+        } else {
+          totalSalah++;
+        }
       }
     });
 
@@ -3880,6 +5166,27 @@
     showSoalModal,
     saveSoal,
     deleteSoal,
+    downloadTemplateSoalXLSX,
+    showUploadSoalModal,
+    handleExcelFileSelect,
+    processImportSoalXLSX,
+    showImportPreviewModal,
+    saveValidImportedSoal,
+    removeDraftImportSoal,
+    handleSoalImageSelect,
+    removeSoalModalImage,
+    previewSingleSoal,
+    previewAllSoal,
+    zoomSoalImage,
+    duplicateSoal,
+    handleSoalSearch,
+    handleSoalFilterJenis,
+    handleSoalFilterKelas,
+    toggleSelectAllSoal,
+    toggleSoalCheckbox,
+    deleteSelectedSoal,
+    setModalJenisSoal,
+    saveExamEssayAnswer,
     promptStartExam,
     verifyTokenAndStart,
     startExamSession,
