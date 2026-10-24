@@ -24,7 +24,18 @@
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 
   <script>
+    // Inisialisasi Tema Instan Sebelum Halaman Dirender (Mencegah Layar Putih Berkedip)
+    (function() {
+      try {
+        const saved = localStorage.getItem('educbt_theme');
+        const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+        const initialTheme = (saved === 'dark' || saved === 'light') ? saved : (prefersDark ? 'dark' : 'light');
+        document.documentElement.setAttribute('data-theme', initialTheme);
+      } catch (e) {}
+    })();
+
     tailwind.config = {
+      darkMode: 'selector',
       theme: {
         extend: {
           fontFamily: {
@@ -46,14 +57,87 @@
   </script>
 
   <style>
+    /* ========================================================================= */
+    /* CSS CUSTOM PROPERTIES: MODE SIANG (LIGHT) & MODE MALAM (DARK)             */
+    /* ========================================================================= */
+    :root, [data-theme="light"] {
+      color-scheme: light;
+      --bg-primary: #F4F7FC;
+      --bg-sidebar: #0A1633;
+      --bg-navbar: #FFFFFF;
+      --bg-card: #FFFFFF;
+      --bg-secondary: #F8FAFC;
+      --bg-hover: #F1F5F9;
+      --text-title: #172554;
+      --text-primary: #1E293B;
+      --text-secondary: #64748B;
+      --text-muted: #94A3B8;
+      --border-color: #E2E8F0;
+      --border-subtle: #F1F5F9;
+      --accent-primary: #2563EB;
+      --accent-secondary: #0EA5E9;
+      --accent-success: #10B981;
+      --accent-warning: #F59E0B;
+      --accent-danger: #F43F5E;
+      --shadow-soft: 0 4px 20px -2px rgba(15, 23, 42, 0.05);
+      --shadow-card: 0 1px 3px 0 rgba(0, 0, 0, 0.05), 0 1px 2px -1px rgba(0, 0, 0, 0.05);
+    }
+
+    [data-theme="dark"] {
+      color-scheme: dark;
+      --bg-primary: #0B1120;
+      --bg-sidebar: #0F172A;
+      --bg-navbar: #111827;
+      --bg-card: #172033;
+      --bg-secondary: #1E293B;
+      --bg-hover: #243047;
+      --text-title: #F8FAFC;
+      --text-primary: #E2E8F0;
+      --text-secondary: #94A3B8;
+      --text-muted: #64748B;
+      --border-color: #293548;
+      --border-subtle: #1E293B;
+      --accent-primary: #3B82F6;
+      --accent-secondary: #38BDF8;
+      --accent-success: #34D399;
+      --accent-warning: #FBBF24;
+      --accent-danger: #FB7185;
+      --shadow-soft: 0 4px 25px -2px rgba(0, 0, 0, 0.45);
+      --shadow-card: 0 4px 6px -1px rgba(0, 0, 0, 0.3), 0 2px 4px -2px rgba(0, 0, 0, 0.3);
+    }
+
+    /* Animasi Transisi Halus (200-300ms) untuk Komponen Tema */
+    #educbt-root,
+    #educbt-root header,
+    #educbt-root main,
+    #educbt-root aside,
+    #educbt-root nav,
+    #educbt-root .bg-white,
+    #educbt-root .bg-slate-50,
+    #educbt-root .bg-slate-100,
+    #educbt-root input,
+    #educbt-root select,
+    #educbt-root textarea,
+    #educbt-root table,
+    #educbt-root .glass-panel {
+      transition: background-color 250ms ease, border-color 250ms ease, color 200ms ease, box-shadow 250ms ease;
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      #educbt-root,
+      #educbt-root * {
+        transition: none !important;
+      }
+    }
+
     /* Fullscreen Overlay untuk menutupi template Blogger tanpa edit XML */
     #educbt-root {
       position: fixed;
       inset: 0;
       z-index: 999999;
-      background-color: #F4F7FE;
+      background-color: var(--bg-primary);
       font-family: 'Plus Jakarta Sans', sans-serif;
-      color: #0F172A;
+      color: var(--text-primary);
       overflow: hidden;
       display: flex;
       flex-direction: column;
@@ -74,6 +158,12 @@
     ::-webkit-scrollbar-thumb:hover {
       background: #94A3B8;
     }
+    [data-theme="dark"] ::-webkit-scrollbar-thumb {
+      background: #2D3D58;
+    }
+    [data-theme="dark"] ::-webkit-scrollbar-thumb:hover {
+      background: #3B82F6;
+    }
 
     /* Glassmorphism & Lingora Card Effects */
     .glass-panel {
@@ -82,9 +172,227 @@
       -webkit-backdrop-filter: blur(16px);
       border: 1px solid rgba(255, 255, 255, 0.9);
     }
+    [data-theme="dark"] .glass-panel {
+      background: rgba(23, 32, 51, 0.94) !important;
+      border-color: var(--border-color) !important;
+      box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.7) !important;
+    }
 
     .hero-banner-gradient {
       background: linear-gradient(135deg, #BAE6FD 0%, #93C5FD 55%, #BFDBFE 100%);
+    }
+    [data-theme="dark"] .hero-banner-gradient {
+      background: linear-gradient(135deg, #1E3A8A 0%, #1E40AF 55%, #172554 100%) !important;
+    }
+
+    /* ========================================================================= */
+    /* PENGATURAN KOMPREHENSIF ELEMEN MODE MALAM (DARK MODE HIERARCHY)           */
+    /* ========================================================================= */
+    [data-theme="dark"] #educbt-root {
+      background-color: var(--bg-primary) !important;
+      color: var(--text-primary) !important;
+    }
+
+    [data-theme="dark"] main {
+      background-color: var(--bg-primary) !important;
+    }
+
+    [data-theme="dark"] header {
+      background-color: var(--bg-navbar) !important;
+      border-color: var(--border-color) !important;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.4) !important;
+    }
+
+    [data-theme="dark"] .desktop-sidebar {
+      background-color: var(--bg-sidebar) !important;
+      border-right: 1px solid var(--border-color) !important;
+    }
+
+    /* Kartu & Container */
+    [data-theme="dark"] .bg-white {
+      background-color: var(--bg-card) !important;
+      color: var(--text-primary) !important;
+      border-color: var(--border-color) !important;
+    }
+
+    [data-theme="dark"] .bg-slate-50,
+    [data-theme="dark"] .bg-slate-50\/80,
+    [data-theme="dark"] .bg-slate-50\/50,
+    [data-theme="dark"] .bg-slate-100 {
+      background-color: var(--bg-secondary) !important;
+      border-color: var(--border-color) !important;
+    }
+
+    [data-theme="dark"] .hover\:bg-slate-50:hover,
+    [data-theme="dark"] .hover\:bg-slate-100:hover,
+    [data-theme="dark"] .hover\:bg-blue-50\/20:hover {
+      background-color: var(--bg-hover) !important;
+    }
+
+    /* Border Adaptif */
+    [data-theme="dark"] .border-slate-100,
+    [data-theme="dark"] .border-slate-200,
+    [data-theme="dark"] .border-slate-300,
+    [data-theme="dark"] .border-blue-100,
+    [data-theme="dark"] .border-purple-100,
+    [data-theme="dark"] .border-emerald-100,
+    [data-theme="dark"] .border-amber-100,
+    [data-theme="dark"] .border-amber-200\/60 {
+      border-color: var(--border-color) !important;
+    }
+
+    /* Tipografi & Warna Teks */
+    [data-theme="dark"] .text-slate-900,
+    [data-theme="dark"] .text-slate-800 {
+      color: var(--text-title) !important;
+    }
+
+    [data-theme="dark"] .text-slate-700,
+    [data-theme="dark"] .text-slate-600 {
+      color: var(--text-primary) !important;
+    }
+
+    [data-theme="dark"] .text-slate-500,
+    [data-theme="dark"] .text-slate-400 {
+      color: var(--text-secondary) !important;
+    }
+
+    /* Translucent Pastel Badges */
+    [data-theme="dark"] .bg-blue-50,
+    [data-theme="dark"] .bg-blue-50\/40,
+    [data-theme="dark"] .bg-blue-50\/80 {
+      background-color: rgba(59, 130, 246, 0.12) !important;
+      border-color: rgba(59, 130, 246, 0.25) !important;
+    }
+    [data-theme="dark"] .bg-amber-50,
+    [data-theme="dark"] .bg-amber-50\/60 {
+      background-color: rgba(245, 158, 11, 0.12) !important;
+      border-color: rgba(245, 158, 11, 0.25) !important;
+    }
+    [data-theme="dark"] .bg-emerald-50 {
+      background-color: rgba(16, 185, 129, 0.12) !important;
+      border-color: rgba(16, 185, 129, 0.25) !important;
+    }
+    [data-theme="dark"] .bg-purple-50 {
+      background-color: rgba(139, 92, 246, 0.12) !important;
+      border-color: rgba(139, 92, 246, 0.25) !important;
+    }
+    [data-theme="dark"] .bg-rose-50 {
+      background-color: rgba(244, 63, 94, 0.12) !important;
+      border-color: rgba(244, 63, 94, 0.25) !important;
+    }
+
+    [data-theme="dark"] .text-blue-700,
+    [data-theme="dark"] .text-blue-600 {
+      color: #60A5FA !important;
+    }
+    [data-theme="dark"] .text-amber-700,
+    [data-theme="dark"] .text-amber-800 {
+      color: #FBBF24 !important;
+    }
+    [data-theme="dark"] .text-emerald-700,
+    [data-theme="dark"] .text-emerald-800 {
+      color: #34D399 !important;
+    }
+    [data-theme="dark"] .text-purple-700,
+    [data-theme="dark"] .text-purple-800 {
+      color: #C084FC !important;
+    }
+    [data-theme="dark"] .text-rose-700,
+    [data-theme="dark"] .text-rose-600 {
+      color: #FB7185 !important;
+    }
+
+    /* Form Inputs, Textarea, Select */
+    [data-theme="dark"] input:not([type="checkbox"]):not([type="radio"]):not([type="submit"]):not([type="button"]):not([type="file"]),
+    [data-theme="dark"] select,
+    [data-theme="dark"] textarea {
+      background-color: var(--bg-secondary) !important;
+      border-color: var(--border-color) !important;
+      color: var(--text-primary) !important;
+    }
+
+    [data-theme="dark"] input::placeholder,
+    [data-theme="dark"] textarea::placeholder {
+      color: var(--text-muted) !important;
+    }
+
+    [data-theme="dark"] select option {
+      background-color: var(--bg-card) !important;
+      color: var(--text-primary) !important;
+    }
+
+    /* Modal Dialog */
+    [data-theme="dark"] #app-modal > div {
+      background-color: var(--bg-card) !important;
+      border-color: var(--border-color) !important;
+      box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.7) !important;
+    }
+
+    [data-theme="dark"] #app-modal .border-b,
+    [data-theme="dark"] #app-modal .border-t {
+      border-color: var(--border-color) !important;
+    }
+
+    [data-theme="dark"] #modal-title {
+      color: var(--text-title) !important;
+    }
+
+    /* Tabel Data */
+    [data-theme="dark"] table thead tr {
+      border-color: var(--border-color) !important;
+    }
+
+    [data-theme="dark"] table thead th {
+      color: var(--text-secondary) !important;
+    }
+
+    [data-theme="dark"] table tbody tr {
+      border-color: var(--border-color) !important;
+    }
+
+    [data-theme="dark"] table tbody tr:hover {
+      background-color: var(--bg-hover) !important;
+    }
+
+    /* Tombol Khusus */
+    [data-theme="dark"] button.bg-slate-100 {
+      background-color: var(--bg-secondary) !important;
+      color: var(--text-primary) !important;
+      border-color: var(--border-color) !important;
+    }
+
+    /* Halaman Login Dark Mode */
+    [data-theme="dark"] #login-school-name {
+      color: #CBD5E1 !important;
+    }
+
+    [data-theme="dark"] #tab-login-siswa.bg-white,
+    [data-theme="dark"] #tab-login-admin.bg-white {
+      background-color: var(--bg-card) !important;
+      color: var(--accent-secondary) !important;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.4) !important;
+    }
+
+    [data-theme="dark"] #tab-login-siswa:not(.bg-white),
+    [data-theme="dark"] #tab-login-admin:not(.bg-white) {
+      color: var(--text-secondary) !important;
+    }
+
+    [data-theme="dark"] #login-view .bg-slate-100 {
+      background-color: var(--bg-secondary) !important;
+    }
+
+    /* Navigasi Mobile Bawah */
+    [data-theme="dark"] .mobile-bottom-nav {
+      background-color: rgba(17, 24, 39, 0.96) !important;
+      border-color: var(--border-color) !important;
+    }
+
+    /* Animasi Hover Tombol Tema */
+    .theme-toggle-btn:hover #theme-icon-wrapper,
+    .theme-toggle-btn:hover #login-theme-icon-wrapper {
+      transform: scale(1.15);
     }
 
     /* Print Styles */
@@ -139,6 +447,16 @@
 <div id="educbt-root">
   <!-- VIEW 1: HALAMAN LOGIN (GLASSMORPHISM & LINGORA THEME) -->
   <div id="login-view" class="flex-1 flex items-center justify-center p-4 overflow-y-auto relative">
+    <!-- Tombol Mode Siang & Malam Halaman Login -->
+    <div class="absolute top-5 right-5 z-20">
+      <button type="button" onclick="window.app.toggleTheme()" class="theme-toggle-btn group relative flex items-center gap-2 px-3.5 py-2 rounded-full border border-slate-200 bg-white/90 hover:bg-white text-slate-700 backdrop-blur-md transition-all shadow-md cursor-pointer select-none" title="Ganti Mode Tema" aria-label="Ganti Mode Tema">
+        <span id="login-theme-icon-wrapper" class="flex items-center justify-center transition-transform duration-300">
+          <i id="login-theme-icon" class="ph-bold ph-sun text-amber-500 text-base"></i>
+        </span>
+        <span id="login-theme-text" class="text-xs font-bold tracking-tight">Siang</span>
+      </button>
+    </div>
+
     <!-- Ornamen Latar Belakang -->
     <div class="absolute -top-24 -left-24 w-96 h-96 bg-blue-300/30 rounded-full blur-3xl pointer-events-none"></div>
     <div class="absolute -bottom-24 -right-24 w-96 h-96 bg-emerald-300/30 rounded-full blur-3xl pointer-events-none"></div>
@@ -371,6 +689,18 @@
             <input type="text" oninput="window.app.handleGlobalSearch(this.value)" placeholder="Cari data..." class="pl-9 pr-4 py-1.5 bg-blue-50/40 border border-blue-100 rounded-full text-xs focus:outline-none focus:ring-2 focus:ring-blue-500 w-44 lg:w-56" />
           </div>
 
+          <!-- Tombol Switch Mode Siang & Mode Malam (Theme Toggle Pill) -->
+          <button type="button" id="theme-toggle-btn" onclick="window.app.toggleTheme()" class="theme-toggle-btn group relative flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-slate-200 bg-slate-100 hover:bg-slate-200 text-slate-700 transition shadow-sm cursor-pointer select-none shrink-0" title="Aktifkan Mode Malam" aria-label="Ganti Tema">
+            <span id="theme-icon-wrapper" class="flex items-center justify-center transition-transform duration-300">
+              <i id="theme-icon" class="ph-bold ph-sun text-amber-500 text-base"></i>
+            </span>
+            <span id="theme-text" class="hidden md:inline-block text-xs font-bold">Siang</span>
+            <!-- Floating Tooltip -->
+            <span id="theme-tooltip" class="pointer-events-none absolute -bottom-9 right-0 z-50 whitespace-nowrap rounded-lg bg-slate-900 px-2.5 py-1 text-[11px] font-semibold text-white shadow-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+              Aktifkan Mode Malam
+            </span>
+          </button>
+
           <!-- Notification Bell dengan Badge Merah 3 -->
           <div class="relative cursor-pointer p-2 text-blue-600 hover:bg-blue-50 rounded-xl transition">
             <i class="ph-fill ph-bell-simple text-xl"></i>
@@ -475,6 +805,7 @@
   const state = {
     user: null, // { id, role: 'admin' | 'siswa', nama, nisn, kelas_id, poin }
     activeMenu: 'dashboard',
+    theme: 'light', // 'light' | 'dark'
     searchQuery: '',
     filterRekapJadwal: '',
     selectedJadwalForSoal: '',
@@ -637,6 +968,104 @@
   function showGasConfigModal() {}
   function saveGasConfig() {}
   function resetToDemoMode() {}
+
+  // ============================================================================
+  // PENGELOLA TEMA MODE SIANG (LIGHT) & MODE MALAM (DARK)
+  // ============================================================================
+  function initTheme() {
+    const saved = localStorage.getItem('educbt_theme');
+    const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+    const initialTheme = (saved === 'dark' || saved === 'light') ? saved : (prefersDark ? 'dark' : 'light');
+    applyTheme(initialTheme, false);
+
+    // Listener otomatis jika pengguna mengganti preferensi tema di sistem operasi
+    if (window.matchMedia) {
+      window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', e => {
+        if (!localStorage.getItem('educbt_theme')) {
+          applyTheme(e.matches ? 'dark' : 'light', true);
+        }
+      });
+    }
+  }
+
+  function applyTheme(theme, notify = false) {
+    state.theme = theme;
+    document.documentElement.setAttribute('data-theme', theme);
+    const root = document.getElementById('educbt-root');
+    if (root) root.setAttribute('data-theme', theme);
+    localStorage.setItem('educbt_theme', theme);
+
+    updateThemeButtonUI(theme);
+
+    if (notify) {
+      showToast(theme === 'dark' ? 'Mode Malam diaktifkan 🌙' : 'Mode Siang diaktifkan ☀️');
+    }
+  }
+
+  function updateThemeButtonUI(theme) {
+    const isDark = theme === 'dark';
+
+    // 1. Tombol Tema di Header Dashboard
+    const icon = document.getElementById('theme-icon');
+    const iconWrapper = document.getElementById('theme-icon-wrapper');
+    const text = document.getElementById('theme-text');
+    const tooltip = document.getElementById('theme-tooltip');
+    const btn = document.getElementById('theme-toggle-btn');
+
+    if (btn) {
+      btn.title = isDark ? 'Aktifkan Mode Siang' : 'Aktifkan Mode Malam';
+      if (isDark) {
+        btn.classList.add('bg-slate-800', 'border-slate-700', 'text-sky-300');
+        btn.classList.remove('bg-slate-100', 'border-slate-200', 'text-slate-700');
+      } else {
+        btn.classList.add('bg-slate-100', 'border-slate-200', 'text-slate-700');
+        btn.classList.remove('bg-slate-800', 'border-slate-700', 'text-sky-300');
+      }
+    }
+
+    if (icon) {
+      icon.className = isDark ? 'ph-bold ph-moon text-sky-400 text-base' : 'ph-bold ph-sun text-amber-500 text-base';
+    }
+    if (iconWrapper) {
+      iconWrapper.style.transform = isDark ? 'rotate(360deg)' : 'rotate(0deg)';
+    }
+    if (text) {
+      text.textContent = isDark ? 'Malam' : 'Siang';
+    }
+    if (tooltip) {
+      tooltip.textContent = isDark ? 'Aktifkan Mode Siang' : 'Aktifkan Mode Malam';
+    }
+
+    // 2. Tombol Tema di Halaman Login
+    const loginIcon = document.getElementById('login-theme-icon');
+    const loginIconWrapper = document.getElementById('login-theme-icon-wrapper');
+    const loginText = document.getElementById('login-theme-text');
+    const loginBtn = document.querySelector('#login-view .theme-toggle-btn');
+
+    if (loginBtn) {
+      if (isDark) {
+        loginBtn.classList.add('bg-slate-800/90', 'border-slate-700', 'text-sky-300');
+        loginBtn.classList.remove('bg-white/90', 'border-slate-200', 'text-slate-700');
+      } else {
+        loginBtn.classList.add('bg-white/90', 'border-slate-200', 'text-slate-700');
+        loginBtn.classList.remove('bg-slate-800/90', 'border-slate-700', 'text-sky-300');
+      }
+    }
+    if (loginIcon) {
+      loginIcon.className = isDark ? 'ph-bold ph-moon text-sky-400 text-base' : 'ph-bold ph-sun text-amber-500 text-base';
+    }
+    if (loginIconWrapper) {
+      loginIconWrapper.style.transform = isDark ? 'rotate(360deg)' : 'rotate(0deg)';
+    }
+    if (loginText) {
+      loginText.textContent = isDark ? 'Malam' : 'Siang';
+    }
+  }
+
+  function toggleTheme() {
+    const nextTheme = state.theme === 'dark' ? 'light' : 'dark';
+    applyTheme(nextTheme, true);
+  }
 
   // ============================================================================
   // SINKRONISASI DATA DARI GOOGLE SPREADSHEET
@@ -850,6 +1279,7 @@
 
     renderSidebarMenu();
     updateUserProfileDisplay();
+    updateThemeButtonUI(state.theme);
     renderAll();
   }
 
@@ -3417,6 +3847,9 @@
     deletePengguna,
     handleGlobalSearch,
     toggleFullscreen,
+    toggleTheme,
+    applyTheme,
+    initTheme,
     closeModal
   };
 
@@ -3424,6 +3857,7 @@
   Object.assign(window, appApi);
 
   async function bootstrap() {
+    initTheme();
     if (!IS_CONNECTED_GAS) {
       initPreviewDummyData();
       applyBrandingUI();
