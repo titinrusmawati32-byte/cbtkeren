@@ -1542,13 +1542,16 @@
     const bannerText = document.getElementById('banner-status-text');
 
     if (IS_CONNECTED_GAS) {
-      if (dbStatusLabel) dbStatusLabel.textContent = 'Sheets Terhubung';
+      const isFb = window.FirebaseAdapter && window.FirebaseAdapter.isConfigured();
+      if (dbStatusLabel) dbStatusLabel.textContent = isFb ? 'Sheets + Firebase' : 'Sheets Terhubung';
       if (bannerBadge) {
-        bannerBadge.textContent = '🟢 Google Sheets Aktif';
+        bannerBadge.textContent = isFb ? '🟢 Sheets + Firebase Cloud' : '🟢 Google Sheets Aktif';
         bannerBadge.className = 'px-2.5 py-0.5 bg-white/20 rounded-full text-[11px] font-bold tracking-wide uppercase';
       }
       if (bannerText) {
-        bannerText.textContent = 'Aplikasi terhubung ke Google Spreadsheet Anda secara real-time.';
+        bannerText.textContent = isFb
+          ? 'Engine CBT Hibrida: Autosave Real-time Cloud Firestore & Database Google Spreadsheet Aktif.'
+          : 'Aplikasi terhubung ke Google Spreadsheet Anda secara real-time.';
       }
     } else {
       if (dbStatusLabel) dbStatusLabel.textContent = 'Mode Demo';

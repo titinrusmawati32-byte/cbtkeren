@@ -20,24 +20,35 @@
 
   const STORAGE_KEY = 'educbt_firebase_config';
 
+  // Konfigurasi Bawaan Tertanam (Permanently Embedded Firebase Configuration)
+  const EMBEDDED_CONFIG = {
+    apiKey: "AIzaSyAa2rLTMeNVj6rwQUXPXEcglSWBDS-A_pg",
+    authDomain: "cbtkeren-3da33.firebaseapp.com",
+    projectId: "cbtkeren-3da33",
+    storageBucket: "cbtkeren-3da33.firebasestorage.app",
+    messagingSenderId: "520669859156",
+    appId: "1:520669859156:web:1436865a21df83ec410cc1"
+  };
+
   let _app = null;
   let _db = null;
   let _auth = null;
   let _isInitialized = false;
 
-  // Baca konfigurasi yang tersimpan di browser
+  // Baca konfigurasi yang tersimpan di browser atau gunakan konfigurasi bawaan tertanam
   function getStoredConfig() {
     try {
       const raw = localStorage.getItem(STORAGE_KEY);
-      if (!raw) return null;
-      const parsed = JSON.parse(raw);
-      if (parsed && parsed.projectId && parsed.apiKey) {
-        return parsed;
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (parsed && parsed.projectId && parsed.apiKey) {
+          return parsed;
+        }
       }
     } catch (e) {
       console.warn('[FirebaseAdapter] Gagal membaca konfigurasi lokal:', e);
     }
-    return null;
+    return EMBEDDED_CONFIG;
   }
 
   // Inisialisasi Firebase App & Firestore
