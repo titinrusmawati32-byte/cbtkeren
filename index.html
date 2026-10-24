@@ -265,19 +265,34 @@
 
   <!-- VIEW 2: DASHBOARD & WORKSPACE APLIKASI UTAMA -->
   <div id="app-view" class="hidden flex-1 flex overflow-hidden">
-    <!-- SIDEBAR DESKTOP -->
-    <aside class="desktop-sidebar w-64 bg-white border-r border-slate-100 p-5 flex flex-col justify-between shrink-0 shadow-sm">
-      <div class="space-y-6">
+    <!-- SIDEBAR DESKTOP (DEEP NAVY BLUE LIKE SCREENSHOT) -->
+    <aside class="desktop-sidebar w-64 bg-[#0A1633] text-white p-5 flex flex-col justify-between shrink-0 shadow-2xl relative overflow-hidden z-30">
+      <!-- Ornamen daun lembut di sudut bawah -->
+      <div class="absolute -bottom-8 -left-8 w-36 h-36 bg-emerald-500/10 rounded-full blur-2xl pointer-events-none"></div>
+
+      <div class="space-y-6 relative z-10">
         <!-- Logo & Identitas Aplikasi -->
-        <div class="flex items-center gap-3 px-2">
-          <div class="w-10 h-10 rounded-2xl bg-blue-600 text-white flex items-center justify-center font-extrabold text-lg shadow-md shadow-blue-500/20 overflow-hidden shrink-0">
-            <img id="sidebar-logo-img" src="" alt="Logo" class="w-full h-full object-cover hidden" />
-            <span id="sidebar-logo-emoji">🐦</span>
+        <div class="flex items-center justify-between px-1">
+          <div class="flex items-center gap-3">
+            <!-- Icon Logo Buku Terbuka & Topi Toga (Lingora Blue Glow) -->
+            <div class="w-11 h-11 rounded-2xl bg-gradient-to-tr from-blue-600 via-sky-500 to-blue-400 text-white flex items-center justify-center font-extrabold text-lg shadow-lg shadow-blue-500/30 ring-2 ring-white/20 shrink-0">
+              <svg viewBox="0 0 36 36" class="w-7 h-7 drop-shadow" fill="none">
+                <path d="M18 6 L5 12 L18 18 L31 12 Z" fill="#FFFFFF" />
+                <path d="M8 15.5 V23 C8 26, 18 30.5, 18 30.5 C18 30.5, 28 26, 28 23 V15.5 L18 20.5 Z" fill="#EFF6FF" fill-opacity="0.95" />
+                <circle cx="18" cy="18" r="2.5" fill="#FBBF24" />
+                <path d="M31 13 V23" stroke="#FBBF24" stroke-width="2" stroke-linecap="round" />
+              </svg>
+            </div>
+            <div class="min-w-0">
+              <h2 id="sidebar-app-name" class="font-extrabold text-base leading-none tracking-tight">
+                <span class="text-white">EduCBT </span><span class="text-amber-400">Lingora</span>
+              </h2>
+              <p id="sidebar-school-sub" class="text-[11px] font-medium text-slate-400 truncate mt-1">SMA Negeri Harapan Bangsa</p>
+            </div>
           </div>
-          <div class="min-w-0">
-            <h2 id="sidebar-app-name" class="font-extrabold text-slate-900 text-base leading-none truncate">EduCBT</h2>
-            <p id="sidebar-school-sub" class="text-[11px] font-semibold text-slate-400 truncate mt-1">SMA Harapan Bangsa</p>
-          </div>
+          <button type="button" class="text-slate-500 hover:text-white p-1 rounded-lg transition" title="Menu">
+            <i class="ph ph-x text-sm"></i>
+          </button>
         </div>
 
         <!-- Menu Navigasi Utama -->
@@ -287,55 +302,80 @@
       </div>
 
       <!-- Profil Singkat & Logout -->
-      <div class="pt-4 border-t border-slate-100 space-y-3">
-        <div class="flex items-center gap-3 px-2">
-          <div class="w-9 h-9 rounded-full bg-slate-100 flex items-center justify-center text-slate-700 font-extrabold text-sm shrink-0">
-            <span id="sidebar-user-avatar">👤</span>
+      <div class="pt-4 border-t border-white/10 space-y-3 relative z-10">
+        <div class="flex items-center gap-3 p-2.5 rounded-2xl bg-white/5 border border-white/10 backdrop-blur-sm">
+          <div class="w-10 h-10 rounded-full bg-sky-100 flex items-center justify-center text-slate-800 font-extrabold text-sm shrink-0 overflow-hidden ring-2 ring-sky-400/50">
+            <!-- Illustrated Avatar Guru / Admin -->
+            <svg viewBox="0 0 48 48" class="w-full h-full">
+              <circle cx="24" cy="24" r="24" fill="#E0F2FE"/>
+              <path d="M10 44 C10 33, 17 30, 24 30 C31 30, 38 33, 38 44 Z" fill="#1E3A8A"/>
+              <polygon points="22,30 26,30 25,37 23,37" fill="#38BDF8"/>
+              <circle cx="24" cy="19" r="8" fill="#FDE68A"/>
+              <!-- Kacamata & Rambut -->
+              <path d="M16 16 C16 11, 32 11, 32 16 C32 14, 30 11, 24 11 C18 11, 16 14, 16 16 Z" fill="#1E293B"/>
+              <circle cx="20.5" cy="19" r="2.8" fill="none" stroke="#0F172A" stroke-width="1"/>
+              <circle cx="27.5" cy="19" r="2.8" fill="none" stroke="#0F172A" stroke-width="1"/>
+              <line x1="23.3" y1="19" x2="24.7" y2="19" stroke="#0F172A" stroke-width="1"/>
+              <path d="M22 23 Q24 25 26 23" stroke="#B45309" stroke-width="1" fill="none"/>
+            </svg>
           </div>
           <div class="min-w-0 flex-1">
-            <p id="sidebar-user-name" class="text-xs font-extrabold text-slate-800 truncate">Administrator</p>
-            <p id="sidebar-user-role" class="text-[10px] font-semibold text-blue-600 uppercase">Guru / Admin</p>
+            <p id="sidebar-user-name" class="text-xs font-extrabold text-white truncate">Dr. H. Ahmad Sulaiman, M.Pd</p>
+            <p id="sidebar-user-role" class="text-[10px] font-bold text-sky-400 uppercase tracking-wider">ADMINISTRATOR</p>
           </div>
         </div>
-        <button type="button" onclick="window.app.handleLogout()" class="w-full py-2.5 px-3 rounded-2xl text-xs font-bold text-rose-600 hover:bg-rose-50 transition flex items-center gap-2">
+        <button type="button" onclick="window.app.handleLogout()" class="w-full py-2 px-3 rounded-xl text-xs font-bold text-rose-400 hover:text-rose-300 hover:bg-rose-500/10 transition flex items-center gap-2">
           <i class="ph-bold ph-sign-out text-base"></i> Keluar
         </button>
+      </div>
+
+      <!-- Ornamen daun hijau di sudut kiri bawah -->
+      <div class="absolute -bottom-2 -left-2 opacity-30 pointer-events-none w-20 h-20 text-emerald-400">
+        <svg viewBox="0 0 100 100" fill="currentColor">
+          <path d="M5,95 Q35,35 90,10 Q75,65 5,95 Z" />
+          <path d="M15,95 Q45,45 80,25 Q65,70 15,95 Z" opacity="0.6"/>
+        </svg>
       </div>
     </aside>
 
     <!-- AREA KONTEN UTAMA -->
-    <main class="flex-1 flex flex-col min-w-0 overflow-hidden bg-bgsoft">
-      <!-- Topbar Header -->
-      <header class="h-16 bg-white/80 backdrop-blur border-b border-slate-100 px-6 flex items-center justify-between shrink-0 z-20">
-        <div class="flex items-center gap-3">
-          <h1 id="topbar-title" class="text-base sm:text-lg font-extrabold text-slate-900">Dashboard Evaluasi</h1>
-          <span id="header-ta-badge" class="hidden sm:inline-block px-2.5 py-1 rounded-full bg-blue-50 text-blue-700 text-[11px] font-extrabold">
+    <main class="flex-1 flex flex-col min-w-0 overflow-hidden bg-[#F3F7FD]">
+      <!-- Topbar Header (Persis Seperti Screenshot) -->
+      <header class="h-16 bg-white border-b border-slate-100 px-6 flex items-center justify-between shrink-0 z-20 shadow-sm">
+        <div class="flex items-center gap-3.5">
+          <!-- Tombol Hamburger Biru Kotak -->
+          <button type="button" class="w-9 h-9 rounded-xl bg-blue-600 hover:bg-blue-700 text-white flex items-center justify-center shadow-md shadow-blue-500/20 shrink-0 transition">
+            <i class="ph-bold ph-list text-lg"></i>
+          </button>
+          <h1 id="topbar-title" class="text-base sm:text-lg font-black text-slate-900 tracking-tight">Dashboard Utama</h1>
+          <span id="header-ta-badge" class="hidden sm:inline-block px-3 py-1 rounded-xl bg-blue-50 text-blue-600 text-[11px] font-extrabold border border-blue-100">
             📅 TA 2026/2027
           </span>
         </div>
 
         <div class="flex items-center gap-2.5">
           <!-- Standar KKM Pill Indicator -->
-          <div id="kkm-pill-indicator" class="hidden sm:flex items-center gap-1.5 px-3 py-1 bg-amber-50 text-amber-700 border border-amber-200/60 rounded-full text-xs font-bold">
-            <i class="ph-bold ph-target"></i> KKM 75
+          <div id="kkm-pill-indicator" class="hidden sm:flex items-center gap-1.5 px-3 py-1 bg-amber-50 text-amber-800 border border-amber-200/60 rounded-full text-xs font-bold">
+            <span class="w-3.5 h-3.5 rounded-full bg-amber-400 flex items-center justify-center text-[9px] text-white font-bold">●</span> KKM 75
           </div>
 
           <!-- Status Server CBT Online -->
-          <div class="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-emerald-50 text-emerald-800 text-xs font-bold border border-emerald-200">
+          <div class="hidden sm:flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-50 text-emerald-800 text-xs font-bold border border-emerald-200">
             <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
             <span>CBT Server Online</span>
           </div>
 
-          <!-- Search Bar -->
+          <!-- Search Bar Pill -->
           <div class="relative hidden sm:block">
-            <i class="ph ph-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"></i>
-            <input type="text" oninput="window.app.handleGlobalSearch(this.value)" placeholder="Cari data..." class="pl-9 pr-3.5 py-1.5 bg-slate-100 rounded-full text-xs focus:outline-none focus:ring-2 focus:ring-blue-500 w-44 lg:w-56" />
+            <i class="ph ph-magnifying-glass absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400"></i>
+            <input type="text" oninput="window.app.handleGlobalSearch(this.value)" placeholder="Cari data..." class="pl-9 pr-4 py-1.5 bg-blue-50/40 border border-blue-100 rounded-full text-xs focus:outline-none focus:ring-2 focus:ring-blue-500 w-44 lg:w-56" />
           </div>
 
-          <!-- Tombol Fullscreen saat ujian -->
-          <button type="button" onclick="window.app.toggleFullscreen()" title="Layar Penuh" class="p-2 text-slate-500 hover:text-slate-900 hover:bg-slate-100 rounded-xl">
-            <i class="ph-bold ph-arrows-out text-lg"></i>
-          </button>
+          <!-- Notification Bell dengan Badge Merah 3 -->
+          <div class="relative cursor-pointer p-2 text-blue-600 hover:bg-blue-50 rounded-xl transition">
+            <i class="ph-fill ph-bell-simple text-xl"></i>
+            <span class="absolute top-1 right-1 w-4 h-4 bg-rose-500 text-white rounded-full text-[9px] font-black flex items-center justify-center shadow-sm">3</span>
+          </div>
         </div>
       </header>
 
@@ -655,10 +695,19 @@
 
     document.getElementById('login-app-name').textContent = p.nama_aplikasi || 'EduCBT';
     document.getElementById('login-school-name').textContent = p.nama_sekolah || 'Portal CBT Sekolah';
-    document.getElementById('sidebar-app-name').textContent = p.nama_aplikasi || 'EduCBT';
-    document.getElementById('sidebar-school-sub').textContent = p.nama_sekolah || 'Learn • Practice';
+    const sidebarAppName = document.getElementById('sidebar-app-name');
+    if (sidebarAppName) {
+      sidebarAppName.innerHTML = '<span class="text-white">EduCBT </span><span class="text-amber-400">Lingora</span>';
+    }
+    const sidebarSchoolSub = document.getElementById('sidebar-school-sub');
+    if (sidebarSchoolSub) {
+      sidebarSchoolSub.textContent = p.nama_sekolah || 'SMA Negeri Harapan Bangsa';
+    }
     document.getElementById('header-ta-badge').textContent = `📅 TA ${p.tahun_ajaran || '2026/2027'}`;
-    document.getElementById('kkm-pill-indicator').textContent = `KKM ${p.kkm_default || 75}`;
+    const kkmIndicator = document.getElementById('kkm-pill-indicator');
+    if (kkmIndicator) {
+      kkmIndicator.innerHTML = `<span class="w-3.5 h-3.5 rounded-full bg-amber-400 flex items-center justify-center text-[9px] text-white font-bold">●</span> KKM ${p.kkm_default || 75}`;
+    }
 
     const loginLogoImg = document.getElementById('login-logo-img');
     const loginLogoEmoji = document.getElementById('login-logo-emoji');
@@ -806,13 +855,14 @@
 
   function updateUserProfileDisplay() {
     if (!state.user) return;
-    document.getElementById('sidebar-user-name').textContent = state.user.nama;
-    document.getElementById('sidebar-user-role').textContent = state.user.role === 'admin' ? 'Administrator' : state.user.role === 'guru' ? 'Guru Pengampu' : 'Peserta Ujian';
-    document.getElementById('sidebar-user-avatar').textContent = state.user.role === 'admin' ? '👨‍💼' : state.user.role === 'guru' ? '👨‍🏫' : '🎓';
+    const nameEl = document.getElementById('sidebar-user-name');
+    if (nameEl) nameEl.textContent = state.user.nama;
+    const roleEl = document.getElementById('sidebar-user-role');
+    if (roleEl) roleEl.textContent = state.user.role === 'admin' ? 'ADMINISTRATOR' : state.user.role === 'guru' ? 'GURU PENGAMPU' : 'PESERTA UJIAN';
   }
 
   // ============================================================================
-  // NAVIGASI & SIDEBAR MENU
+  // NAVIGASI & SIDEBAR MENU (GLOWING ACTIVE PILL & DARK NAVY)
   // ============================================================================
   function renderSidebarMenu() {
     const list = document.getElementById('sidebar-menu-list');
@@ -822,8 +872,8 @@
     const menus = isStaff
       ? [
           { id: 'dashboard', label: 'Dashboard', icon: 'ph-house' },
-          { id: 'kelas', label: 'Data Kelas', icon: 'ph-chalkboard-teacher' },
-          { id: 'siswa', label: 'Data Siswa', icon: 'ph-users' },
+          { id: 'kelas', label: 'Data Kelas', icon: 'ph-users-three' },
+          { id: 'siswa', label: 'Data Siswa', icon: 'ph-student' },
           { id: 'jadwal', label: 'Jadwal & Mapel', icon: 'ph-calendar-check' },
           { id: 'soal', label: 'Bank Soal CBT', icon: 'ph-file-text' },
           { id: 'rekap', label: 'Rekapitulasi Nilai', icon: 'ph-chart-bar' },
@@ -839,13 +889,13 @@
     list.innerHTML = menus.map(m => {
       const active = state.activeMenu === m.id;
       return `
-        <button type="button" onclick="window.app.navigateMenu('${m.id}')" class="w-full px-3.5 py-3 rounded-2xl text-xs font-bold transition flex items-center gap-3 ${
+        <button type="button" onclick="window.app.navigateMenu('${m.id}')" class="w-full px-4 py-3 rounded-2xl text-xs font-bold transition-all flex items-center gap-3.5 ${
           active
-            ? 'bg-blue-600 text-white shadow-md shadow-blue-500/25'
-            : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
+            ? 'bg-gradient-to-r from-blue-600 via-blue-500 to-sky-400 text-white shadow-lg shadow-blue-500/30 ring-1 ring-white/20'
+            : 'text-slate-300 hover:text-white hover:bg-white/10'
         }">
-          <i class="ph-bold ${m.icon} text-lg"></i>
-          <span>${m.label}</span>
+          <i class="ph-bold ${m.icon} text-lg shrink-0"></i>
+          <span class="truncate">${m.label}</span>
         </button>
       `;
     }).join('');
@@ -914,7 +964,7 @@
   }
 
   // ============================================================================
-  // MODUL 1: DASHBOARD
+  // MODUL 1: DASHBOARD (PERSIS SEPERTI GAMBAR TAMPILAN SCREENSHOT)
   // ============================================================================
   function renderDashboardModule() {
     if (!state.user) return '';
@@ -930,138 +980,444 @@
 
     return `
       <div class="space-y-6">
-        <!-- Banner Sambutan Lingora -->
-        <div class="hero-banner-gradient rounded-3xl p-6 sm:p-8 flex flex-col md:flex-row items-center justify-between gap-6 shadow-sm border border-sky-100 relative overflow-hidden">
-          <div class="space-y-2 z-10 text-center md:text-left">
-            <span class="px-3 py-1 rounded-full bg-white/80 text-blue-700 text-xs font-extrabold uppercase tracking-wide">
-              Selamat Datang ✨
-            </span>
-            <h2 class="text-2xl sm:text-3xl font-extrabold text-slate-900">${state.user?.nama || 'Pengguna'}!</h2>
-            <p class="text-xs sm:text-sm text-slate-700 max-w-lg">
-              ${isAdmin ? 'Database tersimpan di Google Spreadsheet. Kelola bank soal, pantau aktivitas pengerjaan CBT siswa, dan unduh rekap nilai instan.' : 'Pilih jadwal mata pelajaran yang aktif untuk memulai evaluasi belajar mandiri Anda hari ini.'}
-            </p>
-          </div>
-          <div class="flex items-center gap-3 z-10 shrink-0">
-            ${isAdmin ? `
-              <button type="button" onclick="window.app.navigateMenu('soal')" class="px-5 py-3 rounded-2xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs shadow-md shadow-blue-500/20 flex items-center gap-2 transition">
-                <i class="ph-bold ph-plus-circle text-base"></i> Buat Butir Soal
-              </button>
-              <button type="button" onclick="window.app.navigateMenu('rekap')" class="px-5 py-3 rounded-2xl bg-white hover:bg-slate-50 text-slate-800 font-bold text-xs shadow-sm flex items-center gap-2 transition">
-                <i class="ph-bold ph-chart-bar text-base"></i> Rekap Nilai
-              </button>
-            ` : `
-              <button type="button" onclick="window.app.navigateMenu('jadwal')" class="px-6 py-3.5 rounded-2xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-sm shadow-md shadow-blue-500/20 flex items-center gap-2 transition">
-                <i class="ph-bold ph-play-circle text-lg"></i> Ikuti Ujian Sekarang
-              </button>
-            `}
+        <!-- Banner Sambutan Lingora Biru Gradien dengan Ilustrasi Guru & Gedung Sekolah -->
+        <div class="relative overflow-hidden rounded-3xl p-6 sm:p-7 text-white shadow-xl shadow-blue-500/10" style="background: linear-gradient(110deg, #1A56DB 0%, #1E6BFF 30%, #38BDF8 75%, #0284C7 100%);">
+          <!-- Ornamen cahaya lembut di background -->
+          <div class="absolute -top-24 -left-24 w-80 h-80 rounded-full bg-white/10 blur-2xl pointer-events-none"></div>
+          <div class="absolute -bottom-24 -right-24 w-80 h-80 rounded-full bg-sky-200/20 blur-2xl pointer-events-none"></div>
+
+          <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-center relative z-10">
+            <!-- Sisi Kiri: Teks Selamat Datang -->
+            <div class="lg:col-span-5 space-y-2.5 text-center sm:text-left">
+              <div class="inline-flex items-center gap-1.5 px-3.5 py-1 rounded-full bg-white text-blue-900 text-[11px] font-black shadow-sm tracking-wider uppercase">
+                <span class="italic">SELAMAT DATANG</span>
+                <span>👋</span>
+              </div>
+              <h2 class="text-2xl sm:text-3xl font-black text-white leading-tight drop-shadow-sm">
+                ${state.user?.nama || 'Dr. H. Ahmad Sulaiman, M.Pd!'}
+              </h2>
+              <p class="text-xs sm:text-[13px] text-white/95 leading-relaxed font-medium">
+                ${isAdmin ? 'Database tersimpan di Google Spreadsheet. Kelola bank soal, pantau aktivitas pengerjaan CBT siswa, dan unduh rekap nilai instan.' : 'Pilih jadwal mata pelajaran yang aktif untuk memulai evaluasi belajar mandiri Anda hari ini.'}
+              </p>
+            </div>
+
+            <!-- Sisi Tengah: Ilustrasi Gedung Sekolah & Guru Berdiri di Meja Laptop -->
+            <div class="lg:col-span-4 flex flex-col items-center justify-center relative">
+              <div class="relative w-full max-w-[270px] h-[155px]">
+                <svg viewBox="0 0 320 180" class="w-full h-full drop-shadow-md">
+                  <!-- Gedung Sekolah Klasik di Latar Belakang -->
+                  <rect x="70" y="30" width="180" height="110" rx="6" fill="#BAE6FD" fill-opacity="0.85"/>
+                  <polygon points="160,5 60,35 260,35" fill="#38BDF8"/>
+                  <!-- Jam Menara -->
+                  <circle cx="160" cy="23" r="8" fill="#FFFFFF"/>
+                  <line x1="160" y1="23" x2="160" y2="18" stroke="#0284C7" stroke-width="1.5" stroke-linecap="round"/>
+                  <line x1="160" y1="23" x2="164" y2="23" stroke="#0284C7" stroke-width="1.5" stroke-linecap="round"/>
+                  <!-- Jendela Gedung -->
+                  <rect x="85" y="45" width="22" height="28" rx="4" fill="#FFFFFF" fill-opacity="0.9"/>
+                  <rect x="120" y="45" width="22" height="28" rx="4" fill="#FFFFFF" fill-opacity="0.9"/>
+                  <rect x="180" y="45" width="22" height="28" rx="4" fill="#FFFFFF" fill-opacity="0.9"/>
+                  <rect x="215" y="45" width="22" height="28" rx="4" fill="#FFFFFF" fill-opacity="0.9"/>
+                  <rect x="145" y="90" width="30" height="50" rx="3" fill="#0284C7"/>
+                  <!-- Pepohonan -->
+                  <circle cx="55" cy="115" r="22" fill="#34D399" fill-opacity="0.9"/>
+                  <circle cx="265" cy="115" r="22" fill="#34D399" fill-opacity="0.9"/>
+                  
+                  <!-- Meja Kerja -->
+                  <rect x="40" y="130" width="240" height="16" rx="4" fill="#64748B"/>
+                  <rect x="45" y="146" width="10" height="30" fill="#475569"/>
+                  <rect x="265" y="146" width="10" height="30" fill="#475569"/>
+
+                  <!-- Tumpukan Buku -->
+                  <rect x="55" y="118" width="32" height="7" rx="1.5" fill="#EF4444"/>
+                  <rect x="57" y="110" width="30" height="7" rx="1.5" fill="#F59E0B"/>
+                  <rect x="54" y="102" width="34" height="7" rx="1.5" fill="#10B981"/>
+
+                  <!-- Laptop -->
+                  <polygon points="175,130 220,130 226,134 169,134" fill="#94A3B8"/>
+                  <polygon points="182,98 218,98 220,130 175,130" fill="#1E293B"/>
+                  <rect x="185" y="101" width="30" height="26" fill="#38BDF8"/>
+                  <circle cx="200" cy="114" r="3.5" fill="#FFFFFF"/>
+
+                  <!-- Guru Pria dengan Jas Biru Tua & Kacamata Menunjuk -->
+                  <!-- Badan Jas -->
+                  <path d="M125,140 C125,95 140,88 152,88 C164,88 178,95 178,140 Z" fill="#0F172A"/>
+                  <polygon points="146,88 158,88 154,115 150,115" fill="#38BDF8"/>
+                  <polygon points="150,115 154,115 152,135" fill="#1D4ED8"/>
+                  <!-- Kepala & Rambut -->
+                  <circle cx="152" cy="68" r="16" fill="#FED7AA"/>
+                  <path d="M136,65 C136,50 168,50 168,65 C168,54 162,48 152,48 C142,48 136,54 136,65 Z" fill="#0F172A"/>
+                  <!-- Kacamata & Senyum -->
+                  <circle cx="146" cy="67" r="4.5" fill="none" stroke="#0F172A" stroke-width="1.8"/>
+                  <circle cx="158" cy="67" r="4.5" fill="none" stroke="#0F172A" stroke-width="1.8"/>
+                  <line x1="150.5" y1="67" x2="153.5" y2="67" stroke="#0F172A" stroke-width="1.8"/>
+                  <path d="M148,76 Q152,80 156,76" stroke="#C2410C" stroke-width="1.8" fill="none" stroke-linecap="round"/>
+                  <!-- Tangan Mengacung Menunjuk ke Kanan (Ke Tombol) -->
+                  <path d="M172,105 C185,95 198,78 202,70 C204,66 206,68 204,74 C201,84 190,102 178,115 Z" fill="#FED7AA"/>
+                  <path d="M168,102 C178,95 186,90 190,95 C190,98 178,115 168,118 Z" fill="#0F172A"/>
+                </svg>
+              </div>
+              <p class="text-[11px] font-bold text-white/95 italic tracking-wide text-center drop-shadow mt-0.5">
+                Bersama Mewujudkan Pendidikan Berkualitas
+              </p>
+            </div>
+
+            <!-- Sisi Kanan: Tombol Aksi Cepat (Buat Butir Soal & Rekap Nilai) -->
+            <div class="lg:col-span-3 flex flex-col gap-3 justify-center">
+              ${isAdmin ? `
+                <button type="button" onclick="window.app.navigateMenu('soal')" class="w-full py-3.5 px-4 rounded-2xl bg-blue-600 hover:bg-blue-700 active:scale-[0.99] text-white font-black text-xs shadow-lg shadow-blue-900/30 flex items-center justify-between transition border border-white/30 group">
+                  <div class="flex items-center gap-2.5">
+                    <span class="w-7 h-7 rounded-full bg-white text-blue-600 flex items-center justify-center shadow-sm">
+                      <i class="ph-fill ph-play text-xs ml-0.5"></i>
+                    </span>
+                    <span class="font-extrabold text-white">Buat Butir Soal</span>
+                  </div>
+                  <i class="ph-bold ph-arrow-right text-sm group-hover:translate-x-1 transition"></i>
+                </button>
+
+                <button type="button" onclick="window.app.navigateMenu('rekap')" class="w-full py-3.5 px-4 rounded-2xl bg-white hover:bg-slate-50 active:scale-[0.99] text-slate-900 font-black text-xs shadow-lg flex items-center justify-between transition group">
+                  <div class="flex items-center gap-2.5">
+                    <span class="w-7 h-7 rounded-full bg-slate-100 text-slate-800 flex items-center justify-center">
+                      <i class="ph-bold ph-chart-bar text-sm"></i>
+                    </span>
+                    <span class="font-extrabold text-slate-900">Rekap Nilai</span>
+                  </div>
+                  <i class="ph-bold ph-arrow-right text-sm text-slate-400 group-hover:translate-x-1 transition"></i>
+                </button>
+              ` : `
+                <button type="button" onclick="window.app.navigateMenu('jadwal')" class="w-full py-3.5 px-5 rounded-2xl bg-white hover:bg-slate-50 text-blue-600 font-extrabold text-xs shadow-lg flex items-center justify-between transition">
+                  <div class="flex items-center gap-2.5">
+                    <i class="ph-bold ph-play-circle text-lg"></i>
+                    <span>Mulai Ujian</span>
+                  </div>
+                  <i class="ph-bold ph-arrow-right text-sm"></i>
+                </button>
+              `}
+            </div>
           </div>
         </div>
 
-        <!-- Metric Stat Cards -->
-        <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
-          <div class="bg-white p-5 rounded-3xl border border-slate-100 shadow-sm flex items-center gap-4">
-            <div class="w-12 h-12 rounded-2xl bg-blue-50 text-blue-600 flex items-center justify-center text-2xl shrink-0">
-              <i class="ph-fill ph-users"></i>
+        <!-- Metric Stat Cards (4 Kartu Bernuansa Pastel & Ilustrasi 3D Seperti Screenshot) -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <!-- Kartu 1: Total Siswa (Blue Theme) -->
+          <div class="bg-white p-5 rounded-3xl border border-blue-100 shadow-sm flex items-center justify-between relative overflow-hidden group hover:shadow-md transition">
+            <div class="space-y-1 z-10">
+              <div class="w-11 h-11 rounded-2xl bg-blue-600 text-white flex items-center justify-center text-xl shadow-md shadow-blue-500/25 mb-1.5">
+                <i class="ph-fill ph-users"></i>
+              </div>
+              <p class="text-xs text-slate-700 font-extrabold">Total Siswa</p>
+              <h3 class="text-2xl font-black text-slate-900 leading-tight">${totalSiswa}</h3>
+              <p class="text-[11px] font-bold text-emerald-600 flex items-center gap-1 pt-0.5">
+                <span>↑ 0%</span> <span class="text-slate-400 font-medium">dari semester lalu</span>
+              </p>
             </div>
-            <div>
-              <p class="text-xs text-slate-400 font-bold">Total Siswa</p>
-              <h3 class="text-xl font-extrabold text-slate-900">${totalSiswa}</h3>
+            <!-- Ilustrasi Siswa & Siswi Berhijab Seragam Sekolah -->
+            <div class="w-20 h-20 shrink-0 relative">
+              <svg viewBox="0 0 80 80" class="w-full h-full drop-shadow">
+                <!-- Siswa Laki-laki -->
+                <circle cx="28" cy="28" r="11" fill="#FED7AA"/>
+                <path d="M18,24 C18,16 38,16 38,24 C38,18 34,14 28,14 C22,14 18,18 18,24 Z" fill="#1E293B"/>
+                <path d="M17,58 C17,42 22,39 28,39 C34,39 39,42 39,58 Z" fill="#FFFFFF"/>
+                <polygon points="26,39 30,39 29,48 27,48" fill="#1D4ED8"/>
+                <path d="M19,56 L37,56 L38,72 L18,72 Z" fill="#60A5FA"/>
+                <!-- Siswi Perempuan Berhijab Putih -->
+                <ellipse cx="52" cy="30" rx="13" ry="15" fill="#F8FAFC"/>
+                <circle cx="52" cy="30" r="9.5" fill="#FED7AA"/>
+                <ellipse cx="52" cy="23" rx="9" ry="5" fill="#F8FAFC"/>
+                <path d="M40,60 C40,46 45,43 52,43 C59,43 64,46 64,60 Z" fill="#FFFFFF"/>
+                <path d="M42,57 L62,57 L63,72 L41,72 Z" fill="#93C5FD"/>
+                <!-- Tas Ransel Hijau di Belakang -->
+                <rect x="60" y="38" width="7" height="18" rx="3.5" fill="#34D399"/>
+              </svg>
             </div>
           </div>
-          <div class="bg-white p-5 rounded-3xl border border-slate-100 shadow-sm flex items-center gap-4">
-            <div class="w-12 h-12 rounded-2xl bg-indigo-50 text-indigo-600 flex items-center justify-center text-2xl shrink-0">
-              <i class="ph-fill ph-calendar-check"></i>
+
+          <!-- Kartu 2: Jadwal Ujian (Purple Theme) -->
+          <div class="bg-white p-5 rounded-3xl border border-purple-100 shadow-sm flex items-center justify-between relative overflow-hidden group hover:shadow-md transition">
+            <div class="space-y-1 z-10">
+              <div class="w-11 h-11 rounded-2xl bg-purple-600 text-white flex items-center justify-center text-xl shadow-md shadow-purple-500/25 mb-1.5">
+                <i class="ph-fill ph-calendar-check"></i>
+              </div>
+              <p class="text-xs text-slate-700 font-extrabold">Jadwal Ujian</p>
+              <h3 class="text-2xl font-black text-slate-900 leading-tight">${totalJadwal}</h3>
+              <p class="text-[11px] font-bold text-emerald-600 flex items-center gap-1 pt-0.5">
+                <span>↑ 0%</span> <span class="text-slate-400 font-medium">dari semester lalu</span>
+              </p>
             </div>
-            <div>
-              <p class="text-xs text-slate-400 font-bold">Jadwal Ujian</p>
-              <h3 class="text-xl font-extrabold text-slate-900">${totalJadwal}</h3>
+            <!-- Ilustrasi Kalender & Jam 3D -->
+            <div class="w-20 h-20 shrink-0 relative">
+              <svg viewBox="0 0 80 80" class="w-full h-full drop-shadow">
+                <!-- Lembar Kalender Ungu -->
+                <rect x="14" y="16" width="46" height="46" rx="10" fill="#DDD6FE"/>
+                <rect x="14" y="16" width="46" height="16" rx="10" fill="#7C3AED"/>
+                <circle cx="24" cy="14" r="3" fill="#C4B5FD"/>
+                <circle cx="50" cy="14" r="3" fill="#C4B5FD"/>
+                <!-- Garis-Garis Tanggal -->
+                <circle cx="25" cy="42" r="3" fill="#8B5CF6"/>
+                <circle cx="37" cy="42" r="3" fill="#8B5CF6"/>
+                <circle cx="49" cy="42" r="3" fill="#8B5CF6"/>
+                <circle cx="25" cy="52" r="3" fill="#8B5CF6"/>
+                <circle cx="37" cy="52" r="3" fill="#A78BFA"/>
+                <!-- Jam Meja Biru di Depan -->
+                <circle cx="55" cy="54" r="14" fill="#3B82F6" stroke="#FFFFFF" stroke-width="2"/>
+                <line x1="55" y1="54" x2="55" y2="46" stroke="#FFFFFF" stroke-width="2" stroke-linecap="round"/>
+                <line x1="55" y1="54" x2="61" y2="54" stroke="#FDE047" stroke-width="2" stroke-linecap="round"/>
+              </svg>
             </div>
           </div>
-          <div class="bg-white p-5 rounded-3xl border border-slate-100 shadow-sm flex items-center gap-4">
-            <div class="w-12 h-12 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center text-2xl shrink-0">
-              <i class="ph-fill ph-file-text"></i>
+
+          <!-- Kartu 3: Bank Soal (Emerald Theme) -->
+          <div class="bg-white p-5 rounded-3xl border border-emerald-100 shadow-sm flex items-center justify-between relative overflow-hidden group hover:shadow-md transition">
+            <div class="space-y-1 z-10">
+              <div class="w-11 h-11 rounded-2xl bg-emerald-600 text-white flex items-center justify-center text-xl shadow-md shadow-emerald-500/25 mb-1.5">
+                <i class="ph-fill ph-book-open"></i>
+              </div>
+              <p class="text-xs text-slate-700 font-extrabold">Bank Soal</p>
+              <h3 class="text-2xl font-black text-slate-900 leading-tight">${totalSoal}</h3>
+              <p class="text-[11px] font-bold text-emerald-600 flex items-center gap-1 pt-0.5">
+                <span>↑ 0%</span> <span class="text-slate-400 font-medium">dari semester lalu</span>
+              </p>
             </div>
-            <div>
-              <p class="text-xs text-slate-400 font-bold">Bank Soal</p>
-              <h3 class="text-xl font-extrabold text-slate-900">${totalSoal}</h3>
+            <!-- Ilustrasi Tumpukan Buku 3D -->
+            <div class="w-20 h-20 shrink-0 relative">
+              <svg viewBox="0 0 80 80" class="w-full h-full drop-shadow">
+                <!-- Buku Bawah (Kuning) -->
+                <polygon points="12,58 55,54 68,62 25,66" fill="#FBBF24"/>
+                <polygon points="12,58 25,66 25,72 12,64" fill="#D97706"/>
+                <polygon points="25,66 68,62 68,67 25,72" fill="#FDE68A"/>
+                <!-- Buku Tengah (Toska) -->
+                <polygon points="16,46 58,42 70,50 28,54" fill="#38BDF8"/>
+                <polygon points="16,46 28,54 28,60 16,52" fill="#0284C7"/>
+                <polygon points="28,54 70,50 70,55 28,60" fill="#E0F2FE"/>
+                <!-- Buku Atas (Hijau Emerald) -->
+                <polygon points="18,34 56,30 68,38 30,42" fill="#10B981"/>
+                <polygon points="18,34 30,42 30,48 18,40" fill="#059669"/>
+                <polygon points="30,42 68,38 68,43 30,48" fill="#D1FAE5"/>
+                <!-- Bookmark Pita Merah -->
+                <path d="M42,32 L46,45 L42,43 L38,45 Z" fill="#EF4444"/>
+              </svg>
             </div>
           </div>
-          <div class="bg-white p-5 rounded-3xl border border-slate-100 shadow-sm flex items-center gap-4">
-            <div class="w-12 h-12 rounded-2xl bg-amber-50 text-amber-600 flex items-center justify-center text-2xl shrink-0">
-              <i class="ph-fill ph-certificate"></i>
+
+          <!-- Kartu 4: Ujian Dikerjakan (Amber Theme) -->
+          <div class="bg-white p-5 rounded-3xl border border-amber-100 shadow-sm flex items-center justify-between relative overflow-hidden group hover:shadow-md transition">
+            <div class="space-y-1 z-10">
+              <div class="w-11 h-11 rounded-2xl bg-amber-500 text-white flex items-center justify-center text-xl shadow-md shadow-amber-500/25 mb-1.5">
+                <i class="ph-fill ph-chat-circle-text"></i>
+              </div>
+              <p class="text-xs text-slate-700 font-extrabold">Ujian Dikerjakan</p>
+              <h3 class="text-2xl font-black text-slate-900 leading-tight">${totalUjianSelesai}</h3>
+              <p class="text-[11px] font-bold text-emerald-600 flex items-center gap-1 pt-0.5">
+                <span>↑ 0%</span> <span class="text-slate-400 font-medium">dari semester lalu</span>
+              </p>
             </div>
-            <div>
-              <p class="text-xs text-slate-400 font-bold">Ujian Dikerjakan</p>
-              <h3 class="text-xl font-extrabold text-slate-900">${totalUjianSelesai}</h3>
+            <!-- Ilustrasi Papan Ujian & Centang 3D -->
+            <div class="w-20 h-20 shrink-0 relative">
+              <svg viewBox="0 0 80 80" class="w-full h-full drop-shadow">
+                <!-- Papan Kayu Clipboard -->
+                <rect x="22" y="16" width="44" height="54" rx="8" fill="#F59E0B"/>
+                <rect x="26" y="22" width="36" height="44" rx="4" fill="#FFFFFF"/>
+                <!-- Klip Logam -->
+                <rect x="34" y="12" width="20" height="8" rx="3" fill="#94A3B8"/>
+                <circle cx="44" cy="14" r="2" fill="#475569"/>
+                <!-- Baris Kertas -->
+                <line x1="30" y1="30" x2="52" y2="30" stroke="#CBD5E1" stroke-width="2.5" stroke-linecap="round"/>
+                <line x1="30" y1="38" x2="56" y2="38" stroke="#CBD5E1" stroke-width="2.5" stroke-linecap="round"/>
+                <line x1="30" y1="46" x2="48" y2="46" stroke="#CBD5E1" stroke-width="2.5" stroke-linecap="round"/>
+                <!-- Lingkaran Centang Oranye/Emas di Bawah Kanan -->
+                <circle cx="58" cy="58" r="13" fill="#F59E0B" stroke="#FFFFFF" stroke-width="2.5"/>
+                <path d="M53,58 L57,62 L64,54" stroke="#FFFFFF" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+              </svg>
             </div>
           </div>
         </div>
 
         <!-- Leaderboard & Jadwal Terdekat Grid -->
         <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
-          <!-- Jadwal Ujian Aktif -->
-          <div class="lg:col-span-7 bg-white rounded-3xl p-6 border border-slate-100 shadow-sm space-y-4">
-            <div class="flex items-center justify-between">
-              <div>
-                <h3 class="text-base font-extrabold text-slate-900">Jadwal Ujian Tersedia</h3>
-                <p class="text-xs text-slate-400">Pilih mata pelajaran untuk pengerjaan</p>
+          <!-- SISI KIRI: Jadwal Ujian Tersedia -->
+          <div class="lg:col-span-7 bg-white rounded-3xl p-6 border border-slate-100 shadow-sm space-y-4 relative overflow-hidden flex flex-col justify-between">
+            <div class="space-y-4">
+              <div class="flex items-center justify-between">
+                <div class="flex items-center gap-3">
+                  <div class="w-10 h-10 rounded-2xl bg-blue-600 text-white flex items-center justify-center text-lg shadow-md shadow-blue-500/20 shrink-0">
+                    <i class="ph-fill ph-calendar-blank"></i>
+                  </div>
+                  <div>
+                    <h3 class="text-base font-extrabold text-slate-900 leading-snug">Jadwal Ujian Tersedia</h3>
+                    <p class="text-xs text-slate-400">Pilih mata pelajaran untuk pengerjaan</p>
+                  </div>
+                </div>
+                <button type="button" onclick="window.app.navigateMenu('jadwal')" class="text-xs font-bold text-blue-600 hover:text-blue-700 flex items-center gap-1 transition">
+                  <span>Lihat Semua</span>
+                  <i class="ph-bold ph-arrow-right"></i>
+                </button>
               </div>
-              <button type="button" onclick="window.app.navigateMenu('jadwal')" class="text-xs font-bold text-blue-600 hover:underline">
-                Lihat Semua
-              </button>
-            </div>
 
-            <div class="space-y-3">
-              ${state.mapel_jadwal.slice(0, 3).map(j => {
-                const soalCount = state.soal.filter(s => s.jadwal_id === j.id).length;
-                return `
-                  <div class="p-4 rounded-2xl bg-slate-50 border border-slate-100 flex items-center justify-between gap-4 hover:border-blue-200 transition">
-                    <div class="flex items-center gap-3.5">
-                      <div class="w-10 h-10 rounded-2xl bg-blue-100 text-blue-600 flex items-center justify-center font-extrabold text-sm">
-                        ${j.kode_mapel.slice(0, 3)}
+              <!-- List Kartu Jadwal Ujian -->
+              <div class="space-y-3">
+                ${state.mapel_jadwal.slice(0, 3).map((j, idx) => {
+                  const soalCount = state.soal.filter(s => s.jadwal_id === j.id).length;
+                  const isMath = j.kode_mapel.toUpperCase().includes('MAT') || j.nama_mapel.toLowerCase().includes('matematika');
+                  return `
+                    <div class="p-4 rounded-2xl bg-slate-50/80 border border-slate-100 hover:border-blue-200 hover:bg-blue-50/20 transition flex items-center justify-between gap-4">
+                      <div class="flex items-center gap-3.5 min-w-0">
+                        <div class="w-12 h-12 rounded-full bg-blue-100/90 text-blue-700 font-black text-xs flex items-center justify-center tracking-wider shrink-0">
+                          ${j.kode_mapel.slice(0, 3).toUpperCase()}
+                        </div>
+                        <div class="min-w-0">
+                          <h4 class="text-xs sm:text-sm font-extrabold text-slate-900 truncate">${j.nama_mapel}</h4>
+                          <p class="text-[11px] text-slate-500 truncate mt-0.5">
+                            ${j.judul_ujian} • <b class="text-blue-600">${soalCount} Soal</b> • ${j.durasi_menit} Menit
+                          </p>
+                        </div>
                       </div>
-                      <div>
-                        <h4 class="text-xs sm:text-sm font-extrabold text-slate-900">${j.nama_mapel}</h4>
-                        <p class="text-[11px] text-slate-500">${j.judul_ujian} • <b class="text-blue-600">${soalCount} Soal</b> • ${j.durasi_menit} Menit</p>
+
+                      <div class="flex items-center gap-3 shrink-0">
+                        <!-- Ilustrasi Kecil 3D (Kalkulator atau Headphone) -->
+                        <div class="hidden sm:block w-14 h-10 opacity-90">
+                          ${isMath || idx === 0 ? `
+                            <svg viewBox="0 0 60 40" class="w-full h-full">
+                              <!-- Kalkulator 3D & Penggaris Segitiga -->
+                              <rect x="22" y="5" width="26" height="32" rx="4" fill="#3B82F6"/>
+                              <rect x="25" y="8" width="20" height="8" rx="2" fill="#93C5FD"/>
+                              <circle cx="28" cy="21" r="2" fill="#FFFFFF"/>
+                              <circle cx="35" cy="21" r="2" fill="#FFFFFF"/>
+                              <circle cx="42" cy="21" r="2" fill="#FFFFFF"/>
+                              <circle cx="28" cy="28" r="2" fill="#FFFFFF"/>
+                              <circle cx="35" cy="28" r="2" fill="#FFFFFF"/>
+                              <circle cx="42" cy="28" r="2" fill="#FBBF24"/>
+                              <polygon points="5,35 22,12 22,35" fill="#F59E0B" fill-opacity="0.9"/>
+                              <polygon points="8,33 19,19 19,33" fill="#FEF3C7"/>
+                              <text x="5" y="14" fill="#38BDF8" font-size="10" font-weight="bold">8</text>
+                              <text x="49" y="16" fill="#38BDF8" font-size="10" font-weight="bold">3</text>
+                            </svg>
+                          ` : `
+                            <svg viewBox="0 0 60 40" class="w-full h-full">
+                              <!-- Buku & Headphone Musik/Bahasa Inggris -->
+                              <rect x="10" y="24" width="38" height="6" rx="2" fill="#EF4444"/>
+                              <rect x="12" y="18" width="34" height="6" rx="2" fill="#F59E0B"/>
+                              <rect x="8" y="12" width="40" height="6" rx="2" fill="#3B82F6"/>
+                              <!-- Headphone Biru -->
+                              <path d="M28,6 C38,6 46,14 46,24" fill="none" stroke="#2563EB" stroke-width="3.5" stroke-linecap="round"/>
+                              <rect x="42" y="20" width="7" height="12" rx="3.5" fill="#1D4ED8"/>
+                              <rect x="23" y="20" width="7" height="12" rx="3.5" fill="#1D4ED8"/>
+                            </svg>
+                          `}
+                        </div>
+
+                        <!-- Tombol Mulai Biru -->
+                        <button type="button" onclick="window.app.promptStartExam('${j.id}')" class="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold transition flex items-center gap-1 shadow-sm">
+                          <span>Mulai</span>
+                          <i class="ph-bold ph-arrow-right text-xs"></i>
+                        </button>
                       </div>
                     </div>
-                    <button type="button" onclick="window.app.promptStartExam('${j.id}')" class="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold transition shadow-sm">
-                      Mulai
-                    </button>
-                  </div>
-                `;
-              }).join('') || '<p class="text-xs text-slate-400 py-4 text-center">Belum ada jadwal ujian aktif.</p>'}
+                  `;
+                }).join('') || '<p class="text-xs text-slate-400 py-6 text-center">Belum ada jadwal ujian aktif.</p>'}
+              </div>
+            </div>
+
+            <!-- Pita Footer Ornamen Prestasi Hari Ini -->
+            <div class="pt-4 border-t border-slate-100 flex items-center justify-center relative">
+              <span class="text-xs font-bold text-amber-500 italic tracking-wide flex items-center gap-1">
+                <span>⭐</span> Prestasi Hari Ini, Masa Depan Esok
+              </span>
             </div>
           </div>
 
-          <!-- Leaderboard XP Siswa -->
-          <div class="lg:col-span-5 bg-white rounded-3xl p-6 border border-slate-100 shadow-sm space-y-4">
-            <div class="flex items-center justify-between">
-              <div class="flex items-center gap-2">
-                <span class="text-xl">🏆</span>
-                <h3 class="text-base font-extrabold text-slate-900">Peringkat XP Siswa</h3>
+          <!-- SISI KANAN: Peringkat XP Siswa (Piala Emas & Avatar) -->
+          <div class="lg:col-span-5 bg-white rounded-3xl p-6 border border-slate-100 shadow-sm space-y-4 relative overflow-hidden flex flex-col justify-between">
+            <div class="space-y-4 relative z-10">
+              <div class="flex items-center justify-between">
+                <div class="flex items-center gap-2.5">
+                  <span class="text-2xl">🏆</span>
+                  <h3 class="text-base font-extrabold text-slate-900 leading-snug">Peringkat XP Siswa</h3>
+                </div>
+                <button type="button" onclick="window.app.navigateMenu('siswa')" class="text-xs font-bold text-blue-600 hover:text-blue-700 flex items-center gap-1 transition">
+                  <span>Top 5 Peserta</span>
+                  <i class="ph-bold ph-arrow-right"></i>
+                </button>
               </div>
-              <span class="text-[11px] font-bold text-slate-400">Top 5 Peserta</span>
+
+              <div class="space-y-3">
+                ${sortedSiswa.map((s, idx) => {
+                  const isFirst = idx === 0;
+                  const isSecond = idx === 1;
+                  return `
+                    <div class="p-3.5 rounded-2xl ${isFirst ? 'bg-amber-50/60 border border-amber-200/60' : 'bg-slate-50 border border-slate-100'} flex items-center justify-between gap-3">
+                      <div class="flex items-center gap-3 min-w-0">
+                        <!-- Medali 1 / 2 -->
+                        <span class="w-6 h-6 rounded-full flex items-center justify-center font-black text-xs shrink-0 ${
+                          isFirst
+                            ? 'bg-amber-400 text-white shadow-sm'
+                            : isSecond
+                            ? 'bg-slate-300 text-slate-700'
+                            : 'bg-amber-100 text-amber-800'
+                        }">
+                          ${idx + 1}
+                        </span>
+
+                        <!-- Avatar Siswa Berkarakter Kartun -->
+                        <div class="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center shrink-0 overflow-hidden ring-2 ${isFirst ? 'ring-amber-300' : 'ring-blue-200'}">
+                          ${isFirst ? `
+                            <!-- Siswi Sophie -->
+                            <svg viewBox="0 0 40 40" class="w-full h-full">
+                              <circle cx="20" cy="20" r="20" fill="#FED7AA"/>
+                              <path d="M8,40 C8,30 14,26 20,26 C26,26 32,30 32,40 Z" fill="#EF4444"/>
+                              <circle cx="20" cy="18" r="8" fill="#FDE68A"/>
+                              <path d="M12,18 C12,10 28,10 28,18 C28,11 25,7 20,7 C15,7 12,11 12,18 Z" fill="#1E293B"/>
+                              <circle cx="17" cy="18" r="1.5" fill="#0F172A"/>
+                              <circle cx="23" cy="18" r="1.5" fill="#0F172A"/>
+                              <path d="M18,22 Q20,24 22,22" stroke="#EA580C" stroke-width="1" fill="none"/>
+                            </svg>
+                          ` : `
+                            <!-- Siswa Alex -->
+                            <svg viewBox="0 0 40 40" class="w-full h-full">
+                              <circle cx="20" cy="20" r="20" fill="#E0F2FE"/>
+                              <path d="M8,40 C8,30 14,26 20,26 C26,26 32,30 32,40 Z" fill="#1D4ED8"/>
+                              <polygon points="18,26 22,26 21,33 19,33" fill="#F59E0B"/>
+                              <circle cx="20" cy="18" r="8" fill="#FED7AA"/>
+                              <path d="M12,17 C12,9 28,9 28,17 C28,11 24,8 20,8 C16,8 12,11 12,17 Z" fill="#78350F"/>
+                              <circle cx="17" cy="18" r="1.5" fill="#0F172A"/>
+                              <circle cx="23" cy="18" r="1.5" fill="#0F172A"/>
+                              <path d="M18,22 Q20,24 22,22" stroke="#B45309" stroke-width="1" fill="none"/>
+                            </svg>
+                          `}
+                        </div>
+
+                        <div class="min-w-0">
+                          <h4 class="text-xs sm:text-sm font-extrabold text-slate-900 truncate">${s.nama_lengkap}</h4>
+                          <p class="text-[10px] text-slate-400 font-mono">NISN : ${s.nisn}</p>
+                        </div>
+                      </div>
+
+                      <!-- XP Pill -->
+                      <span class="px-3 py-1 rounded-full bg-blue-50 text-blue-600 border border-blue-200/60 text-xs font-black shrink-0 flex items-center gap-1 shadow-sm">
+                        <span>💎</span> ${s.poin || 0} XP
+                      </span>
+                    </div>
+                  `;
+                }).join('') || '<p class="text-xs text-slate-400 py-6 text-center">Belum ada siswa.</p>'}
+              </div>
             </div>
 
-            <div class="space-y-2.5">
-              ${sortedSiswa.map((s, idx) => {
-                const medals = ['🥇', '🥈', '🥉', '4️⃣', '5️⃣'];
-                return `
-                  <div class="p-3 rounded-2xl ${idx === 0 ? 'bg-amber-50/70 border border-amber-200/50' : 'bg-slate-50'} flex items-center justify-between">
-                    <div class="flex items-center gap-3">
-                      <span class="text-base font-bold">${medals[idx]}</span>
-                      <div>
-                        <h4 class="text-xs font-extrabold text-slate-900">${s.nama_lengkap}</h4>
-                        <p class="text-[10px] text-slate-400 font-mono">NISN: ${s.nisn}</p>
-                      </div>
-                    </div>
-                    <span class="px-2.5 py-1 rounded-full bg-white text-blue-600 text-xs font-extrabold shadow-sm">
-                      💎 ${s.poin || 0} XP
-                    </span>
-                  </div>
-                `;
-              }).join('') || '<p class="text-xs text-slate-400 py-4 text-center">Belum ada siswa.</p>'}
+            <!-- Ilustrasi Piala Emas 3D di Sudut Bawah Kanan -->
+            <div class="absolute -bottom-4 -right-4 w-32 h-32 opacity-95 pointer-events-none z-0">
+              <svg viewBox="0 0 100 100" class="w-full h-full drop-shadow-lg">
+                <!-- Ombak Biru Latar Belakang -->
+                <path d="M0,85 Q40,65 100,85 L100,100 L0,100 Z" fill="#93C5FD" opacity="0.6"/>
+                <path d="M0,92 Q50,75 100,92 L100,100 L0,100 Z" fill="#3B82F6" opacity="0.8"/>
+                <!-- Piala Emas -->
+                <polygon points="50,65 42,85 58,85" fill="#D97706"/>
+                <rect x="36" y="85" width="28" height="6" rx="2" fill="#B45309"/>
+                <path d="M35,30 L65,30 C65,55 35,55 35,30 Z" fill="#FBBF24"/>
+                <ellipse cx="50" cy="30" rx="15" ry="4" fill="#FDE68A"/>
+                <!-- Gagang Piala Kiri & Kanan -->
+                <path d="M35,34 C25,34 25,48 37,50" fill="none" stroke="#F59E0B" stroke-width="3.5" stroke-linecap="round"/>
+                <path d="M65,34 C75,34 75,48 63,50" fill="none" stroke="#F59E0B" stroke-width="3.5" stroke-linecap="round"/>
+                <!-- Bintang-Bintang Berkilau -->
+                <polygon points="28,20 30,25 35,26 31,29 32,34 28,31 24,34 25,29 21,26 26,25" fill="#FEF08A"/>
+                <polygon points="72,25 73.5,28.5 77,29 74.5,31 75,34.5 72,32.5 69,34.5 69.5,31 67,29 70.5,28.5" fill="#FEF08A"/>
+              </svg>
             </div>
           </div>
         </div>
