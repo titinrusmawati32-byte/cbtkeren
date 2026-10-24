@@ -76,12 +76,11 @@ function doGet(e) {
 }
 
 /**
- * Handle HTTP POST Request (CRUD Data)
+ * Handle HTTP POST Request (CRUD Data & Fast Auth)
  */
 function doPost(e) {
+  const t_start = new Date().getTime();
   try {
-    initDatabaseSheets();
-
     let requestData = {};
     if (e.postData && e.postData.contents) {
       requestData = JSON.parse(e.postData.contents);
@@ -91,30 +90,49 @@ function doPost(e) {
 
     const action = requestData.action;
     const payload = requestData.payload || {};
+    const reqId = (requestData.requestId && String(requestData.requestId).substring(0, 32)) || ('req_' + Utilities.getUuid().substring(0, 8));
+
+    // Pastikan inisialisasi hanya jika sheet belum ada, jangan blokir auth
+    if (action !== 'loginAdmin' && action !== 'loginSiswa' && action !== 'validateSession' && action !== 'logoutSession') {
+      initDatabaseSheets();
+    }
 
     const ss = SpreadsheetApp.getActiveSpreadsheet();
 
     switch (action) {
-      // 1. AUTENTIKASI ADMIN & GURU DARI DATABASE DENGAN TOKEN SESI PERSISTEN
+      // 1. AUTENTIKASI ADMIN & GURU DARI DATABASE DENGAN FAST ROW SCAN & TOKEN PERSISTEN
       case 'loginAdmin': {
-        const userSheet = ss.getSheetByName(SHEETS.PENGGUNA);
-        let found = null;
+        const t_db_start = new Date().getTime();
+        let userSheet = ss.getSheetByName(SHEETS.PENGGUNA);
+        if (!userSheet) {
+          initDatabaseSheets();
+          userSheet = ss.getSheetByName(SHEETS.PENGGUNA);
+        }
+
         const inputId = String(payload.email || payload.username || payload.identifier || '').trim().toLowerCase();
         const inputPass = String(payload.password || '').trim();
 
-        if (userSheet) {
-          const userList = sheetToObjects(userSheet);
-          found = userList.find(u => 
-            (String(u.username || '').toLowerCase() === inputId || String(u.email || '').toLowerCase() === inputId) &&
-            String(u.password || '').trim() === inputPass
-          );
-        }
+        let found = fastFindRow(userSheet, (row, map) => {
+          const uCol = map['username'] !== undefined ? map['username'] : 1;
+          const eCol = map['email'] !== undefined ? map['email'] : 3;
+          const pCol = map['password'] !== undefined ? map['password'] : 4;
+          const matchId = String(row[uCol] || '').toLowerCase() === inputId || String(row[eCol] || '').toLowerCase() === inputId;
+          return matchId && String(row[pCol] || '').trim() === inputPass;
+        });
+
+        const t_db_read = new Date().getTime() - t_db_start;
 
         if (found) {
           if (found.status && String(found.status).toLowerCase() !== 'aktif') {
-            return jsonResponse({ status: 'error', code: 'USER_INACTIVE', message: 'Akun Anda dinonaktifkan oleh administrator!' });
+            return jsonResponse({
+              status: 'error',
+              code: 'USER_INACTIVE',
+              message: 'Akun Anda dinonaktifkan oleh administrator!',
+              requestId: reqId
+            });
           }
 
+          const t_token_start = new Date().getTime();
           const userData = {
             id: found.id,
             role: (found.role || 'admin').toLowerCase(),
@@ -130,23 +148,31 @@ function doPost(e) {
             identifier: userData.username || userData.email,
             type: 'admin'
           });
+          const t_token = new Date().getTime() - t_token_start;
+          const t_total = new Date().getTime() - t_start;
 
           return jsonResponse({
             status: 'success',
             token: sessionInfo.token,
             expiresAt: sessionInfo.exp,
-            user: userData
+            user: userData,
+            requestId: reqId,
+            _timings: {
+              db_read_ms: t_db_read,
+              token_ms: t_token,
+              total_ms: t_total
+            }
           });
         }
 
-        // Fallback ke tabel pengaturan
+        // Fallback ke tabel pengaturan untuk akun master administrator
         const setSheet = ss.getSheetByName(SHEETS.PENGATURAN);
-        const setRows = sheetToObjects(setSheet);
-        const config = setRows[0] || {};
+        const config = (setSheet ? sheetToObjects(setSheet)[0] : null) || {};
         const adminEmail = (config.admin_email || 'admin@educbt.id').toLowerCase();
         const adminPass = String(config.admin_password || 'admin123').trim();
 
         if ((inputId === adminEmail || inputId === 'admin') && inputPass === adminPass) {
+          const t_token_start = new Date().getTime();
           const userData = {
             id: 'admin-gas',
             role: 'admin',
@@ -162,25 +188,57 @@ function doPost(e) {
             identifier: 'admin',
             type: 'admin'
           });
+          const t_token = new Date().getTime() - t_token_start;
+          const t_total = new Date().getTime() - t_start;
 
           return jsonResponse({
             status: 'success',
             token: sessionInfo.token,
             expiresAt: sessionInfo.exp,
-            user: userData
+            user: userData,
+            requestId: reqId,
+            _timings: {
+              db_read_ms: t_db_read,
+              token_ms: t_token,
+              total_ms: t_total
+            }
           });
         } else {
-          return jsonResponse({ status: 'error', code: 'AUTH_FAILED', message: 'Username/Email atau Password Guru/Admin tidak cocok dengan database!' });
+          return jsonResponse({
+            status: 'error',
+            code: 'AUTH_FAILED',
+            message: 'Username/Email atau Password Guru/Admin tidak cocok dengan database!',
+            requestId: reqId,
+            _timings: {
+              db_read_ms: t_db_read,
+              total_ms: new Date().getTime() - t_start
+            }
+          });
         }
       }
 
-      // 2. AUTENTIKASI SISWA DENGAN TOKEN SESI PERSISTEN
+      // 2. AUTENTIKASI SISWA DENGAN FAST ROW SCAN & TOKEN PERSISTEN
       case 'loginSiswa': {
-        const siswaSheet = ss.getSheetByName(SHEETS.SISWA);
-        const siswaList = sheetToObjects(siswaSheet);
-        const found = siswaList.find(s => String(s.nisn).trim() === String(payload.nisn).trim() && String(s.password).trim() === String(payload.password).trim());
+        const t_db_start = new Date().getTime();
+        let siswaSheet = ss.getSheetByName(SHEETS.SISWA);
+        if (!siswaSheet) {
+          initDatabaseSheets();
+          siswaSheet = ss.getSheetByName(SHEETS.SISWA);
+        }
+
+        const inputNisn = String(payload.nisn || '').trim();
+        const inputPass = String(payload.password || '').trim();
+
+        const found = fastFindRow(siswaSheet, (row, map) => {
+          const nisnCol = map['nisn'] !== undefined ? map['nisn'] : 1;
+          const passCol = map['password'] !== undefined ? map['password'] : 3;
+          return String(row[nisnCol]).trim() === inputNisn && String(row[passCol]).trim() === inputPass;
+        });
+
+        const t_db_read = new Date().getTime() - t_db_start;
 
         if (found) {
+          const t_token_start = new Date().getTime();
           const userData = {
             id: found.id,
             role: 'siswa',
@@ -196,47 +254,68 @@ function doPost(e) {
             identifier: String(userData.nisn),
             type: 'siswa'
           });
+          const t_token = new Date().getTime() - t_token_start;
+          const t_total = new Date().getTime() - t_start;
 
           return jsonResponse({
             status: 'success',
             token: sessionInfo.token,
             expiresAt: sessionInfo.exp,
-            user: userData
+            user: userData,
+            requestId: reqId,
+            _timings: {
+              db_read_ms: t_db_read,
+              token_ms: t_token,
+              total_ms: t_total
+            }
           });
         } else {
-          return jsonResponse({ status: 'error', code: 'AUTH_FAILED', message: 'NISN atau Password siswa tidak cocok!' });
+          return jsonResponse({
+            status: 'error',
+            code: 'AUTH_FAILED',
+            message: 'NISN atau Password siswa tidak cocok!',
+            requestId: reqId,
+            _timings: {
+              db_read_ms: t_db_read,
+              total_ms: new Date().getTime() - t_start
+            }
+          });
         }
       }
 
-      // 2B. VALIDASI SESI DARI TOKEN PERSISTEN (UNTUK REFRESH F5 / BUKA TAB BARU)
+      // 2B. VALIDASI SESI DARI TOKEN PERSISTEN (FAST-PATH UNTUK REFRESH F5 / BUKA TAB BARU)
       case 'validateSession': {
+        const t_valid_start = new Date().getTime();
         const token = String(payload.token || '').trim();
         if (!token) {
-          return jsonResponse({ status: 'error', code: 'TOKEN_REQUIRED', message: 'Token sesi diperlukan' });
+          return jsonResponse({ status: 'error', code: 'TOKEN_REQUIRED', message: 'Token sesi diperlukan', requestId: reqId });
         }
 
         const verification = verifySessionToken(token);
         if (!verification) {
-          return jsonResponse({ status: 'error', code: 'INVALID_TOKEN', message: 'Token autentikasi tidak valid atau sudah dibatalkan' });
+          return jsonResponse({ status: 'error', code: 'INVALID_TOKEN', message: 'Token autentikasi tidak valid atau sudah dibatalkan', requestId: reqId });
         }
         if (verification.expired) {
-          return jsonResponse({ status: 'error', code: 'EXPIRED_TOKEN', message: 'Sesi login telah kedaluwarsa. Silakan masuk kembali.' });
+          return jsonResponse({ status: 'error', code: 'EXPIRED_TOKEN', message: 'Sesi login telah kedaluwarsa. Silakan masuk kembali.', requestId: reqId });
         }
 
-        // Ambil data mutakhir langsung dari Database Google Sheets (Keamanan Backend Terverifikasi)
+        // Ambil data mutakhir langsung dari Database Google Sheets secara targeted
         if (verification.type === 'siswa' || verification.role === 'siswa') {
           const siswaSheet = ss.getSheetByName(SHEETS.SISWA);
           if (!siswaSheet) {
-            return jsonResponse({ status: 'error', code: 'DB_ERROR', message: 'Tabel siswa belum siap' });
+            return jsonResponse({ status: 'error', code: 'DB_ERROR', message: 'Tabel siswa belum siap', requestId: reqId });
           }
-          const siswaList = sheetToObjects(siswaSheet);
-          const found = siswaList.find(s => 
-            String(s.id) === String(verification.sub) || 
-            (verification.identifier && String(s.nisn).trim() === String(verification.identifier).trim())
-          );
+          const subId = String(verification.sub || '');
+          const ident = verification.identifier ? String(verification.identifier).trim() : '';
+
+          const found = fastFindRow(siswaSheet, (row, map) => {
+            const idCol = map['id'] !== undefined ? map['id'] : 0;
+            const nisnCol = map['nisn'] !== undefined ? map['nisn'] : 1;
+            return String(row[idCol]) === subId || (ident && String(row[nisnCol]).trim() === ident);
+          });
 
           if (!found) {
-            return jsonResponse({ status: 'error', code: 'USER_NOT_FOUND', message: 'Akun siswa tidak ditemukan di database' });
+            return jsonResponse({ status: 'error', code: 'USER_NOT_FOUND', message: 'Akun siswa tidak ditemukan di database', requestId: reqId });
           }
 
           return jsonResponse({
@@ -248,6 +327,10 @@ function doPost(e) {
               nisn: found.nisn,
               kelas_id: found.kelas_id,
               poin: Number(found.poin || 100)
+            },
+            requestId: reqId,
+            _timings: {
+              total_ms: new Date().getTime() - t_valid_start
             }
           });
         } else {
@@ -255,16 +338,21 @@ function doPost(e) {
           const userSheet = ss.getSheetByName(SHEETS.PENGGUNA);
           let found = null;
           if (userSheet) {
-            const userList = sheetToObjects(userSheet);
-            found = userList.find(u => 
-              String(u.id) === String(verification.sub) ||
-              (verification.identifier && (String(u.username || '').toLowerCase() === String(verification.identifier).toLowerCase() || String(u.email || '').toLowerCase() === String(verification.identifier).toLowerCase()))
-            );
+            const subId = String(verification.sub || '');
+            const ident = verification.identifier ? String(verification.identifier).toLowerCase() : '';
+
+            found = fastFindRow(userSheet, (row, map) => {
+              const idCol = map['id'] !== undefined ? map['id'] : 0;
+              const uCol = map['username'] !== undefined ? map['username'] : 1;
+              const eCol = map['email'] !== undefined ? map['email'] : 3;
+              return String(row[idCol]) === subId ||
+                (ident && (String(row[uCol] || '').toLowerCase() === ident || String(row[eCol] || '').toLowerCase() === ident));
+            });
           }
 
           if (found) {
             if (found.status && String(found.status).toLowerCase() !== 'aktif') {
-              return jsonResponse({ status: 'error', code: 'USER_INACTIVE', message: 'Akun Anda dinonaktifkan oleh administrator!' });
+              return jsonResponse({ status: 'error', code: 'USER_INACTIVE', message: 'Akun Anda dinonaktifkan oleh administrator!', requestId: reqId });
             }
             return jsonResponse({
               status: 'success',
@@ -275,6 +363,10 @@ function doPost(e) {
                 username: found.username,
                 email: found.email,
                 poin: 999
+              },
+              requestId: reqId,
+              _timings: {
+                total_ms: new Date().getTime() - t_valid_start
               }
             });
           }
@@ -294,12 +386,16 @@ function doPost(e) {
                   email: config.admin_email || 'admin@educbt.id',
                   username: 'admin',
                   poin: 999
+                },
+                requestId: reqId,
+                _timings: {
+                  total_ms: new Date().getTime() - t_valid_start
                 }
               });
             }
           }
 
-          return jsonResponse({ status: 'error', code: 'USER_NOT_FOUND', message: 'Akun staf/guru tidak ditemukan di database' });
+          return jsonResponse({ status: 'error', code: 'USER_NOT_FOUND', message: 'Akun staf/guru tidak ditemukan di database', requestId: reqId });
         }
       }
 
@@ -859,6 +955,36 @@ function initDatabaseSheets() {
 }
 
 /**
+ * Fast-path scan sheet langsung dari 2D Array getValues() tanpa overhead alokasi ribuan object.
+ * Berhenti seketika saat row yang dicocokkan ditemukan (early termination).
+ */
+function fastFindRow(sheet, predicateFn) {
+  if (!sheet) return null;
+  const values = sheet.getDataRange().getValues();
+  if (values.length <= 1) return null;
+  const headers = values[0].map(h => String(h || '').trim().toLowerCase());
+  const headerMap = {};
+  for (let j = 0; j < headers.length; j++) {
+    headerMap[headers[j]] = j;
+  }
+  for (let i = 1; i < values.length; i++) {
+    const row = values[i];
+    if (predicateFn(row, headerMap)) {
+      const obj = {};
+      for (let j = 0; j < headers.length; j++) {
+        let val = row[j];
+        if (headers[j] === 'jawaban_json' && typeof val === 'string' && val.startsWith('{')) {
+          try { val = JSON.parse(val); } catch (e) {}
+        }
+        obj[headers[j]] = val;
+      }
+      return obj;
+    }
+  }
+  return null;
+}
+
+/**
  * Mengubah Sheet Menjadi Array of Objects Berdasarkan Header Kolom
  */
 function sheetToObjects(sheet) {
@@ -949,13 +1075,28 @@ function deleteRowsByForeignKey(sheet, colIndex, fkValue) {
  * HELPER MANAJEMEN SESI & TOKEN PERSISTEN (HMAC-SHA256)
  * ============================================================================
  */
+let _cachedSecret = null;
+
 function getSessionSecret() {
+  if (_cachedSecret) return _cachedSecret;
+  try {
+    const mem = CacheService.getScriptCache().get('EDUCBT_SESSION_SECRET');
+    if (mem) {
+      _cachedSecret = mem;
+      return mem;
+    }
+  } catch (e) {}
+
   const props = PropertiesService.getScriptProperties();
   let secret = props.getProperty('EDUCBT_SESSION_SECRET');
   if (!secret) {
     secret = Utilities.getUuid() + '-' + Utilities.getUuid() + '-' + Date.now();
     props.setProperty('EDUCBT_SESSION_SECRET', secret);
   }
+  _cachedSecret = secret;
+  try {
+    CacheService.getScriptCache().put('EDUCBT_SESSION_SECRET', secret, 21600);
+  } catch (e) {}
   return secret;
 }
 

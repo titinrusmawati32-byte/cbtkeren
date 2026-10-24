@@ -934,14 +934,17 @@
     if (!GAS_URL) {
       throw new Error('URL Google Apps Script belum diisi!');
     }
+    const reqId = 'req_' + Date.now().toString(36) + '_' + Math.random().toString(36).substr(2, 5);
+    const t0 = performance.now();
     const response = await fetch(GAS_URL, {
       method: 'POST',
       headers: {
         'Content-Type': 'text/plain;charset=utf-8'
       },
-      body: JSON.stringify({ action, payload })
+      body: JSON.stringify({ action, payload, requestId: reqId })
     });
     const result = await response.json();
+    result._clientNetworkMs = Math.round(performance.now() - t0);
     if (result.status === 'error') {
       throw new Error(result.message || 'Terjadi kesalahan pada Google Apps Script');
     }
@@ -1527,12 +1530,14 @@
       if (res && res.status === 'success' && res.user) {
         // Kategori B: Token valid dan pengguna terverifikasi di database
         state.user = res.user;
-        await loadAllDataFromGAS();
         restoreSavedMenu();
         enterApplication();
         hideSessionLoading();
         const roleLabel = state.user.role === 'admin' ? 'Administrator' : state.user.role === 'guru' ? 'Guru Pengampu' : 'Siswa';
         showToast(`Sesi aktif (${roleLabel}): Selamat datang kembali, ${state.user.nama}!`);
+
+        // Sinkronisasi data mutakhir di latar belakang secara progresif
+        loadAllDataFromGAS().catch(() => {});
         return true;
       } else {
         throw new Error(res?.message || 'Token sesi tidak valid');
@@ -1564,11 +1569,43 @@
     }
   }
 
+  // Mutex state untuk mengunci tombol login & mencegah multiple request bersaing
+  let _isSubmittingAuth = false;
+  let _lastAuthMetrics = null;
+
+  function setSubmitButtonLoading(btnId, isLoading, defaultHtml, loadingText = 'Memverifikasi...') {
+    const btn = document.getElementById(btnId);
+    if (!btn) return;
+    if (isLoading) {
+      btn.disabled = true;
+      btn.setAttribute('data-original-html', btn.innerHTML);
+      btn.classList.add('opacity-80', 'cursor-not-allowed');
+      btn.innerHTML = `<i class="ph-bold ph-spinner animate-spin text-base"></i><span>${loadingText}</span>`;
+    } else {
+      btn.disabled = false;
+      btn.classList.remove('opacity-80', 'cursor-not-allowed');
+      const orig = btn.getAttribute('data-original-html');
+      if (orig) btn.innerHTML = orig;
+      else if (defaultHtml) btn.innerHTML = defaultHtml;
+    }
+  }
+
   async function handleLoginAdmin(e) {
     e.preventDefault();
+    if (_isSubmittingAuth) return;
+
     const identifierInput = document.getElementById('admin-identifier') || document.getElementById('admin-email');
     const identifier = identifierInput ? identifierInput.value.trim() : '';
     const password = document.getElementById('admin-password').value.trim();
+
+    if (!identifier || !password) {
+      showToast('Harap isi username/email dan password!', 'warning');
+      return;
+    }
+
+    _isSubmittingAuth = true;
+    setSubmitButtonLoading('btn-submit-admin', true, null, 'Memverifikasi Akun...');
+    const tStart = performance.now();
 
     try {
       showToast('Memverifikasi data guru/admin ke database...');
@@ -1578,6 +1615,8 @@
         email: identifier,
         password: password
       });
+
+      const tAuth = performance.now();
       state.user = res.user;
       if (res.token) {
         localStorage.setItem(AUTH_TOKEN_KEY, res.token);
@@ -1585,10 +1624,34 @@
         localStorage.setItem(AUTH_TOKEN_KEY, 'demo_token_' + btoa(JSON.stringify(res.user)));
       }
       localStorage.setItem(SAVED_MENU_KEY, 'dashboard');
-      await loadAllDataFromGAS();
+
+      // DECOUPLED: Masuk seketika ke dashboard tanpa menunggu download seluruh database!
       enterApplication();
+      const tRender = performance.now();
+
       const roleLabel = state.user.role === 'admin' ? 'Administrator' : 'Guru';
       showToast(`Selamat datang ${roleLabel}, ${state.user.nama}!`);
+
+      // Telemetri Performa
+      const totalClientMs = Math.round(tRender - tStart);
+      const authNetMs = Math.round(tAuth - tStart);
+      const renderMs = Math.round(tRender - tAuth);
+      _lastAuthMetrics = {
+        role: state.user.role,
+        requestId: res.requestId || 'n/a',
+        totalClientMs: totalClientMs,
+        networkAuthMs: authNetMs,
+        clientRenderMs: renderMs,
+        gasTimings: res._timings || {}
+      };
+
+      console.log(`%c[EduCBT Performance] Login Admin Berhasil!%c Total: ${totalClientMs}ms (API: ${authNetMs}ms, Render: ${renderMs}ms, GAS Exec: ${res._timings?.total_ms || '-'}ms) [ReqID: ${res.requestId || '-'}]`, 'color:#2563EB;font-weight:bold;', 'color:#475569;');
+
+      // Muat data seluruh database secara asinkron di latar belakang
+      loadAllDataFromGAS().catch(err => {
+        console.warn('Sinkronisasi data latar belakang:', err);
+      });
+
     } catch (err) {
       // Fallback pencocokan data lokal jika ada di cache
       const found = (state.pengguna || []).find(u =>
@@ -1611,17 +1674,33 @@
         return;
       }
       showToast('Login Gagal: ' + err.message, 'error');
+    } finally {
+      _isSubmittingAuth = false;
+      setSubmitButtonLoading('btn-submit-admin', false);
     }
   }
 
   async function handleLoginSiswa(e) {
     e.preventDefault();
+    if (_isSubmittingAuth) return;
+
     const nisn = document.getElementById('siswa-nisn').value.trim();
     const password = document.getElementById('siswa-password').value.trim();
+
+    if (!nisn || !password) {
+      showToast('Harap masukkan NISN dan password ujian!', 'warning');
+      return;
+    }
+
+    _isSubmittingAuth = true;
+    setSubmitButtonLoading('btn-submit-siswa', true, null, 'Memverifikasi NISN...');
+    const tStart = performance.now();
 
     try {
       showToast('Memverifikasi data siswa ke database...');
       const res = await callGAS('loginSiswa', { nisn, password });
+
+      const tAuth = performance.now();
       state.user = res.user;
       if (res.token) {
         localStorage.setItem(AUTH_TOKEN_KEY, res.token);
@@ -1629,9 +1708,33 @@
         localStorage.setItem(AUTH_TOKEN_KEY, 'demo_token_' + btoa(JSON.stringify(res.user)));
       }
       localStorage.setItem(SAVED_MENU_KEY, 'dashboard');
-      await loadAllDataFromGAS();
+
+      // DECOUPLED: Masuk seketika ke dashboard ujian siswa tanpa jeda!
       enterApplication();
-      showToast(`Selamat datang, ${state.user.nama}!`);
+      const tRender = performance.now();
+
+      showToast(`Selamat belajar, ${state.user.nama}!`);
+
+      // Telemetri Performa
+      const totalClientMs = Math.round(tRender - tStart);
+      const authNetMs = Math.round(tAuth - tStart);
+      const renderMs = Math.round(tRender - tAuth);
+      _lastAuthMetrics = {
+        role: 'siswa',
+        requestId: res.requestId || 'n/a',
+        totalClientMs: totalClientMs,
+        networkAuthMs: authNetMs,
+        clientRenderMs: renderMs,
+        gasTimings: res._timings || {}
+      };
+
+      console.log(`%c[EduCBT Performance] Login Siswa Berhasil!%c Total: ${totalClientMs}ms (API: ${authNetMs}ms, Render: ${renderMs}ms, GAS Exec: ${res._timings?.total_ms || '-'}ms) [ReqID: ${res.requestId || '-'}]`, 'color:#10B981;font-weight:bold;', 'color:#475569;');
+
+      // Muat data seluruh database secara asinkron di latar belakang
+      loadAllDataFromGAS().catch(err => {
+        console.warn('Sinkronisasi data latar belakang siswa:', err);
+      });
+
     } catch (err) {
       const found = (state.siswa || []).find(s => String(s.nisn).trim() === String(nisn).trim() && String(s.password).trim() === String(password).trim());
       if (found) {
@@ -1650,6 +1753,9 @@
         return;
       }
       showToast('Verifikasi Siswa Gagal: ' + err.message, 'error');
+    } finally {
+      _isSubmittingAuth = false;
+      setSubmitButtonLoading('btn-submit-siswa', false);
     }
   }
 
@@ -5954,6 +6060,7 @@
     restoreSession,
     retryRestoreSession,
     forceLoginView,
+    getLastLoginMetrics: () => _lastAuthMetrics,
     closeModal
   };
 
