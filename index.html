@@ -1208,12 +1208,61 @@
         }
       }
 
+      if (sheetData.materi && Array.isArray(sheetData.materi)) {
+        if (onProgress) onProgress('Memigrasikan Materi Pembelajaran...', 95);
+        for (const m of sheetData.materi) {
+          batch.set(_fbDb.collection('materials').doc(String(m.id)), {
+            id: String(m.id),
+            judul: m.judul || '',
+            deskripsi: m.deskripsi || '',
+            mapel_id: m.mapel_id || '',
+            kelas_id: m.kelas_id || 'ALL',
+            jenis: m.jenis || 'VIDEO',
+            url: m.url || '',
+            status: m.status || 'PUBLISHED',
+            created_by: m.created_by || 'Admin',
+            created_at: m.created_at || new Date().toISOString(),
+            updated_at: m.updated_at || new Date().toISOString(),
+            migratedAt: firebase.firestore.FieldValue.serverTimestamp()
+          }, { merge: true });
+          opCount++;
+          report.materiCount = (report.materiCount || 0) + 1;
+          await commitIfNeeded();
+        }
+      }
+
       if (opCount > 0) {
         await batch.commit();
       }
 
       if (onProgress) onProgress('Migrasi selesai!', 100);
       return report;
+    },
+    saveMaterial: async (mat) => {
+      const ok = await initFirebaseEngine();
+      if (!ok || !_fbDb) return false;
+      try {
+        await _fbDb.collection('materials').doc(String(mat.id)).set({
+          ...mat,
+          updated_at: new Date().toISOString(),
+          syncedAt: firebase.firestore.FieldValue.serverTimestamp()
+        }, { merge: true });
+        return true;
+      } catch (e) {
+        console.warn('Firebase saveMaterial error:', e);
+        return false;
+      }
+    },
+    deleteMaterial: async (id) => {
+      const ok = await initFirebaseEngine();
+      if (!ok || !_fbDb) return false;
+      try {
+        await _fbDb.collection('materials').doc(String(id)).delete();
+        return true;
+      } catch (e) {
+        console.warn('Firebase deleteMaterial error:', e);
+        return false;
+      }
     }
   };
 
@@ -1290,6 +1339,12 @@
     soal: [],
     rekap_nilai: [],
     pengguna: [],
+    materi: [],
+    materiSearchQuery: '',
+    materiFilterMapel: 'ALL',
+    materiFilterKelas: 'ALL',
+    materiFilterJenis: 'ALL',
+    materiFilterStatus: 'ALL',
     pengaturan: {
       id: 1,
       nama_aplikasi: 'EDU CBT SENAPATI',
@@ -1400,6 +1455,48 @@
       { id: 'usr-2', username: 'guru1', nama_lengkap: 'Budi Santoso, M.Pd', email: 'budi@sekolah.sch.id', password: 'guru123', role: 'guru', status: 'Aktif' },
       { id: 'usr-3', username: 'guru2', nama_lengkap: 'Siti Aminah, S.Pd', email: 'siti@sekolah.sch.id', password: 'guru123', role: 'guru', status: 'Aktif' }
     ];
+
+    state.materi = [
+      {
+        id: 'mat-001',
+        judul: 'Konsep Dasar Trigonometri Sudut Istimewa',
+        deskripsi: 'Pemahaman komprehensif mengenai sin, cos, tan pada kuadran I-IV serta relasi sudut dan identitas trigonometri.',
+        mapel_id: 'jdw-1',
+        kelas_id: 'ALL',
+        jenis: 'VIDEO',
+        url: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ',
+        status: 'PUBLISHED',
+        created_by: 'Budi Santoso, M.Pd',
+        created_at: new Date(Date.now() - 86400000 * 2).toISOString(),
+        updated_at: new Date(Date.now() - 86400000 * 2).toISOString()
+      },
+      {
+        id: 'mat-002',
+        judul: 'Modul Lengkap Biologi: Struktur dan Fungsi Sel',
+        deskripsi: 'Materi pendukung bab 1 biologi tentang organel sel, membran plasma, dan transport aktif-pasif antar sel.',
+        mapel_id: 'jdw-1',
+        kelas_id: 'ALL',
+        jenis: 'PDF',
+        url: 'https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf',
+        status: 'PUBLISHED',
+        created_by: 'Siti Aminah, S.Pd',
+        created_at: new Date(Date.now() - 86400000).toISOString(),
+        updated_at: new Date(Date.now() - 86400000).toISOString()
+      },
+      {
+        id: 'mat-003',
+        judul: 'Infografis Ringkasan Rumus Dinamika & Hukum Newton',
+        deskripsi: 'Peta konsep visual hukum gerak Newton I, II, III dan penerapannya pada bidang miring serta lift bergerak.',
+        mapel_id: 'jdw-2',
+        kelas_id: 'kls-1',
+        jenis: 'GAMBAR',
+        url: 'https://images.unsplash.com/photo-1635070041078-e363dbe005cb?w=1200&q=80',
+        status: 'PUBLISHED',
+        created_by: 'Admin Sekolah',
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      }
+    ];
   }
 
   // ============================================================================
@@ -1419,7 +1516,11 @@
     }, 3200);
   }
 
-  function openModal(title, htmlContent) {
+  function openModal(title, htmlContent, customWidthClass = 'sm:max-w-xl') {
+    const modalBox = document.querySelector('#app-modal > div');
+    if (modalBox) {
+      modalBox.className = `w-[95vw] sm:w-full ${customWidthClass} bg-white dark:bg-[#172033] rounded-3xl shadow-2xl border border-slate-100 dark:border-[#293548] overflow-hidden flex flex-col max-h-[92vh] transition-all`;
+    }
     document.getElementById('modal-title').textContent = title;
     document.getElementById('modal-body').innerHTML = htmlContent;
     document.getElementById('app-modal').classList.remove('hidden');
@@ -1428,6 +1529,10 @@
   function closeModal() {
     document.getElementById('app-modal').classList.add('hidden');
     document.getElementById('modal-body').innerHTML = '';
+    const modalBox = document.querySelector('#app-modal > div');
+    if (modalBox) {
+      modalBox.className = `w-[94vw] sm:w-full sm:max-w-xl bg-white dark:bg-[#172033] rounded-3xl shadow-2xl border border-slate-100 dark:border-[#293548] overflow-hidden flex flex-col max-h-[90vh]`;
+    }
   }
 
   function toggleFullscreen() {
@@ -1757,6 +1862,7 @@
           soal: data.soal || [],
           rekap_nilai: data.rekap_nilai || [],
           pengguna: data.pengguna || [],
+          materi: data.materi || [],
           pengaturan: data.pengaturan || {}
         }
       }));
@@ -1788,6 +1894,7 @@
         state.soal = cached.soal || [];
         state.rekap_nilai = cached.rekap_nilai || [];
         state.pengguna = cached.pengguna || [];
+        state.materi = cached.materi || [];
         if (cached.pengaturan && Object.keys(cached.pengaturan).length > 0) {
           state.pengaturan = { ...state.pengaturan, ...cached.pengaturan };
         }
@@ -1812,6 +1919,7 @@
         state.soal = d.soal || [];
         state.rekap_nilai = d.rekap_nilai || [];
         state.pengguna = d.pengguna || [];
+        state.materi = d.materi || [];
         if (d.pengaturan && Object.keys(d.pengaturan).length > 0) {
           state.pengaturan = { ...state.pengaturan, ...d.pengaturan };
         }
@@ -2320,6 +2428,7 @@
     const menus = isStaff
       ? [
           { id: 'dashboard', label: 'Dashboard', icon: 'ph-house' },
+          { id: 'materi', label: 'Kelola Materi', icon: 'ph-book-open' },
           { id: 'kelas', label: 'Data Kelas', icon: 'ph-users-three' },
           { id: 'siswa', label: 'Data Siswa', icon: 'ph-student' },
           { id: 'jadwal', label: 'Jadwal & Mapel', icon: 'ph-calendar-check' },
@@ -2330,6 +2439,7 @@
         ]
       : [
           { id: 'dashboard', label: 'Dashboard Siswa', icon: 'ph-house' },
+          { id: 'materi', label: 'Materi Pembelajaran', icon: 'ph-book-open' },
           { id: 'jadwal', label: 'Daftar Ujian Saya', icon: 'ph-exam' },
           { id: 'rekap', label: 'Hasil Nilai Saya', icon: 'ph-chart-line' }
         ];
@@ -2398,13 +2508,13 @@
 
     const curr = state.activeMenu;
     const isMenuOpen = !!state.isMobileMenuOpen;
-    const isOtherMenu = ['soal', 'siswa', 'pengguna', 'pengaturan'].includes(curr);
+    const isOtherMenu = ['soal', 'siswa', 'pengguna', 'pengaturan', 'materi'].includes(curr);
 
     const items = [
       { id: 'dashboard', label: 'Beranda', icon: 'ph-house', fillIcon: 'ph-fill ph-house' },
+      { id: 'materi', label: 'Materi', icon: 'ph-book-open', fillIcon: 'ph-fill ph-book-open' },
       { id: 'kelas', label: 'Kelas', icon: 'ph-users-three', fillIcon: 'ph-fill ph-users-three' },
       { id: 'jadwal', label: 'Ujian', icon: 'ph-article', fillIcon: 'ph-fill ph-article' },
-      { id: 'rekap', label: 'Nilai', icon: 'ph-chart-bar', fillIcon: 'ph-fill ph-chart-bar' },
       { id: 'menu', label: 'Menu', icon: 'ph-squares-four', fillIcon: 'ph-fill ph-squares-four', isDrawerTrigger: true }
     ];
 
@@ -2470,6 +2580,7 @@
         if (grid) {
           const isStaff = state.user?.role === 'admin' || state.user?.role === 'guru';
           const items = isStaff ? [
+            { id: 'materi', label: 'Kelola Materi', icon: 'ph-book-open', color: 'bg-rose-50 text-rose-700 dark:bg-rose-950/40 dark:text-rose-400 border-rose-200 dark:border-rose-900/40' },
             { id: 'soal', label: 'Bank Soal CBT', icon: 'ph-file-text', color: 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400 border-emerald-200 dark:border-emerald-900/40' },
             { id: 'siswa', label: 'Data Siswa', icon: 'ph-student', color: 'bg-blue-50 text-blue-700 dark:bg-blue-950/40 dark:text-blue-400 border-blue-200 dark:border-blue-900/40' },
             { id: 'pengguna', label: 'Data Pengguna', icon: 'ph-user-gear', color: 'bg-purple-50 text-purple-700 dark:bg-purple-950/40 dark:text-purple-400 border-purple-200 dark:border-purple-900/40' },
@@ -2480,6 +2591,7 @@
             { id: 'dashboard', label: 'Dashboard Utama', icon: 'ph-house', color: 'bg-blue-50 text-blue-700 dark:bg-blue-950/40 dark:text-blue-400 border-blue-200 dark:border-blue-900/40' }
           ] : [
             { id: 'dashboard', label: 'Dashboard Siswa', icon: 'ph-house', color: 'bg-blue-50 text-blue-700 dark:bg-blue-950/40 dark:text-blue-400 border-blue-200 dark:border-blue-900/40' },
+            { id: 'materi', label: 'Materi Belajar', icon: 'ph-book-open', color: 'bg-rose-50 text-rose-700 dark:bg-rose-950/40 dark:text-rose-400 border-rose-200 dark:border-rose-900/40' },
             { id: 'jadwal', label: 'Daftar Ujian Saya', icon: 'ph-article', color: 'bg-purple-50 text-purple-700 dark:bg-purple-950/40 dark:text-purple-400 border-purple-200 dark:border-purple-900/40' },
             { id: 'rekap', label: 'Hasil Nilai Saya', icon: 'ph-chart-bar', color: 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400 border-emerald-200 dark:border-emerald-900/40' }
           ];
@@ -2631,13 +2743,15 @@
       document.getElementById('mobile-bottom-nav')?.classList.remove('hidden');
     }
 
+    const isStaff = state.user?.role === 'admin' || state.user?.role === 'guru';
     const titles = {
-      dashboard: 'Dashboard Utama',
+      dashboard: isStaff ? 'Dashboard Utama' : 'Dashboard Siswa',
+      materi: isStaff ? 'Kelola Materi Pembelajaran' : 'Materi Pembelajaran Siswa',
       kelas: 'Manajemen Kelas',
       siswa: 'Manajemen Data Siswa',
-      jadwal: 'Jadwal & Mata Pelajaran',
+      jadwal: isStaff ? 'Jadwal & Mata Pelajaran' : 'Daftar Ujian Saya',
       soal: 'Bank Soal CBT Interaktif',
-      rekap: 'Rekapitulasi Nilai Ujian',
+      rekap: isStaff ? 'Rekapitulasi Nilai Ujian' : 'Hasil Nilai Ujian Saya',
       pengguna: 'Data Pengguna (Admin & Guru)',
       pengaturan: 'Identitas Sekolah & Konfigurasi'
     };
@@ -2647,6 +2761,9 @@
     switch (state.activeMenu) {
       case 'dashboard':
         container.innerHTML = renderDashboardModule();
+        break;
+      case 'materi':
+        container.innerHTML = isStaff ? renderAdminMateriModule() : renderSiswaMateriModule();
         break;
       case 'kelas':
         container.innerHTML = renderKelasModule();
@@ -2980,8 +3097,1015 @@
             </div>
           </div>
         </div>
+
+        <!-- Banner / Grid Materi Pembelajaran Pilihan (Akses Langsung dari Dashboard) -->
+        <div class="bg-white dark:bg-[#172033] rounded-3xl p-5 sm:p-6 border border-slate-100 dark:border-[#293548] shadow-sm space-y-4">
+          <div class="flex items-center justify-between">
+            <div class="flex items-center gap-3">
+              <div class="w-11 h-11 rounded-2xl bg-rose-600 text-white flex items-center justify-center text-xl shadow-md shadow-rose-500/20 shrink-0">
+                <i class="ph-fill ph-book-open"></i>
+              </div>
+              <div>
+                <h3 class="text-sm sm:text-base font-black text-slate-900 dark:text-white leading-snug">
+                  ${isAdmin ? 'Materi Pembelajaran Terkini' : 'Materi Belajar Untukmu'}
+                </h3>
+                <p class="text-[11px] text-slate-400 dark:text-slate-500">
+                  ${isAdmin ? 'Materi digital yang telah dibagikan kepada peserta didik' : 'Pelajari video, modul ringkasan PDF, dan infografis rumus sebelum ujian'}
+                </p>
+              </div>
+            </div>
+            <button type="button" onclick="window.app.navigateMenu('materi')" class="text-xs font-bold text-rose-600 hover:text-rose-700 flex items-center gap-1 transition">
+              <span>${isAdmin ? 'Kelola Materi' : 'Lihat Semua'}</span>
+              <i class="ph-bold ph-caret-right text-xs"></i>
+            </button>
+          </div>
+
+          <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3.5">
+            ${(state.materi || []).filter(m => isAdmin || (m.status === 'PUBLISHED' && (m.kelas_id === 'ALL' || m.kelas_id === state.user?.kelas_id))).slice(0, 3).map(m => {
+              const mapelObj = state.mapel_jadwal.find(j => j.id === m.mapel_id);
+              const mapelNama = mapelObj ? mapelObj.nama_mapel : (m.mapel_id || 'Materi Umum');
+              let iconClass = 'ph-fill ph-youtube-logo text-rose-600';
+              if (m.jenis === 'PDF') iconClass = 'ph-fill ph-file-pdf text-red-600';
+              if (m.jenis === 'GAMBAR') iconClass = 'ph-fill ph-image text-emerald-600';
+
+              return `
+                <div onclick="window.app.previewMateriModal('${m.id}')" class="p-4 rounded-2xl bg-slate-50/80 dark:bg-[#1E293B]/60 border border-slate-100 dark:border-[#293548] hover:border-blue-400 dark:hover:border-blue-600 cursor-pointer transition flex items-start gap-3 group">
+                  <div class="w-10 h-10 rounded-xl bg-white dark:bg-slate-900 flex items-center justify-center text-xl shrink-0 shadow-sm">
+                    <i class="${iconClass}"></i>
+                  </div>
+                  <div class="min-w-0 flex-1">
+                    <div class="flex items-center gap-1.5">
+                      <span class="text-[10px] font-bold text-blue-600 dark:text-blue-400 uppercase tracking-wider truncate">${mapelNama}</span>
+                      <span class="text-[10px] text-slate-300 dark:text-slate-600">•</span>
+                      <span class="text-[10px] text-slate-400">${m.jenis}</span>
+                    </div>
+                    <h4 class="text-xs font-black text-slate-900 dark:text-white truncate group-hover:text-blue-600 dark:group-hover:text-blue-400 transition mt-0.5">${m.judul}</h4>
+                    <p class="text-[11px] text-slate-500 dark:text-slate-400 line-clamp-1 mt-0.5">${m.deskripsi || 'Klik untuk membuka materi ini'}</p>
+                  </div>
+                </div>
+              `;
+            }).join('') || '<p class="text-xs text-slate-400 py-4 text-center col-span-3">Belum ada materi pembelajaran yang dipublikasikan.</p>'}
+          </div>
+        </div>
       </div>
     `;
+  }
+
+  // ============================================================================
+  // MODUL MATERI PEMBELAJARAN (ADMIN & SISWA) DENGAN PRATINJAU LEBAR
+  // ============================================================================
+  function getYouTubeVideoId(url) {
+    if (!url) return '';
+    const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|&v=|shorts\/)([^#&?]*).*/;
+    const match = String(url).trim().match(regExp);
+    return (match && match[2].length === 11) ? match[2] : '';
+  }
+
+  function getYouTubeEmbedUrl(url) {
+    const id = getYouTubeVideoId(url);
+    return id ? `https://www.youtube-nocookie.com/embed/${id}?rel=0` : '';
+  }
+
+  function getPdfPreviewUrl(url) {
+    if (!url) return '';
+    const s = String(url).trim();
+    if (s.includes('drive.google.com')) {
+      const match = s.match(/\/file\/d\/([a-zA-Z0-9_-]+)/) || s.match(/id=([a-zA-Z0-9_-]+)/);
+      if (match && match[1]) {
+        return `https://drive.google.com/file/d/${match[1]}/preview`;
+      }
+    }
+    return s;
+  }
+
+  function handleMateriSearch(val) {
+    state.materiSearchQuery = val;
+    renderAll();
+  }
+
+  function handleMateriFilterMapel(val) {
+    state.materiFilterMapel = val;
+    renderAll();
+  }
+
+  function handleMateriFilterKelas(val) {
+    state.materiFilterKelas = val;
+    renderAll();
+  }
+
+  function handleMateriFilterJenis(val) {
+    state.materiFilterJenis = val;
+    renderAll();
+  }
+
+  function handleMateriFilterStatus(val) {
+    state.materiFilterStatus = val;
+    renderAll();
+  }
+
+  // --- 1. TAMPILAN ADMIN: KELOLA MATERI ---
+  function renderAdminMateriModule() {
+    const listMateri = state.materi || [];
+    const q = (state.materiSearchQuery || '').toLowerCase();
+    const filterMapel = state.materiFilterMapel || 'ALL';
+    const filterKelas = state.materiFilterKelas || 'ALL';
+    const filterJenis = state.materiFilterJenis || 'ALL';
+    const filterStatus = state.materiFilterStatus || 'ALL';
+
+    // Statistik Cepat
+    const totalMateri = listMateri.length;
+    const totalVideo = listMateri.filter(m => m.jenis === 'VIDEO').length;
+    const totalPdf = listMateri.filter(m => m.jenis === 'PDF').length;
+    const totalGambar = listMateri.filter(m => m.jenis === 'GAMBAR').length;
+    const totalPublished = listMateri.filter(m => m.status === 'PUBLISHED').length;
+
+    // Filter Data
+    const filtered = listMateri.filter(m => {
+      const matchQ = (m.judul || '').toLowerCase().includes(q) || (m.deskripsi || '').toLowerCase().includes(q);
+      const matchMapel = filterMapel === 'ALL' || m.mapel_id === filterMapel;
+      const matchKelas = filterKelas === 'ALL' || m.kelas_id === 'ALL' || m.kelas_id === filterKelas;
+      const matchJenis = filterJenis === 'ALL' || m.jenis === filterJenis;
+      const matchStatus = filterStatus === 'ALL' || m.status === filterStatus;
+      return matchQ && matchMapel && matchKelas && matchJenis && matchStatus;
+    });
+
+    // Option Mapel & Kelas
+    const mapelOptions = state.mapel_jadwal.map(j =>
+      `<option value="${j.id}" ${filterMapel === j.id ? 'selected' : ''}>${j.nama_mapel}</option>`
+    ).join('');
+
+    const kelasOptions = state.kelas.map(k =>
+      `<option value="${k.id}" ${filterKelas === k.id ? 'selected' : ''}>${k.nama_kelas}</option>`
+    ).join('');
+
+    return `
+      <div class="space-y-5 sm:space-y-6">
+        <!-- 5 Kartu Statistik Ringkas -->
+        <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 sm:gap-4">
+          <div class="bg-white dark:bg-[#172033] p-4 rounded-3xl border border-slate-100 dark:border-[#293548] shadow-sm flex flex-col justify-between">
+            <div class="w-10 h-10 rounded-2xl bg-blue-600 text-white flex items-center justify-center text-xl shadow-md shadow-blue-500/20">
+              <i class="ph-fill ph-book-open"></i>
+            </div>
+            <div class="mt-3">
+              <p class="text-[11px] font-bold text-slate-400 dark:text-slate-500">Total Materi</p>
+              <h3 class="text-2xl font-black text-slate-900 dark:text-white mt-0.5">${totalMateri}</h3>
+            </div>
+          </div>
+
+          <div class="bg-white dark:bg-[#172033] p-4 rounded-3xl border border-rose-100 dark:border-[#293548] shadow-sm flex flex-col justify-between">
+            <div class="w-10 h-10 rounded-2xl bg-rose-600 text-white flex items-center justify-center text-xl shadow-md shadow-rose-500/20">
+              <i class="ph-fill ph-youtube-logo"></i>
+            </div>
+            <div class="mt-3">
+              <p class="text-[11px] font-bold text-slate-400 dark:text-slate-500">Video YouTube</p>
+              <h3 class="text-2xl font-black text-slate-900 dark:text-white mt-0.5">${totalVideo}</h3>
+            </div>
+          </div>
+
+          <div class="bg-white dark:bg-[#172033] p-4 rounded-3xl border border-red-100 dark:border-[#293548] shadow-sm flex flex-col justify-between">
+            <div class="w-10 h-10 rounded-2xl bg-red-600 text-white flex items-center justify-center text-xl shadow-md shadow-red-500/20">
+              <i class="ph-fill ph-file-pdf"></i>
+            </div>
+            <div class="mt-3">
+              <p class="text-[11px] font-bold text-slate-400 dark:text-slate-500">Dokumen PDF</p>
+              <h3 class="text-2xl font-black text-slate-900 dark:text-white mt-0.5">${totalPdf}</h3>
+            </div>
+          </div>
+
+          <div class="bg-white dark:bg-[#172033] p-4 rounded-3xl border border-emerald-100 dark:border-[#293548] shadow-sm flex flex-col justify-between">
+            <div class="w-10 h-10 rounded-2xl bg-emerald-600 text-white flex items-center justify-center text-xl shadow-md shadow-emerald-500/20">
+              <i class="ph-fill ph-image"></i>
+            </div>
+            <div class="mt-3">
+              <p class="text-[11px] font-bold text-slate-400 dark:text-slate-500">Infografis & Foto</p>
+              <h3 class="text-2xl font-black text-slate-900 dark:text-white mt-0.5">${totalGambar}</h3>
+            </div>
+          </div>
+
+          <div class="col-span-2 sm:col-span-1 bg-white dark:bg-[#172033] p-4 rounded-3xl border border-amber-100 dark:border-[#293548] shadow-sm flex flex-col justify-between">
+            <div class="w-10 h-10 rounded-2xl bg-amber-500 text-white flex items-center justify-center text-xl shadow-md shadow-amber-500/20">
+              <i class="ph-fill ph-check-circle"></i>
+            </div>
+            <div class="mt-3">
+              <p class="text-[11px] font-bold text-slate-400 dark:text-slate-500">Terpublikasi</p>
+              <h3 class="text-2xl font-black text-slate-900 dark:text-white mt-0.5">${totalPublished} <span class="text-xs font-normal text-slate-400">/ ${totalMateri}</span></h3>
+            </div>
+          </div>
+        </div>
+
+        <!-- Panel Utama Kelola Materi -->
+        <div class="bg-white dark:bg-[#172033] rounded-3xl p-5 sm:p-6 border border-slate-100 dark:border-[#293548] shadow-sm space-y-5">
+          <!-- Header Bar & Tombol Tambah -->
+          <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div>
+              <h2 class="text-base sm:text-lg font-black text-slate-900 dark:text-white leading-tight">Daftar Materi Pembelajaran</h2>
+              <p class="text-xs text-slate-400 dark:text-slate-500 mt-0.5">Kelola materi pelajaran (YouTube, PDF, Gambar) yang dapat diakses oleh siswa.</p>
+            </div>
+            <div class="flex items-center gap-2">
+              <button type="button" onclick="window.app.loadAllDataFromGAS(true)" class="p-2.5 rounded-2xl bg-slate-50 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-700 text-xs font-bold transition flex items-center gap-1.5" title="Sinkronkan dengan Spreadsheet">
+                <i class="ph-bold ph-arrow-clockwise text-base"></i>
+              </button>
+              <button type="button" onclick="window.app.showMateriModal()" class="px-4 py-2.5 rounded-2xl bg-blue-600 hover:bg-blue-700 active:scale-95 text-white text-xs font-black flex items-center gap-2 shadow-md shadow-blue-500/20 transition">
+                <i class="ph-bold ph-plus-circle text-base"></i>
+                <span>Tambah Materi Baru</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- Filter & Search Bar -->
+          <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-2.5 p-3.5 rounded-2xl bg-slate-50/80 dark:bg-[#1E293B]/60 border border-slate-100 dark:border-[#293548]">
+            <!-- Search -->
+            <div class="relative sm:col-span-2 lg:col-span-1">
+              <i class="ph-bold ph-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm"></i>
+              <input type="text" value="${state.materiSearchQuery || ''}" oninput="window.app.handleMateriSearch(this.value)" placeholder="Cari materi..." class="w-full pl-8 pr-3 py-2 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-xs text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500" />
+            </div>
+
+            <!-- Filter Mapel -->
+            <div>
+              <select onchange="window.app.handleMateriFilterMapel(this.value)" class="w-full px-3 py-2 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-xs font-bold text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                <option value="ALL">Semua Mapel</option>
+                ${mapelOptions}
+              </select>
+            </div>
+
+            <!-- Filter Kelas -->
+            <div>
+              <select onchange="window.app.handleMateriFilterKelas(this.value)" class="w-full px-3 py-2 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-xs font-bold text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                <option value="ALL">Semua Kelas</option>
+                ${kelasOptions}
+              </select>
+            </div>
+
+            <!-- Filter Jenis -->
+            <div>
+              <select onchange="window.app.handleMateriFilterJenis(this.value)" class="w-full px-3 py-2 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-xs font-bold text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                <option value="ALL" ${filterJenis === 'ALL' ? 'selected' : ''}>Semua Jenis</option>
+                <option value="VIDEO" ${filterJenis === 'VIDEO' ? 'selected' : ''}>Video YouTube</option>
+                <option value="PDF" ${filterJenis === 'PDF' ? 'selected' : ''}>Dokumen PDF</option>
+                <option value="GAMBAR" ${filterJenis === 'GAMBAR' ? 'selected' : ''}>Gambar / Infografis</option>
+              </select>
+            </div>
+
+            <!-- Filter Status -->
+            <div>
+              <select onchange="window.app.handleMateriFilterStatus(this.value)" class="w-full px-3 py-2 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-xs font-bold text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                <option value="ALL" ${filterStatus === 'ALL' ? 'selected' : ''}>Semua Status</option>
+                <option value="PUBLISHED" ${filterStatus === 'PUBLISHED' ? 'selected' : ''}>Dipublikasikan</option>
+                <option value="DRAFT" ${filterStatus === 'DRAFT' ? 'selected' : ''}>Draf (Draft)</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- Tampilan Tabel Responsif / List Card -->
+          <div class="overflow-x-auto">
+            <table class="w-full text-left border-collapse">
+              <thead>
+                <tr class="border-b border-slate-200 dark:border-slate-700/60 text-[11px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-wider">
+                  <th class="py-3 px-4">Judul Materi</th>
+                  <th class="py-3 px-4">Mapel & Kelas</th>
+                  <th class="py-3 px-4">Jenis</th>
+                  <th class="py-3 px-4">Status</th>
+                  <th class="py-3 px-4">Tanggal</th>
+                  <th class="py-3 px-4 text-right">Aksi</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-slate-100 dark:divide-slate-800">
+                ${filtered.length === 0 ? `
+                  <tr>
+                    <td colspan="6" class="py-12 text-center text-xs text-slate-400 dark:text-slate-500">
+                      <div class="flex flex-col items-center justify-center gap-2">
+                        <i class="ph-bold ph-book-open text-3xl text-slate-300 dark:text-slate-600"></i>
+                        <p class="font-bold">Tidak ada materi pembelajaran yang cocok dengan filter.</p>
+                      </div>
+                    </td>
+                  </tr>
+                ` : filtered.map(m => {
+                  const mapelObj = state.mapel_jadwal.find(j => j.id === m.mapel_id);
+                  const mapelNama = mapelObj ? mapelObj.nama_mapel : (m.mapel_id || 'Umum');
+                  const kelasObj = state.kelas.find(k => k.id === m.kelas_id);
+                  const kelasNama = m.kelas_id === 'ALL' ? 'Semua Kelas' : (kelasObj ? kelasObj.nama_kelas : m.kelas_id);
+
+                  let badgeJenis = '';
+                  if (m.jenis === 'VIDEO') {
+                    badgeJenis = `<span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-rose-50 dark:bg-rose-950/40 text-rose-600 dark:text-rose-400 border border-rose-200 dark:border-rose-900/40 text-[11px] font-black"><i class="ph-fill ph-youtube-logo text-sm"></i> Video</span>`;
+                  } else if (m.jenis === 'PDF') {
+                    badgeJenis = `<span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-red-50 dark:bg-red-950/40 text-red-600 dark:text-red-400 border border-red-200 dark:border-red-900/40 text-[11px] font-black"><i class="ph-fill ph-file-pdf text-sm"></i> PDF</span>`;
+                  } else {
+                    badgeJenis = `<span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-900/40 text-[11px] font-black"><i class="ph-fill ph-image text-sm"></i> Gambar</span>`;
+                  }
+
+                  const isPub = m.status === 'PUBLISHED';
+                  const dateStr = m.created_at ? new Date(m.created_at).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' }) : '-';
+
+                  return `
+                    <tr class="hover:bg-slate-50/80 dark:hover:bg-[#1E293B]/40 transition">
+                      <td class="py-3.5 px-4 min-w-[220px]">
+                        <p class="text-xs font-black text-slate-900 dark:text-white line-clamp-1">${m.judul}</p>
+                        <p class="text-[11px] text-slate-500 dark:text-slate-400 line-clamp-1 mt-0.5">${m.deskripsi || 'Tidak ada deskripsi'}</p>
+                      </td>
+                      <td class="py-3.5 px-4 whitespace-nowrap">
+                        <span class="text-xs font-bold text-slate-800 dark:text-slate-200 block">${mapelNama}</span>
+                        <span class="text-[10px] text-blue-600 dark:text-blue-400 font-bold">${kelasNama}</span>
+                      </td>
+                      <td class="py-3.5 px-4 whitespace-nowrap">${badgeJenis}</td>
+                      <td class="py-3.5 px-4 whitespace-nowrap">
+                        <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-black ${
+                          isPub
+                            ? 'bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-900/50'
+                            : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 border border-slate-200 dark:border-slate-700'
+                        }">
+                          <span class="w-1.5 h-1.5 rounded-full ${isPub ? 'bg-emerald-500' : 'bg-slate-400'}"></span>
+                          <span>${isPub ? 'Dipublikasi' : 'Draf'}</span>
+                        </span>
+                      </td>
+                      <td class="py-3.5 px-4 text-xs font-mono text-slate-500 dark:text-slate-400 whitespace-nowrap">${dateStr}</td>
+                      <td class="py-3.5 px-4 text-right whitespace-nowrap space-x-1">
+                        <button type="button" onclick="window.app.previewMateriModal('${m.id}')" class="p-2 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-950/50 rounded-xl transition" title="Pratinjau Materi Lebar">
+                          <i class="ph-bold ph-eye text-base"></i>
+                        </button>
+                        <button type="button" onclick="window.app.showMateriModal('${m.id}')" class="p-2 text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-950/50 rounded-xl transition" title="Edit Materi">
+                          <i class="ph-bold ph-pencil-simple text-base"></i>
+                        </button>
+                        <button type="button" onclick="window.app.deleteMateri('${m.id}')" class="p-2 text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/50 rounded-xl transition" title="Hapus Materi">
+                          <i class="ph-bold ph-trash text-base"></i>
+                        </button>
+                      </td>
+                    </tr>
+                  `;
+                }).join('')}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    `;
+  }
+
+  // --- 2. TAMPILAN SISWA: MATERI PEMBELAJARAN ---
+  function renderSiswaMateriModule() {
+    const listMateri = state.materi || [];
+    const userKelas = state.user?.kelas_id;
+    const q = (state.materiSearchQuery || '').toLowerCase();
+    const filterMapel = state.materiFilterMapel || 'ALL';
+    const filterJenis = state.materiFilterJenis || 'ALL';
+
+    // ATURAN KEAMANAN & AKSES SISWA:
+    // 1. Status HARUS 'PUBLISHED'
+    // 2. Kelas HARUS 'ALL' ATAU sama dengan kelas_id siswa
+    const siswaMateri = listMateri.filter(m => {
+      const isPublished = m.status === 'PUBLISHED';
+      const matchKelas = m.kelas_id === 'ALL' || !m.kelas_id || m.kelas_id === userKelas;
+      const matchQ = (m.judul || '').toLowerCase().includes(q) || (m.deskripsi || '').toLowerCase().includes(q);
+      const matchMapel = filterMapel === 'ALL' || m.mapel_id === filterMapel;
+      const matchJenis = filterJenis === 'ALL' || m.jenis === filterJenis;
+      return isPublished && matchKelas && matchQ && matchMapel && matchJenis;
+    });
+
+    const mapelOptions = state.mapel_jadwal.map(j =>
+      `<option value="${j.id}" ${filterMapel === j.id ? 'selected' : ''}>${j.nama_mapel}</option>`
+    ).join('');
+
+    return `
+      <div class="space-y-5 sm:space-y-6">
+        <!-- Banner Sambutan Modul Materi Siswa -->
+        <div class="relative overflow-hidden rounded-3xl p-5 sm:p-6 text-white shadow-xl shadow-blue-500/10" style="background: linear-gradient(110deg, #1E40AF 0%, #2563EB 50%, #38BDF8 100%);">
+          <div class="relative z-10 max-w-xl space-y-2">
+            <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/20 backdrop-blur-md text-[10px] sm:text-[11px] font-black uppercase tracking-wider">
+              <span>📚</span> Modul Belajar Digital
+            </span>
+            <h2 class="text-lg sm:text-2xl font-black">Pusat Materi Pembelajaran Siswa</h2>
+            <p class="text-xs sm:text-sm text-blue-100 font-medium leading-relaxed">
+              Pelajari video pembelajaran, modul PDF lengkap, serta infografis rumus untuk memperdalam pemahaman sebelum ujian.
+            </p>
+          </div>
+          <div class="absolute -right-6 -bottom-6 w-44 h-44 rounded-full bg-white/10 blur-xl pointer-events-none"></div>
+        </div>
+
+        <!-- Filter & Pencarian Siswa -->
+        <div class="bg-white dark:bg-[#172033] rounded-2xl p-4 border border-slate-100 dark:border-[#293548] shadow-sm flex flex-col sm:flex-row items-center justify-between gap-3">
+          <div class="relative w-full sm:w-80">
+            <i class="ph-bold ph-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm"></i>
+            <input type="text" value="${state.materiSearchQuery || ''}" oninput="window.app.handleMateriSearch(this.value)" placeholder="Cari judul materi pelajaran..." class="w-full pl-8 pr-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-xs text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500" />
+          </div>
+
+          <div class="flex items-center gap-2 w-full sm:w-auto">
+            <select onchange="window.app.handleMateriFilterMapel(this.value)" class="flex-1 sm:w-44 px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-xs font-bold text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500">
+              <option value="ALL">Semua Mata Pelajaran</option>
+              ${mapelOptions}
+            </select>
+            <select onchange="window.app.handleMateriFilterJenis(this.value)" class="flex-1 sm:w-36 px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-xs font-bold text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500">
+              <option value="ALL" ${filterJenis === 'ALL' ? 'selected' : ''}>Semua Format</option>
+              <option value="VIDEO" ${filterJenis === 'VIDEO' ? 'selected' : ''}>Video</option>
+              <option value="PDF" ${filterJenis === 'PDF' ? 'selected' : ''}>Dokumen PDF</option>
+              <option value="GAMBAR" ${filterJenis === 'GAMBAR' ? 'selected' : ''}>Infografis</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Grid Kartu Materi Siswa -->
+        ${siswaMateri.length === 0 ? `
+          <div class="bg-white dark:bg-[#172033] rounded-3xl p-10 border border-slate-100 dark:border-[#293548] shadow-sm text-center space-y-3">
+            <div class="w-16 h-16 rounded-3xl bg-blue-50 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400 mx-auto flex items-center justify-center text-3xl shadow-sm">
+              <i class="ph-bold ph-book-open"></i>
+            </div>
+            <h3 class="text-base font-black text-slate-900 dark:text-white">Belum Ada Materi Tersedia</h3>
+            <p class="text-xs text-slate-400 dark:text-slate-500 max-w-sm mx-auto">
+              Guru Anda belum mempublikasikan materi untuk kelas ini, atau tidak ada materi yang cocok dengan pencarian Anda.
+            </p>
+          </div>
+        ` : `
+          <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-5">
+            ${siswaMateri.map(m => {
+              const mapelObj = state.mapel_jadwal.find(j => j.id === m.mapel_id);
+              const mapelNama = mapelObj ? mapelObj.nama_mapel : (m.mapel_id || 'Materi Umum');
+              const ytId = m.jenis === 'VIDEO' ? getYouTubeVideoId(m.url) : '';
+
+              let bannerHtml = '';
+              let badgeTypeHtml = '';
+
+              if (m.jenis === 'VIDEO') {
+                badgeTypeHtml = `<span class="px-2.5 py-1 rounded-full bg-rose-600 text-white text-[10px] font-black flex items-center gap-1 shadow-sm"><i class="ph-fill ph-youtube-logo text-xs"></i> Video</span>`;
+                bannerHtml = `
+                  <div class="relative w-full h-36 bg-slate-900 flex items-center justify-center overflow-hidden group-hover:scale-[1.02] transition duration-300">
+                    ${ytId ? `<img src="https://img.youtube.com/vi/${ytId}/mqdefault.jpg" alt="Video Thumbnail" class="w-full h-full object-cover opacity-85" />` : ''}
+                    <div class="absolute inset-0 bg-black/30 backdrop-blur-[1px]"></div>
+                    <div class="absolute w-12 h-12 rounded-full bg-rose-600 text-white flex items-center justify-center text-xl shadow-lg shadow-rose-600/40 transform group-hover:scale-110 transition">
+                      <i class="ph-fill ph-play ml-0.5"></i>
+                    </div>
+                  </div>
+                `;
+              } else if (m.jenis === 'PDF') {
+                badgeTypeHtml = `<span class="px-2.5 py-1 rounded-full bg-red-600 text-white text-[10px] font-black flex items-center gap-1 shadow-sm"><i class="ph-fill ph-file-pdf text-xs"></i> PDF</span>`;
+                bannerHtml = `
+                  <div class="relative w-full h-36 bg-gradient-to-br from-red-600 via-rose-600 to-amber-600 flex items-center justify-center overflow-hidden">
+                    <div class="flex flex-col items-center justify-center text-white space-y-1">
+                      <i class="ph-fill ph-file-pdf text-4xl drop-shadow-md"></i>
+                      <span class="text-[11px] font-black uppercase tracking-wider">DOKUMEN BELAJAR</span>
+                    </div>
+                  </div>
+                `;
+              } else {
+                badgeTypeHtml = `<span class="px-2.5 py-1 rounded-full bg-emerald-600 text-white text-[10px] font-black flex items-center gap-1 shadow-sm"><i class="ph-fill ph-image text-xs"></i> Gambar</span>`;
+                bannerHtml = `
+                  <div class="relative w-full h-36 bg-slate-100 dark:bg-slate-800 flex items-center justify-center overflow-hidden">
+                    ${m.url ? `<img src="${m.url}" alt="${m.judul}" class="w-full h-full object-cover opacity-90 group-hover:scale-105 transition duration-300" />` : `
+                      <i class="ph-fill ph-image text-4xl text-slate-300"></i>
+                    `}
+                  </div>
+                `;
+              }
+
+              return `
+                <div class="bg-white dark:bg-[#172033] rounded-3xl border border-slate-100 dark:border-[#293548] shadow-sm hover:shadow-md transition-all overflow-hidden flex flex-col justify-between group">
+                  <div>
+                    <!-- Visual Header Thumbnail -->
+                    <div class="relative">
+                      ${bannerHtml}
+                      <div class="absolute top-3 left-3">
+                        ${badgeTypeHtml}
+                      </div>
+                      <div class="absolute top-3 right-3">
+                        <span class="px-2.5 py-1 rounded-full bg-slate-900/70 backdrop-blur text-white text-[10px] font-bold">
+                          ${mapelNama}
+                        </span>
+                      </div>
+                    </div>
+
+                    <!-- Detail Konten -->
+                    <div class="p-4 sm:p-5 space-y-2">
+                      <h3 class="text-sm sm:text-base font-black text-slate-900 dark:text-white leading-snug line-clamp-2 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition">
+                        ${m.judul}
+                      </h3>
+                      <p class="text-xs text-slate-500 dark:text-slate-400 line-clamp-2 leading-relaxed">
+                        ${m.deskripsi || 'Klik tombol di bawah untuk mempelajari materi ini selengkapnya.'}
+                      </p>
+                    </div>
+                  </div>
+
+                  <!-- Footer Kartu & Tombol Aksi -->
+                  <div class="p-4 sm:p-5 pt-0 border-t border-slate-100 dark:border-slate-800/80 mt-2 flex items-center justify-between">
+                    <span class="text-[10px] font-bold text-slate-400 dark:text-slate-500 flex items-center gap-1">
+                      <i class="ph-bold ph-user"></i>
+                      <span>${m.created_by || 'Guru'}</span>
+                    </span>
+                    <button type="button" onclick="window.app.previewMateriModal('${m.id}')" class="px-3.5 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-700 active:scale-95 text-white text-xs font-black flex items-center gap-1.5 shadow-sm shadow-blue-500/20 transition">
+                      <span>Buka Materi</span>
+                      <i class="ph-bold ph-arrow-right text-xs"></i>
+                    </button>
+                  </div>
+                </div>
+              `;
+            }).join('')}
+          </div>
+        `}
+      </div>
+    `;
+  }
+
+  // --- 3. PRATINJAU MATERI AREA LEBAR (PRIORITAS TINGGI: max-w-5xl / max-w-6xl) ---
+  window._previewImageZoom = 1;
+
+  function zoomPreviewImage(delta) {
+    let z = (window._previewImageZoom || 1) + delta;
+    if (delta === 0) z = 1;
+    if (z < 0.5) z = 0.5;
+    if (z > 3.0) z = 3.0;
+    window._previewImageZoom = z;
+    const img = document.getElementById('preview-materi-img');
+    const label = document.getElementById('preview-zoom-label');
+    if (img) img.style.transform = `scale(${z})`;
+    if (label) label.textContent = `${Math.round(z * 100)}%`;
+  }
+
+  function previewMateriModal(id) {
+    const m = (state.materi || []).find(it => it.id === id);
+    if (!m) {
+      showToast('Data materi tidak ditemukan!', 'error');
+      return;
+    }
+
+    const mapelObj = state.mapel_jadwal.find(j => j.id === m.mapel_id);
+    const mapelNama = mapelObj ? mapelObj.nama_mapel : (m.mapel_id || 'Mata Pelajaran Umum');
+    const kelasObj = state.kelas.find(k => k.id === m.kelas_id);
+    const kelasNama = m.kelas_id === 'ALL' ? 'Semua Kelas' : (kelasObj ? kelasObj.nama_kelas : m.kelas_id);
+    const dateStr = m.created_at ? new Date(m.created_at).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' }) : '';
+
+    let contentHtml = '';
+
+    if (m.jenis === 'VIDEO') {
+      const ytEmbedUrl = getYouTubeEmbedUrl(m.url);
+      const ytId = getYouTubeVideoId(m.url);
+      const directUrl = ytId ? `https://www.youtube.com/watch?v=${ytId}` : m.url;
+
+      contentHtml = `
+        <div class="space-y-4">
+          <!-- 16:9 Responsive YouTube Player -->
+          <div class="relative w-full aspect-video rounded-2xl overflow-hidden shadow-2xl bg-black border border-slate-800">
+            ${ytEmbedUrl ? `
+              <iframe 
+                src="${ytEmbedUrl}" 
+                title="${m.judul}"
+                class="w-full h-full border-0" 
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" 
+                allowfullscreen>
+              </iframe>
+            ` : `
+              <div class="w-full h-full flex flex-col items-center justify-center p-6 text-center text-white space-y-2">
+                <i class="ph-bold ph-warning-circle text-4xl text-amber-400"></i>
+                <p class="font-bold text-sm">URL Video YouTube Tidak Valid</p>
+                <p class="text-xs text-slate-400">Pastikan URL berformat youtube.com/watch?v=... atau youtu.be/...</p>
+              </div>
+            `}
+          </div>
+
+          <!-- Quick Link ke YouTube -->
+          <div class="flex items-center justify-between p-3 rounded-2xl bg-rose-50 dark:bg-rose-950/30 border border-rose-100 dark:border-rose-900/40 text-xs">
+            <span class="font-bold text-rose-700 dark:text-rose-400 flex items-center gap-1.5">
+              <i class="ph-fill ph-youtube-logo text-base"></i> Video Pembelajaran YouTube Interaktif
+            </span>
+            <a href="${directUrl}" target="_blank" rel="noopener noreferrer" class="px-3 py-1.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-black flex items-center gap-1 shadow-sm transition">
+              <span>Buka di YouTube</span>
+              <i class="ph-bold ph-arrow-square-out text-xs"></i>
+            </a>
+          </div>
+        </div>
+      `;
+    } else if (m.jenis === 'PDF') {
+      const pdfPreviewUrl = getPdfPreviewUrl(m.url);
+
+      contentHtml = `
+        <div class="space-y-4">
+          <!-- Floating Action Bar PDF -->
+          <div class="flex flex-wrap items-center justify-between gap-2 p-3 rounded-2xl bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700">
+            <div class="flex items-center gap-2">
+              <span class="w-8 h-8 rounded-xl bg-red-600 text-white flex items-center justify-center text-lg shadow-sm">
+                <i class="ph-fill ph-file-pdf"></i>
+              </span>
+              <div>
+                <span class="text-xs font-black text-slate-900 dark:text-white block">Dokumen PDF Terbuka</span>
+                <span class="text-[10px] text-slate-500 dark:text-slate-400">Gunakan scrollbar di dalam reader untuk membaca seluruh halaman</span>
+              </div>
+            </div>
+            <div class="flex items-center gap-2">
+              <a href="${m.url}" target="_blank" rel="noopener noreferrer" class="px-3 py-1.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:text-blue-600 text-xs font-bold flex items-center gap-1 shadow-sm transition">
+                <i class="ph-bold ph-arrow-square-out text-sm"></i>
+                <span>Tab Baru</span>
+              </a>
+              <a href="${m.url}" download="${m.judul}.pdf" target="_blank" class="px-3.5 py-1.5 rounded-xl bg-red-600 hover:bg-red-700 text-white text-xs font-black flex items-center gap-1 shadow-sm transition">
+                <i class="ph-bold ph-download-simple text-sm"></i>
+                <span>Unduh PDF</span>
+              </a>
+            </div>
+          </div>
+
+          <!-- Embedded High-Height PDF Viewer -->
+          <div class="w-full h-[580px] sm:h-[650px] rounded-2xl overflow-hidden border border-slate-200 dark:border-slate-700 shadow-inner bg-slate-900/5">
+            <iframe 
+              src="${pdfPreviewUrl}" 
+              title="${m.judul}"
+              class="w-full h-full border-0"
+              allow="fullscreen">
+            </iframe>
+          </div>
+        </div>
+      `;
+    } else {
+      // GAMBAR DENGAN KONTROL ZOOM
+      window._previewImageZoom = 1;
+
+      contentHtml = `
+        <div class="space-y-4">
+          <!-- Toolbar Kontrol Zoom Gambar -->
+          <div class="flex items-center justify-between p-2.5 rounded-2xl bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700">
+            <span class="text-xs font-bold text-slate-700 dark:text-slate-300 flex items-center gap-1.5 pl-2">
+              <i class="ph-bold ph-magnifying-glass-plus text-base text-blue-600"></i> Kontrol Zoom Gambar:
+            </span>
+            <div class="flex items-center gap-1.5">
+              <button type="button" onclick="window.app.zoomPreviewImage(-0.25)" class="w-8 h-8 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-50 flex items-center justify-center font-black transition" title="Perkecil (-)">
+                <i class="ph-bold ph-minus text-xs"></i>
+              </button>
+              <span id="preview-zoom-label" class="px-2.5 text-xs font-mono font-bold text-slate-800 dark:text-slate-200 min-w-[50px] text-center">100%</span>
+              <button type="button" onclick="window.app.zoomPreviewImage(0.25)" class="w-8 h-8 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-50 flex items-center justify-center font-black transition" title="Perbesar (+)">
+                <i class="ph-bold ph-plus text-xs"></i>
+              </button>
+              <button type="button" onclick="window.app.zoomPreviewImage(0)" class="px-2.5 py-1.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-50 text-[11px] font-bold transition">
+                Reset
+              </button>
+              <a href="${m.url}" target="_blank" class="px-2.5 py-1.5 rounded-xl bg-blue-600 text-white text-[11px] font-bold flex items-center gap-1 shadow-sm">
+                <i class="ph-bold ph-arrows-out"></i> Fullscreen
+              </a>
+            </div>
+          </div>
+
+          <!-- Viewport Gambar Proporsional -->
+          <div class="w-full max-h-[68vh] overflow-auto rounded-2xl bg-slate-950/90 dark:bg-slate-950 p-4 flex items-center justify-center border border-slate-200 dark:border-slate-800">
+            <img 
+              id="preview-materi-img" 
+              src="${m.url}" 
+              alt="${m.judul}" 
+              style="transform: scale(1); transform-origin: center center; transition: transform 0.2s ease;" 
+              class="max-w-full max-h-[62vh] object-contain rounded-xl shadow-2xl" 
+            />
+          </div>
+        </div>
+      `;
+    }
+
+    const modalBody = `
+      <div class="space-y-6 text-slate-800 dark:text-slate-200">
+        <!-- Header Materi Informasi -->
+        <div class="border-b border-slate-100 dark:border-slate-800 pb-4">
+          <div class="flex flex-wrap items-center gap-2 mb-2">
+            <span class="px-3 py-1 rounded-full bg-blue-50 dark:bg-blue-950/50 text-blue-600 dark:text-blue-400 font-extrabold text-[11px] border border-blue-100 dark:border-blue-900/40">
+              ${mapelNama}
+            </span>
+            <span class="px-3 py-1 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 font-bold text-[11px]">
+              Target: ${kelasNama}
+            </span>
+            <span class="text-xs text-slate-400 dark:text-slate-500 font-medium ml-auto flex items-center gap-1">
+              <i class="ph-bold ph-calendar"></i> ${dateStr}
+            </span>
+          </div>
+          <h2 class="text-lg sm:text-2xl font-black text-slate-900 dark:text-white leading-snug">
+            ${m.judul}
+          </h2>
+          <p class="text-xs text-slate-500 dark:text-slate-400 mt-1 flex items-center gap-1.5">
+            <i class="ph-bold ph-user-circle text-sm text-blue-500"></i> Pengampu: <strong class="text-slate-700 dark:text-slate-300">${m.created_by || 'Admin Sekolah'}</strong>
+          </p>
+        </div>
+
+        <!-- Render Viewer Konten Utama -->
+        ${contentHtml}
+
+        <!-- Deskripsi Materi Lengkap -->
+        <div class="p-4 sm:p-5 rounded-2xl bg-slate-50/80 dark:bg-slate-800/40 border border-slate-100 dark:border-slate-800 space-y-2">
+          <h4 class="text-xs font-black text-slate-900 dark:text-white uppercase tracking-wider flex items-center gap-1.5">
+            <i class="ph-bold ph-info text-blue-600"></i> Deskripsi & Petunjuk Pembelajaran
+          </h4>
+          <p class="text-xs text-slate-600 dark:text-slate-300 leading-relaxed font-medium whitespace-pre-line">
+            ${m.deskripsi || 'Tidak ada catatan deskripsi tambahan untuk materi ini.'}
+          </p>
+        </div>
+
+        <div class="flex justify-end pt-2">
+          <button type="button" onclick="window.app.closeModal()" class="px-5 py-2.5 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 text-xs font-black transition">
+            Tutup Pratinjau
+          </button>
+        </div>
+      </div>
+    `;
+
+    // Gunakan Lebar Maksimal (max-w-6xl) agar materi sangat nyaman dipelajari
+    openModal('Pratinjau Materi Pembelajaran', modalBody, 'max-w-5xl lg:max-w-6xl');
+  }
+
+  // --- 4. FORM TAMBAH & EDIT MATERI ADMIN ---
+  window._tempMateriFileBase64 = '';
+  window._tempMateriModalJenis = 'VIDEO';
+
+  function setMateriModalJenis(jenis) {
+    window._tempMateriModalJenis = jenis;
+    const tabVideo = document.getElementById('tab-materi-video');
+    const tabPdf = document.getElementById('tab-materi-pdf');
+    const tabGambar = document.getElementById('tab-materi-gambar');
+
+    const inputVideo = document.getElementById('container-input-video');
+    const inputPdf = document.getElementById('container-input-pdf');
+    const inputGambar = document.getElementById('container-input-gambar');
+
+    const activeClass = 'bg-blue-600 text-white border-blue-600 shadow-sm';
+    const inactiveClass = 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:bg-slate-50';
+
+    if (tabVideo) tabVideo.className = `py-2.5 px-3 rounded-xl border font-black text-xs flex items-center justify-center gap-2 transition ${jenis === 'VIDEO' ? activeClass : inactiveClass}`;
+    if (tabPdf) tabPdf.className = `py-2.5 px-3 rounded-xl border font-black text-xs flex items-center justify-center gap-2 transition ${jenis === 'PDF' ? activeClass : inactiveClass}`;
+    if (tabGambar) tabGambar.className = `py-2.5 px-3 rounded-xl border font-black text-xs flex items-center justify-center gap-2 transition ${jenis === 'GAMBAR' ? activeClass : inactiveClass}`;
+
+    if (inputVideo) inputVideo.classList.toggle('hidden', jenis !== 'VIDEO');
+    if (inputPdf) inputPdf.classList.toggle('hidden', jenis !== 'PDF');
+    if (inputGambar) inputGambar.classList.toggle('hidden', jenis !== 'GAMBAR');
+  }
+
+  function handleMateriFileUpload(event, type) {
+    const file = event.target.files && event.target.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = function(e) {
+      window._tempMateriFileBase64 = e.target.result;
+      const metaEl = document.getElementById(type === 'PDF' ? 'materi-pdf-file-meta' : 'materi-gambar-file-meta');
+      if (metaEl) {
+        metaEl.textContent = `File terpilih: ${file.name} (${(file.size / 1024).toFixed(0)} KB)`;
+        metaEl.classList.remove('hidden');
+      }
+      showToast(`File ${file.name} berhasil dimuat dari perangkat!`);
+    };
+    reader.readAsDataURL(file);
+  }
+
+  function showMateriModal(editId = null) {
+    const isEdit = !!editId;
+    const item = isEdit ? (state.materi || []).find(m => m.id === editId) : {
+      id: '',
+      judul: '',
+      deskripsi: '',
+      mapel_id: state.mapel_jadwal[0]?.id || '',
+      kelas_id: 'ALL',
+      jenis: 'VIDEO',
+      url: '',
+      status: 'PUBLISHED'
+    };
+
+    if (isEdit && !item) {
+      showToast('Data materi tidak ditemukan!', 'error');
+      return;
+    }
+
+    window._tempMateriFileBase64 = '';
+    window._tempMateriModalJenis = item.jenis || 'VIDEO';
+
+    const mapelOptions = state.mapel_jadwal.map(j =>
+      `<option value="${j.id}" ${item.mapel_id === j.id ? 'selected' : ''}>${j.nama_mapel} (${j.kode_mapel || 'Mapel'})</option>`
+    ).join('');
+
+    const kelasOptions = [
+      `<option value="ALL" ${item.kelas_id === 'ALL' ? 'selected' : ''}>Semua Kelas (Umum)</option>`,
+      ...state.kelas.map(k => `<option value="${k.id}" ${item.kelas_id === k.id ? 'selected' : ''}>${k.nama_kelas}</option>`)
+    ].join('');
+
+    const modalBody = `
+      <form onsubmit="window.app.saveMateri(event, '${editId || ''}')" class="space-y-4 text-xs text-slate-800 dark:text-slate-200">
+        <!-- Judul Materi -->
+        <div>
+          <label class="block font-bold text-slate-700 dark:text-slate-300 mb-1">Judul Materi Pembelajaran <span class="text-rose-500">*</span></label>
+          <input type="text" id="f-mat-judul" required value="${item.judul || ''}" placeholder="Contoh: Konsep Turunan Fungsi Aljabar dan Grafiknya" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 font-extrabold focus:outline-none focus:ring-2 focus:ring-blue-500 text-xs" />
+        </div>
+
+        <!-- Deskripsi Materi -->
+        <div>
+          <label class="block font-bold text-slate-700 dark:text-slate-300 mb-1">Deskripsi & Catatan Pembelajaran</label>
+          <textarea id="f-mat-deskripsi" rows="3" placeholder="Tuliskan ringkasan materi atau petunjuk belajar bagi siswa..." class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 leading-relaxed font-medium focus:outline-none focus:ring-2 focus:ring-blue-500 text-xs">${item.deskripsi || ''}</textarea>
+        </div>
+
+        <!-- Mapel & Kelas Target -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div>
+            <label class="block font-bold text-slate-700 dark:text-slate-300 mb-1">Mata Pelajaran <span class="text-rose-500">*</span></label>
+            <select id="f-mat-mapel" required class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 font-bold focus:outline-none focus:ring-2 focus:ring-blue-500 text-xs">
+              ${mapelOptions || '<option value="">Belum ada mapel/jadwal</option>'}
+            </select>
+          </div>
+          <div>
+            <label class="block font-bold text-slate-700 dark:text-slate-300 mb-1">Kelas Sasaran <span class="text-rose-500">*</span></label>
+            <select id="f-mat-kelas" required class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 font-bold focus:outline-none focus:ring-2 focus:ring-blue-500 text-xs">
+              ${kelasOptions}
+            </select>
+          </div>
+        </div>
+
+        <!-- Pemilih Format / Jenis Materi (Interaktif) -->
+        <div>
+          <label class="block font-bold text-slate-700 dark:text-slate-300 mb-1.5">Jenis Format Materi <span class="text-rose-500">*</span></label>
+          <div class="grid grid-cols-3 gap-2">
+            <button type="button" id="tab-materi-video" onclick="window.app.setMateriModalJenis('VIDEO')" class="py-2.5 px-2 sm:px-3 rounded-xl border font-black text-xs flex items-center justify-center gap-1.5 transition ${item.jenis === 'VIDEO' ? 'bg-blue-600 text-white border-blue-600 shadow-sm' : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700'}">
+              <i class="ph-bold ph-youtube-logo text-base"></i> Video
+            </button>
+            <button type="button" id="tab-materi-pdf" onclick="window.app.setMateriModalJenis('PDF')" class="py-2.5 px-2 sm:px-3 rounded-xl border font-black text-xs flex items-center justify-center gap-1.5 transition ${item.jenis === 'PDF' ? 'bg-blue-600 text-white border-blue-600 shadow-sm' : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700'}">
+              <i class="ph-bold ph-file-pdf text-base"></i> Dokumen PDF
+            </button>
+            <button type="button" id="tab-materi-gambar" onclick="window.app.setMateriModalJenis('GAMBAR')" class="py-2.5 px-2 sm:px-3 rounded-xl border font-black text-xs flex items-center justify-center gap-1.5 transition ${item.jenis === 'GAMBAR' ? 'bg-blue-600 text-white border-blue-600 shadow-sm' : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700'}">
+              <i class="ph-bold ph-image text-base"></i> Gambar / Foto
+            </button>
+          </div>
+        </div>
+
+        <!-- 1. Input Khusus Video YouTube -->
+        <div id="container-input-video" class="${item.jenis === 'VIDEO' ? '' : 'hidden'} p-4 rounded-2xl bg-rose-50/60 dark:bg-rose-950/20 border border-rose-200 dark:border-rose-900/40 space-y-2">
+          <label class="block font-bold text-slate-800 dark:text-slate-200">URL Video YouTube <span class="text-rose-500">*</span></label>
+          <input type="url" id="f-mat-url-video" value="${item.jenis === 'VIDEO' ? (item.url || '') : ''}" placeholder="https://www.youtube.com/watch?v=... atau https://youtu.be/..." class="w-full px-3.5 py-2.5 rounded-xl border border-rose-200 dark:border-rose-900/40 bg-white dark:bg-slate-900 text-xs font-mono focus:outline-none focus:ring-2 focus:ring-rose-500" />
+          <p class="text-[10px] text-slate-500 dark:text-slate-400">
+            Mendukung tautan standar YouTube, YouTube Shorts, serta link pendek youtu.be.
+          </p>
+        </div>
+
+        <!-- 2. Input Khusus Dokumen PDF -->
+        <div id="container-input-pdf" class="${item.jenis === 'PDF' ? '' : 'hidden'} p-4 rounded-2xl bg-red-50/60 dark:bg-red-950/20 border border-red-200 dark:border-red-900/40 space-y-3">
+          <div>
+            <label class="block font-bold text-slate-800 dark:text-slate-200 mb-1">URL Dokumen PDF / Google Drive Preview Link</label>
+            <input type="url" id="f-mat-url-pdf" value="${item.jenis === 'PDF' ? (item.url || '') : ''}" placeholder="https://drive.google.com/file/d/... atau https://sekolah.id/modul.pdf" class="w-full px-3.5 py-2.5 rounded-xl border border-red-200 dark:border-red-900/40 bg-white dark:bg-slate-900 text-xs font-mono focus:outline-none focus:ring-2 focus:ring-red-500" />
+            <p class="text-[10px] text-slate-500 dark:text-slate-400 mt-1">
+              Jika menggunakan Google Drive, pastikan tautan disetel <em>"Siapa saja yang memiliki link dapat melihat"</em>.
+            </p>
+          </div>
+          <div class="pt-2 border-t border-red-200/60 dark:border-red-900/40 flex items-center justify-between">
+            <span class="text-[11px] font-bold text-slate-700 dark:text-slate-300">Atau pilih file PDF dari perangkat:</span>
+            <label for="f-mat-file-pdf" class="px-3 py-1.5 rounded-xl bg-white dark:bg-slate-900 border border-red-300 dark:border-red-800 text-red-600 dark:text-red-400 text-xs font-bold cursor-pointer hover:bg-red-50 transition">
+              <i class="ph-bold ph-upload-simple"></i> Pilih PDF
+            </label>
+            <input type="file" id="f-mat-file-pdf" accept="application/pdf" onchange="window.app.handleMateriFileUpload(event, 'PDF')" class="hidden" />
+          </div>
+          <p id="materi-pdf-file-meta" class="text-[10px] font-bold text-emerald-600 hidden"></p>
+        </div>
+
+        <!-- 3. Input Khusus Gambar / Foto -->
+        <div id="container-input-gambar" class="${item.jenis === 'GAMBAR' ? '' : 'hidden'} p-4 rounded-2xl bg-emerald-50/60 dark:bg-emerald-950/20 border border-emerald-200 dark:border-emerald-900/40 space-y-3">
+          <div>
+            <label class="block font-bold text-slate-800 dark:text-slate-200 mb-1">URL Gambar / Infografis</label>
+            <input type="url" id="f-mat-url-gambar" value="${item.jenis === 'GAMBAR' ? (item.url || '') : ''}" placeholder="https://domain.com/gambar-rumus.jpg" class="w-full px-3.5 py-2.5 rounded-xl border border-emerald-200 dark:border-emerald-900/40 bg-white dark:bg-slate-900 text-xs font-mono focus:outline-none focus:ring-2 focus:ring-emerald-500" />
+          </div>
+          <div class="pt-2 border-t border-emerald-200/60 dark:border-emerald-900/40 flex items-center justify-between">
+            <span class="text-[11px] font-bold text-slate-700 dark:text-slate-300">Atau upload gambar dari perangkat:</span>
+            <label for="f-mat-file-gambar" class="px-3 py-1.5 rounded-xl bg-white dark:bg-slate-900 border border-emerald-300 dark:border-emerald-800 text-emerald-600 dark:text-emerald-400 text-xs font-bold cursor-pointer hover:bg-emerald-50 transition">
+              <i class="ph-bold ph-upload-simple"></i> Pilih Foto
+            </label>
+            <input type="file" id="f-mat-file-gambar" accept="image/jpeg,image/png,image/webp" onchange="window.app.handleMateriFileUpload(event, 'GAMBAR')" class="hidden" />
+          </div>
+          <p id="materi-gambar-file-meta" class="text-[10px] font-bold text-emerald-600 hidden"></p>
+        </div>
+
+        <!-- Status Publikasi -->
+        <div>
+          <label class="block font-bold text-slate-700 dark:text-slate-300 mb-1.5">Status Publikasi</label>
+          <div class="grid grid-cols-2 gap-2">
+            <label class="p-3 rounded-xl border border-slate-200 dark:border-slate-700 flex items-center gap-2 cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800 transition">
+              <input type="radio" name="materi_status_radio" value="PUBLISHED" ${item.status !== 'DRAFT' ? 'checked' : ''} class="w-4 h-4 text-emerald-600 focus:ring-emerald-500" />
+              <div>
+                <span class="font-extrabold text-slate-900 dark:text-white block">Dipublikasikan</span>
+                <span class="text-[10px] text-slate-400">Siswa dapat langsung mengakses</span>
+              </div>
+            </label>
+            <label class="p-3 rounded-xl border border-slate-200 dark:border-slate-700 flex items-center gap-2 cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800 transition">
+              <input type="radio" name="materi_status_radio" value="DRAFT" ${item.status === 'DRAFT' ? 'checked' : ''} class="w-4 h-4 text-slate-600 focus:ring-slate-500" />
+              <div>
+                <span class="font-extrabold text-slate-900 dark:text-white block">Draf (Disembunyikan)</span>
+                <span class="text-[10px] text-slate-400">Hanya dapat dilihat guru/admin</span>
+              </div>
+            </label>
+          </div>
+        </div>
+
+        <!-- Tombol Aksi Form -->
+        <div class="flex items-center justify-end gap-2 pt-3 border-t border-slate-100 dark:border-slate-800">
+          <button type="button" onclick="window.app.closeModal()" class="px-4 py-2.5 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 text-slate-700 dark:text-slate-300 font-bold transition">
+            Batal
+          </button>
+          <button type="submit" id="btn-submit-materi" class="px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 active:scale-95 text-white font-black flex items-center gap-2 shadow-md shadow-blue-500/20 transition">
+            <i class="ph-bold ph-floppy-disk text-base"></i>
+            <span>${isEdit ? 'Perbarui Materi' : 'Simpan Materi'}</span>
+          </button>
+        </div>
+      </form>
+    `;
+
+    openModal(isEdit ? 'Edit Materi Pembelajaran' : 'Tambah Materi Pembelajaran Baru', modalBody, 'sm:max-w-2xl');
+  }
+
+  // --- 5. LOGIKA SIMPAN & HAPUS MATERI (GAS + FIRESTORE HYBRID) ---
+  async function saveMateri(e, editId) {
+    e.preventDefault();
+    const judul = document.getElementById('f-mat-judul').value.trim();
+    const deskripsi = document.getElementById('f-mat-deskripsi').value.trim();
+    const mapelId = document.getElementById('f-mat-mapel').value;
+    const kelasId = document.getElementById('f-mat-kelas').value;
+    const jenis = window._tempMateriModalJenis || 'VIDEO';
+
+    let url = '';
+    if (jenis === 'VIDEO') {
+      url = document.getElementById('f-mat-url-video')?.value.trim() || '';
+      if (!url) {
+        showToast('Masukkan URL Video YouTube!', 'warning');
+        return;
+      }
+      const vid = getYouTubeVideoId(url);
+      if (!vid) {
+        showToast('URL Video YouTube tidak valid! Gunakan format youtube.com atau youtu.be', 'warning');
+        return;
+      }
+    } else if (jenis === 'PDF') {
+      url = window._tempMateriFileBase64 || document.getElementById('f-mat-url-pdf')?.value.trim() || '';
+      if (!url) {
+        showToast('Masukkan URL PDF atau pilih file PDF dari perangkat!', 'warning');
+        return;
+      }
+    } else {
+      url = window._tempMateriFileBase64 || document.getElementById('f-mat-url-gambar')?.value.trim() || '';
+      if (!url) {
+        showToast('Masukkan URL Gambar atau upload foto dari perangkat!', 'warning');
+        return;
+      }
+    }
+
+    const statusRadio = document.querySelector('input[name="materi_status_radio"]:checked');
+    const status = statusRadio ? statusRadio.value : 'PUBLISHED';
+
+    const creatorName = state.user?.nama || 'Admin Guru';
+    const nowIso = new Date().toISOString();
+
+    const newMateri = {
+      id: editId || ('mat-' + Date.now().toString(36) + '-' + Math.random().toString(36).substr(2, 4)),
+      judul: judul,
+      deskripsi: deskripsi,
+      mapel_id: mapelId,
+      kelas_id: kelasId,
+      jenis: jenis,
+      url: url,
+      status: status,
+      created_by: creatorName,
+      created_at: editId ? (state.materi.find(m => m.id === editId)?.created_at || nowIso) : nowIso,
+      updated_at: nowIso
+    };
+
+    // Optimistic Update Lokal
+    if (!state.materi) state.materi = [];
+    const existingIdx = state.materi.findIndex(m => m.id === newMateri.id);
+    if (existingIdx >= 0) {
+      state.materi[existingIdx] = newMateri;
+    } else {
+      state.materi.unshift(newMateri);
+    }
+
+    saveLocalDataCache(state);
+    closeModal();
+    renderAll();
+    showToast(editId ? 'Materi berhasil diperbarui!' : 'Materi baru berhasil ditambahkan!');
+
+    // Simpan ke Google Apps Script Spreadsheet di latar belakang
+    if (IS_CONNECTED_GAS) {
+      callGAS('saveMateri', { materi: newMateri }).catch(err => {
+        console.warn('Gagal menyimpan materi ke Google Apps Script:', err);
+      });
+    }
+
+    // Simpan ke Cloud Firestore di latar belakang
+    if (window.FirebaseAdapter && window.FirebaseAdapter.saveMaterial) {
+      window.FirebaseAdapter.saveMaterial(newMateri).catch(err => {
+        console.warn('Gagal sinkron materi ke Firestore:', err);
+      });
+    }
+  }
+
+  async function deleteMateri(id) {
+    const item = (state.materi || []).find(m => m.id === id);
+    const judul = item ? item.judul : 'materi ini';
+    if (!confirm(`Apakah Anda yakin ingin menghapus "${judul}"? Tindakan ini tidak dapat dibatalkan.`)) {
+      return;
+    }
+
+    state.materi = (state.materi || []).filter(m => m.id !== id);
+    saveLocalDataCache(state);
+    renderAll();
+    showToast('Materi berhasil dihapus');
+
+    if (IS_CONNECTED_GAS) {
+      callGAS('deleteMateri', { id }).catch(err => {
+        console.warn('Gagal menghapus materi dari GAS:', err);
+      });
+    }
+
+    if (window.FirebaseAdapter && window.FirebaseAdapter.deleteMaterial) {
+      window.FirebaseAdapter.deleteMaterial(id).catch(err => {
+        console.warn('Gagal menghapus materi dari Firestore:', err);
+      });
+    }
   }
 
   // ============================================================================
@@ -6560,6 +7684,20 @@
     showPenggunaModal,
     savePengguna,
     deletePengguna,
+    renderAdminMateriModule,
+    renderSiswaMateriModule,
+    showMateriModal,
+    saveMateri,
+    deleteMateri,
+    previewMateriModal,
+    handleMateriSearch,
+    handleMateriFilterMapel,
+    handleMateriFilterKelas,
+    handleMateriFilterJenis,
+    handleMateriFilterStatus,
+    setMateriModalJenis,
+    handleMateriFileUpload,
+    zoomPreviewImage,
     handleGlobalSearch,
     toggleFullscreen,
     toggleTheme,

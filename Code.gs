@@ -29,7 +29,8 @@ const SHEETS = {
   SOAL: 'soal',
   REKAP: 'rekap_nilai',
   PENGATURAN: 'pengaturan',
-  PENGGUNA: 'pengguna'
+  PENGGUNA: 'pengguna',
+  MATERI: 'materi'
 };
 
 /**
@@ -67,6 +68,11 @@ function doGet(e) {
 
     if (action === 'ping') {
       return jsonResponse({ status: 'success', message: 'Backend Google Apps Script EduCBT Aktif!', timestamp: new Date().toISOString() });
+    }
+
+    if (action === 'setupMateri') {
+      const res = setupMateriSheet();
+      return jsonResponse({ status: 'success', message: res });
     }
 
     return jsonResponse({ status: 'error', message: 'Action GET tidak dikenali: ' + action });
@@ -779,6 +785,36 @@ function doPost(e) {
         return jsonResponse({ status: 'success', id: payload.id });
       }
 
+      // 10. CRUD KELOLA MATERI PEMBELAJARAN
+      case 'saveMateri': {
+        const mat = payload.materi || payload;
+        const sheet = ss.getSheetByName(SHEETS.MATERI) || getOrCreateMateriSheet(ss);
+        const id = mat.id || 'mat-' + Utilities.getUuid();
+        const row = [
+          id,
+          mat.judul || 'Materi Pembelajaran',
+          mat.deskripsi || '',
+          mat.mapel_id || mat.mapel || 'Umum',
+          mat.kelas_id || 'ALL',
+          mat.jenis || 'VIDEO', // VIDEO | PDF | GAMBAR
+          mat.url || mat.content_url || '',
+          mat.status || 'PUBLISHED', // PUBLISHED | DRAFT
+          mat.created_by || 'Admin',
+          mat.created_at || new Date().toISOString(),
+          new Date().toISOString()
+        ];
+        upsertRowById(sheet, id, row);
+        invalidateDataCache();
+        return jsonResponse({ status: 'success', id: id });
+      }
+
+      case 'deleteMateri': {
+        const sheet = ss.getSheetByName(SHEETS.MATERI) || getOrCreateMateriSheet(ss);
+        deleteRowById(sheet, payload.id);
+        invalidateDataCache();
+        return jsonResponse({ status: 'success', id: payload.id });
+      }
+
       default:
         return jsonResponse({ status: 'error', message: 'Action POST tidak dikenal: ' + action });
     }
@@ -808,6 +844,8 @@ function fetchAllDatabase(userRole = 'admin') {
   const mapel_jadwal = sheetToObjects(ss.getSheetByName(SHEETS.JADWAL));
   const pengaturan = sheetToObjects(ss.getSheetByName(SHEETS.PENGATURAN))[0] || {};
   let rawSoal = sheetToObjects(ss.getSheetByName(SHEETS.SOAL));
+  let materiSheet = ss.getSheetByName(SHEETS.MATERI) || getOrCreateMateriSheet(ss);
+  let materi = sheetToObjects(materiSheet);
   let siswa = [];
   let rekap_nilai = [];
   let pengguna = [];
@@ -832,6 +870,8 @@ function fetchAllDatabase(userRole = 'admin') {
       delete copy.pembahasan;
       return copy;
     });
+    // Siswa hanya boleh menerima materi yang berstatus PUBLISHED
+    materi = (materi || []).filter(m => String(m.status || '').toUpperCase() === 'PUBLISHED');
   }
 
   return {
@@ -841,7 +881,8 @@ function fetchAllDatabase(userRole = 'admin') {
     soal: rawSoal,
     rekap_nilai: rekap_nilai,
     pengaturan: pengaturan,
-    pengguna: pengguna
+    pengguna: pengguna,
+    materi: materi || []
   };
 }
 
@@ -854,15 +895,88 @@ function jsonResponse(data) {
 }
 
 /**
+ * Otomatis Memeriksa atau Membuat Lembar 'materi' Lengkap dengan Header & Sampel
+ */
+function getOrCreateMateriSheet(ss) {
+  if (!ss) ss = SpreadsheetApp.getActiveSpreadsheet();
+  let sheet = ss.getSheetByName(SHEETS.MATERI);
+  if (!sheet) {
+    sheet = ss.insertSheet(SHEETS.MATERI);
+    const headers = ['id', 'judul', 'deskripsi', 'mapel_id', 'kelas_id', 'jenis', 'url', 'status', 'created_by', 'created_at', 'updated_at'];
+    sheet.appendRow(headers);
+    sheet.getRange(1, 1, 1, headers.length).setFontWeight('bold').setBackground('#E2E8F0');
+    sheet.setFrozenRows(1);
+
+    // Data sampel awal agar tabel langsung siap digunakan
+    sheet.appendRow([
+      'mat-001',
+      'Konsep Dasar Trigonometri Sudut Istimewa',
+      'Pemahaman komprehensif mengenai sin, cos, tan pada kuadran I-IV serta relasi sudut dan identitas trigonometri.',
+      'jdw-1',
+      'ALL',
+      'VIDEO',
+      'https://www.youtube.com/watch?v=dQw4w9WgXcQ',
+      'PUBLISHED',
+      'Budi Santoso, M.Pd',
+      new Date().toISOString(),
+      new Date().toISOString()
+    ]);
+    sheet.appendRow([
+      'mat-002',
+      'Modul Lengkap Biologi: Struktur dan Fungsi Sel',
+      'Materi pendukung bab 1 biologi tentang organel sel, membran plasma, dan transport aktif-pasif antar sel.',
+      'jdw-1',
+      'ALL',
+      'PDF',
+      'https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf',
+      'PUBLISHED',
+      'Siti Aminah, S.Pd',
+      new Date().toISOString(),
+      new Date().toISOString()
+    ]);
+    sheet.appendRow([
+      'mat-003',
+      'Infografis Ringkasan Rumus Dinamika & Hukum Newton',
+      'Peta konsep visual hukum gerak Newton I, II, III dan penerapannya pada bidang miring serta lift bergerak.',
+      'jdw-2',
+      'kls-1',
+      'GAMBAR',
+      'https://images.unsplash.com/photo-1635070041078-e363dbe005cb?w=1200&q=80',
+      'PUBLISHED',
+      'Admin Sekolah',
+      new Date().toISOString(),
+      new Date().toISOString()
+    ]);
+  }
+  return sheet;
+}
+
+/**
+ * FUNGSI 1-KLIK: Jalankan fungsi ini langsung dari editor Google Apps Script (klik 'Run' / 'Jalankan')
+ * untuk membuat lembar 'materi' di Spreadsheet secara otomatis dalam 1 detik!
+ */
+function setupMateriSheet() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const sheet = getOrCreateMateriSheet(ss);
+  Logger.log('Berhasil membuat/memverifikasi lembar: ' + sheet.getName());
+  return 'Sukses! Lembar ' + sheet.getName() + ' siap digunakan dengan ' + sheet.getLastRow() + ' baris data.';
+}
+
+/**
  * Inisialisasi Cepat Sheet dan Header Kolom (Bypass Instan jika sudah diinisialisasi)
  */
 function initDatabaseSheets() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  
+  // Selalu pastikan lembar materi ada sekalipun DB_INITIALIZED sudah true
+  if (!ss.getSheetByName(SHEETS.MATERI)) {
+    getOrCreateMateriSheet(ss);
+  }
+
   const props = PropertiesService.getScriptProperties();
   if (props.getProperty('DB_INITIALIZED') === 'true') {
     return; // Bypass instan: hemat 700ms - 1500ms pada setiap request!
   }
-
-  const ss = SpreadsheetApp.getActiveSpreadsheet();
 
   const definitions = [
     {
@@ -934,6 +1048,51 @@ function initDatabaseSheets() {
         ['usr-1', 'admin', 'Dr. H. Ahmad Sulaiman, M.Pd', 'admin@educbt.id', 'admin123', 'admin', 'Aktif', new Date().toISOString()],
         ['usr-2', 'guru1', 'Budi Santoso, M.Pd', 'budi@sekolah.sch.id', 'guru123', 'guru', 'Aktif', new Date().toISOString()],
         ['usr-3', 'guru2', 'Siti Aminah, S.Pd', 'siti@sekolah.sch.id', 'guru123', 'guru', 'Aktif', new Date().toISOString()]
+      ]
+    },
+    {
+      name: SHEETS.MATERI,
+      headers: ['id', 'judul', 'deskripsi', 'mapel_id', 'kelas_id', 'jenis', 'url', 'status', 'created_by', 'created_at', 'updated_at'],
+      initial: [
+        [
+          'mat-001',
+          'Konsep Dasar Trigonometri Sudut Istimewa',
+          'Pemahaman komprehensif mengenai sin, cos, tan pada kuadran I-IV serta relasi sudut dan identitas trigonometri.',
+          'mpl-1',
+          'ALL',
+          'VIDEO',
+          'https://www.youtube.com/watch?v=dQw4w9WgXcQ',
+          'PUBLISHED',
+          'Budi Santoso, M.Pd',
+          new Date().toISOString(),
+          new Date().toISOString()
+        ],
+        [
+          'mat-002',
+          'Modul Lengkap Biologi: Struktur dan Fungsi Sel',
+          'Materi pendukung bab 1 biologi tentang organel sel, membran plasma, dan transport aktif-pasif antar sel.',
+          'mpl-2',
+          'ALL',
+          'PDF',
+          'https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf',
+          'PUBLISHED',
+          'Siti Aminah, S.Pd',
+          new Date().toISOString(),
+          new Date().toISOString()
+        ],
+        [
+          'mat-003',
+          'Infografis Ringkasan Hukum Newton & Gravitasi',
+          'Peta konsep visual hukum gerak Newton I, II, III dan penerapannya pada bidang miring serta lift.',
+          'mpl-3',
+          'ALL',
+          'GAMBAR',
+          'https://images.unsplash.com/photo-1635070041078-e363dbe005cb?w=1200&q=80',
+          'PUBLISHED',
+          'Admin Sekolah',
+          new Date().toISOString(),
+          new Date().toISOString()
+        ]
       ]
     }
   ];

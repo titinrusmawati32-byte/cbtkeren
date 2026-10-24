@@ -328,6 +328,7 @@
       siswaCount: 0,
       jadwalCount: 0,
       soalCount: 0,
+      materiCount: 0,
       rekapCount: 0,
       errors: []
     };
@@ -429,12 +430,70 @@
       }
     }
 
+    // 5. Migrasi Materi Pembelajaran
+    if (sheetData.materi && Array.isArray(sheetData.materi)) {
+      if (onProgress) onProgress('Memigrasikan Materi Pembelajaran...', 90);
+      for (const m of sheetData.materi) {
+        const docRef = _db.collection('materials').doc(String(m.id));
+        batch.set(docRef, {
+          id: String(m.id),
+          judul: m.judul || '',
+          deskripsi: m.deskripsi || '',
+          mapel_id: m.mapel_id || '',
+          kelas_id: m.kelas_id || 'ALL',
+          jenis: m.jenis || 'VIDEO',
+          url: m.url || '',
+          status: m.status || 'PUBLISHED',
+          created_by: m.created_by || 'Admin',
+          created_at: m.created_at || new Date().toISOString(),
+          updated_at: m.updated_at || new Date().toISOString(),
+          migratedAt: firebase.firestore.FieldValue.serverTimestamp()
+        }, { merge: true });
+        opCount++;
+        report.materiCount++;
+        await commitBatchIfNeeded();
+      }
+    }
+
     if (opCount > 0) {
       await batch.commit();
     }
 
     if (onProgress) onProgress('Migrasi selesai! Data tersimpan di Cloud Firestore.', 100);
     return report;
+  }
+
+  /**
+   * Menyimpan / memperbarui dokumen materi pembelajaran di Firestore
+   */
+  async function saveMaterial(mat) {
+    if (!initFirebase()) return false;
+    try {
+      const docRef = _db.collection('materials').doc(String(mat.id));
+      await docRef.set({
+        ...mat,
+        updated_at: new Date().toISOString(),
+        syncedAt: firebase.firestore.FieldValue.serverTimestamp()
+      }, { merge: true });
+      return true;
+    } catch (e) {
+      console.warn('FirebaseAdapter.saveMaterial warning:', e);
+      return false;
+    }
+  }
+
+  /**
+   * Menghapus dokumen materi pembelajaran dari Firestore
+   */
+  async function deleteMaterial(id) {
+    if (!initFirebase()) return false;
+    try {
+      await _db.collection('materials').doc(String(id)).delete();
+      return true;
+    } catch (e) {
+      console.warn('FirebaseAdapter.deleteMaterial warning:', e);
+      return false;
+    }
   }
 
   // Export API ke window global
@@ -448,6 +507,8 @@
     saveStudentAnswer: saveStudentAnswer,
     getStudentAttempt: getStudentAttempt,
     recordExamResult: recordExamResult,
+    saveMaterial: saveMaterial,
+    deleteMaterial: deleteMaterial,
     migrateSheetsToFirestore: migrateSheetsToFirestore
   };
 

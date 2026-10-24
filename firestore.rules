@@ -110,7 +110,15 @@ service cloud.firestore {
       allow write: if isAdmin();
     }
 
-    // 9. Koleksi Tes Ping Konektivitas Sistem
+    // 9. Koleksi Materi Pembelajaran (materials)
+    // Guru dan Admin dapat mengelola materi secara penuh.
+    // Siswa dapat membaca materi yang statusnya PUBLISHED.
+    match /materials/{materialId} {
+      allow read: if isGuru() || (isAuthenticated() && resource.data.status == 'PUBLISHED');
+      allow create, update, delete: if isGuru();
+    }
+
+    // 10. Koleksi Tes Ping Konektivitas Sistem
     match /system_health/{docId} {
       allow read, write: if true;
     }
