@@ -891,14 +891,10 @@
         </div>
 
         <!-- Tombol Pengaturan Cepat di Drawer -->
-        <div class="pt-2 border-t border-slate-100 grid grid-cols-2 gap-2">
-          <button type="button" onclick="window.app.toggleTheme()" class="p-2.5 rounded-2xl bg-slate-50 border border-slate-200 text-xs font-bold text-slate-700 flex items-center justify-center gap-2 hover:bg-slate-100 transition">
+        <div class="pt-2 border-t border-slate-100 dark:border-slate-800">
+          <button type="button" onclick="window.app.toggleTheme()" class="w-full p-2.5 rounded-2xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs font-bold text-slate-700 dark:text-slate-300 flex items-center justify-center gap-2 hover:bg-slate-100 dark:hover:bg-slate-700 transition">
             <i class="ph-bold ph-sun text-amber-500 text-base theme-icon-sync"></i>
-            <span>Mode Tema</span>
-          </button>
-          <button type="button" onclick="window.app.showGasConfigModal(); window.app.closeMobileMenuDrawer();" class="p-2.5 rounded-2xl bg-slate-50 border border-slate-200 text-xs font-bold text-slate-700 flex items-center justify-center gap-2 hover:bg-slate-100 transition">
-            <i class="ph-bold ph-database text-blue-500 text-base"></i>
-            <span>Database CBT</span>
+            <span>Mode Tema (Siang / Malam)</span>
           </button>
         </div>
       </div>
@@ -1547,8 +1543,17 @@
 
   // ============================================================================
   // PUSAT INTEGRASI DATABASE & FIREBASE CLOUD (HYBRID ARCHITECTURE)
+  // TERSEMBUNYI DARI SISWA, GURU, DAN PENGGUNA UMUM (KHUSUS DEVELOPER / SUPER ADMIN)
   // ============================================================================
-  function showGasConfigModal() {
+  function showGasConfigModal(bypassAuth = false) {
+    if (!bypassAuth) {
+      const pin = prompt('Menu Tersembunyi Khusus Pengembang / Super Admin\nMasukkan Password/PIN Keamanan Database:');
+      if (pin !== 'admin123' && pin !== 'senapati123') {
+        if (pin !== null) showToast('Akses ditolak: Kata sandi pengembang salah!', 'error');
+        return;
+      }
+    }
+
     const isFbActive = window.FirebaseAdapter && window.FirebaseAdapter.isConfigured();
     const fbConf = (window.FirebaseAdapter && window.FirebaseAdapter.getConfig()) || {};
 
@@ -1742,6 +1747,14 @@
 
   function saveGasConfig() {}
   function resetToDemoMode() {}
+
+  // Pintasan Rahasia Pengembang (Ctrl + Shift + D) untuk Membuka Panel Database
+  document.addEventListener('keydown', (e) => {
+    if (e.ctrlKey && e.shiftKey && (e.key === 'D' || e.key === 'd')) {
+      e.preventDefault();
+      showGasConfigModal();
+    }
+  });
 
   // ============================================================================
   // PENGELOLA TEMA MODE SIANG (LIGHT) & MODE MALAM (DARK)
