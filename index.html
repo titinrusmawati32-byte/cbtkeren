@@ -2290,8 +2290,8 @@
       return;
     }
     const isStaff = state.user?.role === 'admin' || state.user?.role === 'guru';
-    const staffMenus = ['dashboard', 'kelas', 'siswa', 'jadwal', 'soal', 'rekap', 'pengguna', 'pengaturan'];
-    const siswaMenus = ['dashboard', 'jadwal', 'rekap'];
+    const staffMenus = ['dashboard', 'materi', 'kelas', 'siswa', 'jadwal', 'soal', 'rekap', 'pengguna', 'pengaturan'];
+    const siswaMenus = ['dashboard', 'materi', 'jadwal', 'rekap'];
 
     if (isStaff && staffMenus.includes(saved)) {
       state.activeMenu = saved;
@@ -2918,6 +2918,19 @@
   }
 
   function navigateMenu(menuId) {
+    const isStaff = state.user?.role === 'admin' || state.user?.role === 'guru';
+    const allowedStaff = ['dashboard', 'materi', 'kelas', 'siswa', 'jadwal', 'soal', 'rekap', 'pengguna', 'pengaturan'];
+    const allowedSiswa = ['dashboard', 'materi', 'jadwal', 'rekap'];
+
+    if (!isStaff && !allowedSiswa.includes(menuId)) {
+      showToast('Akses dibatasi: Fitur ini hanya untuk Guru dan Admin!', 'warning');
+      state.activeMenu = 'dashboard';
+      renderSidebarMenu();
+      renderBottomNav();
+      renderAll();
+      return;
+    }
+
     state.activeMenu = menuId;
     try {
       localStorage.setItem(SAVED_MENU_KEY, menuId);
@@ -2942,13 +2955,22 @@
 
     const curr = state.activeMenu;
     const isMenuOpen = !!state.isMobileMenuOpen;
-    const isOtherMenu = ['soal', 'siswa', 'pengguna', 'pengaturan', 'materi'].includes(curr);
+    const isStaff = state.user?.role === 'admin' || state.user?.role === 'guru';
+    const isOtherMenu = isStaff
+      ? ['soal', 'siswa', 'pengguna', 'pengaturan', 'materi'].includes(curr)
+      : ['materi'].includes(curr);
 
-    const items = [
+    const items = isStaff ? [
       { id: 'dashboard', label: 'Beranda', icon: 'ph-house', fillIcon: 'ph-fill ph-house' },
       { id: 'materi', label: 'Materi', icon: 'ph-book-open', fillIcon: 'ph-fill ph-book-open' },
       { id: 'kelas', label: 'Kelas', icon: 'ph-users-three', fillIcon: 'ph-fill ph-users-three' },
       { id: 'jadwal', label: 'Ujian', icon: 'ph-article', fillIcon: 'ph-fill ph-article' },
+      { id: 'menu', label: 'Menu', icon: 'ph-squares-four', fillIcon: 'ph-fill ph-squares-four', isDrawerTrigger: true }
+    ] : [
+      { id: 'dashboard', label: 'Beranda', icon: 'ph-house', fillIcon: 'ph-fill ph-house' },
+      { id: 'materi', label: 'Materi', icon: 'ph-book-open', fillIcon: 'ph-fill ph-book-open' },
+      { id: 'jadwal', label: 'Ujian', icon: 'ph-article', fillIcon: 'ph-fill ph-article' },
+      { id: 'rekap', label: 'Nilai', icon: 'ph-chart-bar', fillIcon: 'ph-fill ph-chart-bar' },
       { id: 'menu', label: 'Menu', icon: 'ph-squares-four', fillIcon: 'ph-fill ph-squares-four', isDrawerTrigger: true }
     ];
 
@@ -3178,6 +3200,10 @@
     }
 
     const isStaff = state.user?.role === 'admin' || state.user?.role === 'guru';
+    if (!isStaff && ['soal', 'kelas', 'siswa', 'pengguna', 'pengaturan'].includes(state.activeMenu)) {
+      state.activeMenu = 'dashboard';
+    }
+
     const titles = {
       dashboard: isStaff ? 'Dashboard Utama' : 'Dashboard Siswa',
       materi: isStaff ? 'Kelola Materi Pembelajaran' : 'Materi Pembelajaran Siswa',
@@ -3231,11 +3257,20 @@
   function renderDashboardModule() {
     if (!state.user) return '';
     const isAdmin = state.user?.role === 'admin' || state.user?.role === 'guru';
+    const isStaff = isAdmin;
     const totalKelas = state.kelas.length;
     const totalSiswa = state.siswa.length;
     const totalJadwal = state.mapel_jadwal.length;
     const totalSoal = state.soal.length;
     const totalUjianSelesai = state.rekap_nilai.length;
+
+    // Metrik Khusus Siswa
+    const userKelasId = state.user?.kelas_id;
+    const siswaMateriCount = (state.materi || []).filter(m =>
+      m.status === 'PUBLISHED' && (m.kelas_id === 'ALL' || !userKelasId || m.kelas_id === userKelasId)
+    ).length;
+    const siswaUjianSelesai = (state.rekap_nilai || []).filter(r => r.siswa_id === state.user?.id).length;
+    const userPoin = state.user?.poin || 100;
 
     // Leaderboard Siswa (Top 5 Poin XP)
     const sortedSiswa = [...state.siswa].sort((a, b) => (b.poin || 0) - (a.poin || 0)).slice(0, 5);
@@ -3316,73 +3351,145 @@
 
         <!-- 4 Metric Stat Cards (Khusus Mobile Disusun 2 Kolom Sesuai Referensi Gambar) -->
         <div class="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
-          <!-- Kartu 1: Total Siswa (Blue Theme) -->
-          <div onclick="window.app.navigateMenu('siswa')" class="bg-white dark:bg-[#172033] p-4 sm:p-5 rounded-3xl border border-blue-100 dark:border-[#293548] shadow-sm flex flex-col justify-between cursor-pointer hover:shadow-md transition group">
-            <div class="flex items-center justify-between">
-              <div class="w-11 h-11 sm:w-12 sm:h-12 rounded-2xl bg-blue-600 text-white flex items-center justify-center text-xl sm:text-2xl shadow-md shadow-blue-500/25 shrink-0">
-                <i class="ph-fill ph-users"></i>
+          ${isStaff ? `
+            <!-- [GURU & ADMIN] Kartu 1: Total Siswa (Blue Theme) -->
+            <div onclick="window.app.navigateMenu('siswa')" class="bg-white dark:bg-[#172033] p-4 sm:p-5 rounded-3xl border border-blue-100 dark:border-[#293548] shadow-sm flex flex-col justify-between cursor-pointer hover:shadow-md transition group">
+              <div class="flex items-center justify-between">
+                <div class="w-11 h-11 sm:w-12 sm:h-12 rounded-2xl bg-blue-600 text-white flex items-center justify-center text-xl sm:text-2xl shadow-md shadow-blue-500/25 shrink-0">
+                  <i class="ph-fill ph-users"></i>
+                </div>
+                <i class="ph-bold ph-caret-right text-blue-400 text-sm sm:text-base group-hover:translate-x-1 transition"></i>
               </div>
-              <i class="ph-bold ph-caret-right text-blue-400 text-sm sm:text-base group-hover:translate-x-1 transition"></i>
+              <div class="mt-2.5">
+                <p class="text-xs font-black text-slate-800 dark:text-slate-200">Total Siswa</p>
+                <h3 class="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white leading-tight mt-0.5">${totalSiswa}</h3>
+                <p class="text-[10px] sm:text-[11px] font-bold text-emerald-600 flex items-center gap-1 mt-1">
+                  <span>Terdaftar aktif</span>
+                </p>
+              </div>
             </div>
-            <div class="mt-2.5">
-              <p class="text-xs font-black text-slate-800 dark:text-slate-200">Total Siswa</p>
-              <h3 class="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white leading-tight mt-0.5">${totalSiswa}</h3>
-              <p class="text-[10px] sm:text-[11px] font-bold text-emerald-600 flex items-center gap-1 mt-1">
-                <span>↑ 0%</span> <span class="text-slate-400 font-medium">dari semester lalu</span>
-              </p>
-            </div>
-          </div>
 
-          <!-- Kartu 2: Jadwal Ujian (Purple Theme) -->
-          <div onclick="window.app.navigateMenu('jadwal')" class="bg-white dark:bg-[#172033] p-4 sm:p-5 rounded-3xl border border-purple-100 dark:border-[#293548] shadow-sm flex flex-col justify-between cursor-pointer hover:shadow-md transition group">
-            <div class="flex items-center justify-between">
-              <div class="w-11 h-11 sm:w-12 sm:h-12 rounded-2xl bg-purple-600 text-white flex items-center justify-center text-xl sm:text-2xl shadow-md shadow-purple-500/25 shrink-0">
-                <i class="ph-fill ph-calendar-blank"></i>
+            <!-- [GURU & ADMIN] Kartu 2: Jadwal Ujian (Purple Theme) -->
+            <div onclick="window.app.navigateMenu('jadwal')" class="bg-white dark:bg-[#172033] p-4 sm:p-5 rounded-3xl border border-purple-100 dark:border-[#293548] shadow-sm flex flex-col justify-between cursor-pointer hover:shadow-md transition group">
+              <div class="flex items-center justify-between">
+                <div class="w-11 h-11 sm:w-12 sm:h-12 rounded-2xl bg-purple-600 text-white flex items-center justify-center text-xl sm:text-2xl shadow-md shadow-purple-500/25 shrink-0">
+                  <i class="ph-fill ph-calendar-blank"></i>
+                </div>
+                <i class="ph-bold ph-caret-right text-purple-400 text-sm sm:text-base group-hover:translate-x-1 transition"></i>
               </div>
-              <i class="ph-bold ph-caret-right text-purple-400 text-sm sm:text-base group-hover:translate-x-1 transition"></i>
+              <div class="mt-2.5">
+                <p class="text-xs font-black text-slate-800 dark:text-slate-200">Jadwal Ujian</p>
+                <h3 class="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white leading-tight mt-0.5">${totalJadwal}</h3>
+                <p class="text-[10px] sm:text-[11px] font-bold text-purple-600 flex items-center gap-1 mt-1">
+                  <span>Mapel CBT aktif</span>
+                </p>
+              </div>
             </div>
-            <div class="mt-2.5">
-              <p class="text-xs font-black text-slate-800 dark:text-slate-200">Jadwal Ujian</p>
-              <h3 class="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white leading-tight mt-0.5">${totalJadwal}</h3>
-              <p class="text-[10px] sm:text-[11px] font-bold text-emerald-600 flex items-center gap-1 mt-1">
-                <span>↑ 0%</span> <span class="text-slate-400 font-medium">dari semester lalu</span>
-              </p>
-            </div>
-          </div>
 
-          <!-- Kartu 3: Bank Soal (Emerald Theme) -->
-          <div onclick="window.app.navigateMenu('soal')" class="bg-white dark:bg-[#172033] p-4 sm:p-5 rounded-3xl border border-emerald-100 dark:border-[#293548] shadow-sm flex flex-col justify-between cursor-pointer hover:shadow-md transition group">
-            <div class="flex items-center justify-between">
-              <div class="w-11 h-11 sm:w-12 sm:h-12 rounded-2xl bg-emerald-500 text-white flex items-center justify-center text-xl sm:text-2xl shadow-md shadow-emerald-500/25 shrink-0">
-                <i class="ph-fill ph-folder-open"></i>
+            <!-- [GURU & ADMIN] Kartu 3: Bank Soal (Emerald Theme - HANYA ADMIN & GURU) -->
+            <div onclick="window.app.navigateMenu('soal')" class="bg-white dark:bg-[#172033] p-4 sm:p-5 rounded-3xl border border-emerald-100 dark:border-[#293548] shadow-sm flex flex-col justify-between cursor-pointer hover:shadow-md transition group">
+              <div class="flex items-center justify-between">
+                <div class="w-11 h-11 sm:w-12 sm:h-12 rounded-2xl bg-emerald-500 text-white flex items-center justify-center text-xl sm:text-2xl shadow-md shadow-emerald-500/25 shrink-0">
+                  <i class="ph-fill ph-folder-open"></i>
+                </div>
+                <i class="ph-bold ph-caret-right text-emerald-400 text-sm sm:text-base group-hover:translate-x-1 transition"></i>
               </div>
-              <i class="ph-bold ph-caret-right text-emerald-400 text-sm sm:text-base group-hover:translate-x-1 transition"></i>
+              <div class="mt-2.5">
+                <p class="text-xs font-black text-slate-800 dark:text-slate-200">Bank Soal</p>
+                <h3 class="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white leading-tight mt-0.5">${totalSoal}</h3>
+                <p class="text-[10px] sm:text-[11px] font-bold text-emerald-600 flex items-center gap-1 mt-1">
+                  <span>Butir soal tersimpan</span>
+                </p>
+              </div>
             </div>
-            <div class="mt-2.5">
-              <p class="text-xs font-black text-slate-800 dark:text-slate-200">Bank Soal</p>
-              <h3 class="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white leading-tight mt-0.5">${totalSoal}</h3>
-              <p class="text-[10px] sm:text-[11px] font-bold text-emerald-600 flex items-center gap-1 mt-1">
-                <span>↑ 0%</span> <span class="text-slate-400 font-medium">dari semester lalu</span>
-              </p>
-            </div>
-          </div>
 
-          <!-- Kartu 4: Ujian Dikerjakan (Amber Theme) -->
-          <div onclick="window.app.navigateMenu('rekap')" class="bg-white dark:bg-[#172033] p-4 sm:p-5 rounded-3xl border border-amber-100 dark:border-[#293548] shadow-sm flex flex-col justify-between cursor-pointer hover:shadow-md transition group">
-            <div class="flex items-center justify-between">
-              <div class="w-11 h-11 sm:w-12 sm:h-12 rounded-2xl bg-amber-500 text-white flex items-center justify-center text-xl sm:text-2xl shadow-md shadow-amber-500/25 shrink-0">
-                <i class="ph-fill ph-clipboard-text"></i>
+            <!-- [GURU & ADMIN] Kartu 4: Ujian Dikerjakan (Amber Theme) -->
+            <div onclick="window.app.navigateMenu('rekap')" class="bg-white dark:bg-[#172033] p-4 sm:p-5 rounded-3xl border border-amber-100 dark:border-[#293548] shadow-sm flex flex-col justify-between cursor-pointer hover:shadow-md transition group">
+              <div class="flex items-center justify-between">
+                <div class="w-11 h-11 sm:w-12 sm:h-12 rounded-2xl bg-amber-500 text-white flex items-center justify-center text-xl sm:text-2xl shadow-md shadow-amber-500/25 shrink-0">
+                  <i class="ph-fill ph-clipboard-text"></i>
+                </div>
+                <i class="ph-bold ph-caret-right text-amber-400 text-sm sm:text-base group-hover:translate-x-1 transition"></i>
               </div>
-              <i class="ph-bold ph-caret-right text-amber-400 text-sm sm:text-base group-hover:translate-x-1 transition"></i>
+              <div class="mt-2.5">
+                <p class="text-xs font-black text-slate-800 dark:text-slate-200">Ujian Dikerjakan</p>
+                <h3 class="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white leading-tight mt-0.5">${totalUjianSelesai}</h3>
+                <p class="text-[10px] sm:text-[11px] font-bold text-amber-600 flex items-center gap-1 mt-1">
+                  <span>Hasil jawaban siswa</span>
+                </p>
+              </div>
             </div>
-            <div class="mt-2.5">
-              <p class="text-xs font-black text-slate-800 dark:text-slate-200">Ujian Dikerjakan</p>
-              <h3 class="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white leading-tight mt-0.5">${totalUjianSelesai}</h3>
-              <p class="text-[10px] sm:text-[11px] font-bold text-emerald-600 flex items-center gap-1 mt-1">
-                <span>↑ 0%</span> <span class="text-slate-400 font-medium">dari semester lalu</span>
-              </p>
+          ` : `
+            <!-- [KHUSUS MURID / SISWA] TIDAK ADA FITUR BANK SOAL / TOTAL SISWA -->
+
+            <!-- Kartu Siswa 1: Daftar Ujian Saya -->
+            <div onclick="window.app.navigateMenu('jadwal')" class="bg-white dark:bg-[#172033] p-4 sm:p-5 rounded-3xl border border-blue-100 dark:border-[#293548] shadow-sm flex flex-col justify-between cursor-pointer hover:shadow-md transition group">
+              <div class="flex items-center justify-between">
+                <div class="w-11 h-11 sm:w-12 sm:h-12 rounded-2xl bg-blue-600 text-white flex items-center justify-center text-xl sm:text-2xl shadow-md shadow-blue-500/25 shrink-0">
+                  <i class="ph-fill ph-article"></i>
+                </div>
+                <i class="ph-bold ph-caret-right text-blue-400 text-sm sm:text-base group-hover:translate-x-1 transition"></i>
+              </div>
+              <div class="mt-2.5">
+                <p class="text-xs font-black text-slate-800 dark:text-slate-200">Daftar Ujian</p>
+                <h3 class="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white leading-tight mt-0.5">${totalJadwal}</h3>
+                <p class="text-[10px] sm:text-[11px] font-bold text-blue-600 flex items-center gap-1 mt-1">
+                  <span>Siap dikerjakan</span>
+                </p>
+              </div>
             </div>
-          </div>
+
+            <!-- Kartu Siswa 2: Materi Pembelajaran Kelas -->
+            <div onclick="window.app.navigateMenu('materi')" class="bg-white dark:bg-[#172033] p-4 sm:p-5 rounded-3xl border border-rose-100 dark:border-[#293548] shadow-sm flex flex-col justify-between cursor-pointer hover:shadow-md transition group">
+              <div class="flex items-center justify-between">
+                <div class="w-11 h-11 sm:w-12 sm:h-12 rounded-2xl bg-rose-500 text-white flex items-center justify-center text-xl sm:text-2xl shadow-md shadow-rose-500/25 shrink-0">
+                  <i class="ph-fill ph-book-open"></i>
+                </div>
+                <i class="ph-bold ph-caret-right text-rose-400 text-sm sm:text-base group-hover:translate-x-1 transition"></i>
+              </div>
+              <div class="mt-2.5">
+                <p class="text-xs font-black text-slate-800 dark:text-slate-200">Materi Belajar</p>
+                <h3 class="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white leading-tight mt-0.5">${siswaMateriCount}</h3>
+                <p class="text-[10px] sm:text-[11px] font-bold text-rose-600 flex items-center gap-1 mt-1">
+                  <span>Modul & Video kelas</span>
+                </p>
+              </div>
+            </div>
+
+            <!-- Kartu Siswa 3: Hasil Nilai Ujian Saya -->
+            <div onclick="window.app.navigateMenu('rekap')" class="bg-white dark:bg-[#172033] p-4 sm:p-5 rounded-3xl border border-emerald-100 dark:border-[#293548] shadow-sm flex flex-col justify-between cursor-pointer hover:shadow-md transition group">
+              <div class="flex items-center justify-between">
+                <div class="w-11 h-11 sm:w-12 sm:h-12 rounded-2xl bg-emerald-500 text-white flex items-center justify-center text-xl sm:text-2xl shadow-md shadow-emerald-500/25 shrink-0">
+                  <i class="ph-fill ph-chart-bar"></i>
+                </div>
+                <i class="ph-bold ph-caret-right text-emerald-400 text-sm sm:text-base group-hover:translate-x-1 transition"></i>
+              </div>
+              <div class="mt-2.5">
+                <p class="text-xs font-black text-slate-800 dark:text-slate-200">Hasil Nilai Saya</p>
+                <h3 class="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white leading-tight mt-0.5">${siswaUjianSelesai}</h3>
+                <p class="text-[10px] sm:text-[11px] font-bold text-emerald-600 flex items-center gap-1 mt-1">
+                  <span>Ujian selesai</span>
+                </p>
+              </div>
+            </div>
+
+            <!-- Kartu Siswa 4: Poin XP Prestasi Belajar -->
+            <div class="bg-white dark:bg-[#172033] p-4 sm:p-5 rounded-3xl border border-amber-100 dark:border-[#293548] shadow-sm flex flex-col justify-between">
+              <div class="flex items-center justify-between">
+                <div class="w-11 h-11 sm:w-12 sm:h-12 rounded-2xl bg-amber-500 text-white flex items-center justify-center text-xl sm:text-2xl shadow-md shadow-amber-500/25 shrink-0">
+                  <i class="ph-fill ph-trophy"></i>
+                </div>
+                <span class="px-2 py-0.5 rounded-full bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300 text-[10px] font-black">Rank Siswa</span>
+              </div>
+              <div class="mt-2.5">
+                <p class="text-xs font-black text-slate-800 dark:text-slate-200">Poin Prestasi</p>
+                <h3 class="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white leading-tight mt-0.5">${userPoin} <span class="text-xs font-bold text-slate-400">XP</span></h3>
+                <p class="text-[10px] sm:text-[11px] font-bold text-amber-600 flex items-center gap-1 mt-1">
+                  <span>Peringkat Aktif</span>
+                </p>
+              </div>
+            </div>
+          `}
         </div>
 
         <!-- Leaderboard & Jadwal Terdekat Grid -->
@@ -5332,6 +5439,11 @@
   }
 
   function openExamOrManage(jadwalId) {
+    const isStaff = state.user?.role === 'admin' || state.user?.role === 'guru';
+    if (!isStaff) {
+      showToast('Akses ditolak: Menu Bank Soal hanya untuk Guru & Admin!', 'warning');
+      return;
+    }
     state.selectedJadwalForSoal = jadwalId;
     state.activeMenu = 'soal';
     renderSidebarMenu();
@@ -5342,6 +5454,23 @@
   // MODUL 5: BANK SOAL CBT INTERAKTIF DENGAN IMPOR EXCEL & UPLOAD FOTO
   // ============================================================================
   function renderSoalModule() {
+    const isStaff = state.user?.role === 'admin' || state.user?.role === 'guru';
+    if (!isStaff) {
+      return `
+        <div class="py-16 text-center space-y-4 bg-white dark:bg-[#172033] rounded-3xl p-8 border border-slate-100 dark:border-[#293548]">
+          <div class="w-16 h-16 rounded-full bg-rose-50 text-rose-600 flex items-center justify-center text-3xl mx-auto shadow-sm">
+            <i class="ph-bold ph-lock-key"></i>
+          </div>
+          <h3 class="text-base font-black text-slate-800 dark:text-white">Akses Dibatasi: Khusus Guru & Administrator</h3>
+          <p class="text-xs text-slate-500 max-w-md mx-auto">Menu Bank Soal CBT hanya dapat diakses oleh Guru Pengampu dan Administrator untuk mengelola butir soal ujian.</p>
+          <div class="pt-2">
+            <button type="button" onclick="window.app.navigateMenu('dashboard')" class="px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs shadow-md transition">
+              Kembali ke Dashboard
+            </button>
+          </div>
+        </div>
+      `;
+    }
     const q = (state.soalSearchQuery || '').toLowerCase();
     const filterJenis = state.soalFilterJenis || 'ALL';
     const filterKelas = state.soalFilterKelas || 'ALL';
