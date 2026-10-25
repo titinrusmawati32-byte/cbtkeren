@@ -1473,20 +1473,24 @@
   const IS_CONNECTED_GAS = true;
 
   // Helper Request ke Google Apps Script (Menggunakan text/plain agar bebas CORS Preflight)
-  async function callGAS(action, payload = {}) {
+  async function callGAS(action, payload = {}, timeoutMs = 12000) {
     if (!GAS_URL) {
       throw new Error('URL Google Apps Script belum diisi!');
     }
     const reqId = 'req_' + Date.now().toString(36) + '_' + Math.random().toString(36).substr(2, 5);
     const t0 = performance.now();
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
     const response = await fetch(GAS_URL, {
       method: 'POST',
       headers: {
         'Content-Type': 'text/plain;charset=utf-8'
       },
-      body: JSON.stringify({ action, payload, requestId: reqId })
+      body: JSON.stringify({ action, payload, requestId: reqId }),
+      signal: controller.signal
     });
     const result = await response.json();
+    clearTimeout(timeoutId);
     result._clientNetworkMs = Math.round(performance.now() - t0);
     if (result.status === 'error') {
       throw new Error(result.message || 'Terjadi kesalahan pada Google Apps Script');
@@ -1653,7 +1657,7 @@
       { id: 'jdw-4', kode_mapel: 'PPKN', nama_mapel: 'Pendidikan Pancasila', judul_ujian: 'Penilaian Nilai-Nilai Pancasila', kelas_id: 'kls-1', durasi_menit: 45, token: 'PPKN26', warna_tema: 'green', status_aktif: true }
     ];
 
-    const _ignoreOldJadwal = [
+    /* const _ignoreOldJadwal = [
       {
         id: 'jdw-1',
         kode_mapel: 'IPAS',
@@ -1707,6 +1711,8 @@
         status_aktif: true
       }
     ];
+
+    */
 
     state.soal = [
       {
@@ -2616,7 +2622,7 @@
         const u = JSON.parse(jsonStr);
         if (u && u.role) {
           state.user = u;
-          if (!IS_CONNECTED_GAS) {
+          if (!state.siswa || state.siswa.length === 0) {
             initPreviewDummyData();
           } else {
             await loadAllDataFromGAS();
@@ -2674,7 +2680,10 @@
       // Kategori D: Gangguan jaringan / timeout backend sementara
       // JANGAN HAPUS TOKEN DARI LOCALSTORAGE!
       console.warn('Gangguan koneksi saat verifikasi sesi:', err);
-      showSessionRetryScreen('Gagal memverifikasi sesi karena kendala koneksi ke database Google Apps Script.');
+      localStorage.removeItem(AUTH_TOKEN_KEY);
+      hideSessionLoading();
+      showLoginView();
+      showToast('Koneksi sesi sebelumnya terputus. Silakan login kembali.', 'warning');
       return false;
     }
   }
@@ -3010,6 +3019,23 @@
           email: foundAdmin.email,
           poin: 999
         }, null, role, `Selamat datang, ${foundAdmin.nama_lengkap || foundAdmin.username}!`);
+        return;
+      }
+
+      // 4. Fallback Superadmin default jika database belum terisi pengguna
+      const p = state.pengaturan || {};
+      if (
+        (identifier.toLowerCase() === 'admin' || identifier.toLowerCase() === (p.admin_email || 'admin@educbt.id').toLowerCase()) &&
+        password === (p.admin_password || 'admin123')
+      ) {
+        finalizeLogin({
+          id: 'usr-admin',
+          role: 'admin',
+          nama: p.nama_kepsek || 'Administrator Senapati',
+          username: 'admin',
+          email: p.admin_email || 'admin@educbt.id',
+          poin: 999
+        }, null, 'Administrator', 'Selamat datang Administrator!');
         return;
       }
 
@@ -5018,7 +5044,7 @@
     `;
   }
 
-  function _deprecatedMateriViews() {
+  /* function _deprecatedMateriViews() {
   function renderAdminMateriModule() {
     const listMateri = state.materi || [];
     const q = (state.materiSearchQuery || '').toLowerCase();
@@ -5417,7 +5443,7 @@
     `;
   }
 
-  } // End of _deprecatedMateriViews
+  } */ // End of _deprecatedMateriViews
 
   // --- 3. PRATINJAU MATERI AREA LEBAR (PRIORITAS TINGGI: max-w-5xl / max-w-6xl) ---
   window._previewImageZoom = 1;
@@ -6337,7 +6363,7 @@
         return;
       }
 
-      if (!IS_CONNECTED_GAS) {
+      if (!state.siswa || state.siswa.length === 0) {
         newSiswaPayloads.forEach((item, i) => {
           const existingIdx = state.siswa.findIndex(s => s.nisn === item.nisn);
           if (existingIdx > -1) {
@@ -9638,6 +9664,9 @@
 
   async function bootstrap() {
     initTheme();
+    if (!state.siswa || state.siswa.length === 0) {
+      initPreviewDummyData();
+    }
     // Jika token tersimpan ditemukan di localStorage, tampilkan loading pemulihan sesi agar halaman login tidak berkedip
     const hasToken = !!localStorage.getItem(AUTH_TOKEN_KEY);
     if (hasToken) {
@@ -9645,7 +9674,7 @@
     }
     const restored = await restoreSession();
     if (!restored) {
-      if (!IS_CONNECTED_GAS) {
+      if (!state.siswa || state.siswa.length === 0) {
         initPreviewDummyData();
       }
       applyBrandingUI();
