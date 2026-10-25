@@ -4114,6 +4114,28 @@
   function selectMateriFolder(folderId) {
     if (state.user && state.user.role === 'SISWA') {
       state.selectedMateriFolder = folderId;
+      try {
+        if (window.location.hash !== `#/materi/folder/${folderId}`) {
+          window.location.hash = `#/materi/folder/${folderId}`;
+        }
+      } catch (e) {}
+    } else {
+      if (state.selectedMateriFolder === folderId) {
+        state.selectedMateriFolder = null; // Toggle off jika diklik ulang di admin
+      } else {
+        state.selectedMateriFolder = folderId;
+      }
+    }
+    state.materiSearchQuery = '';
+    state.materiFilterJenis = 'ALL';
+    try {
+      sessionStorage.setItem('educbt_selected_materi_folder', state.selectedMateriFolder || '');
+    } catch (e) {}
+    saveLocalDataCache(state);
+    renderAll();
+  }
+    if (state.user && state.user.role === 'SISWA') {
+      state.selectedMateriFolder = folderId;
     } else {
       if (state.selectedMateriFolder === folderId) {
         state.selectedMateriFolder = null; // Toggle off jika diklik ulang di admin
@@ -4144,6 +4166,12 @@
   }
 
   function selectMateriFolder_OLD(folderId) {
+    return;
+  }
+  function clearMateriFolderSelection_OLD() {
+    return;
+  }
+  function _skipOldMateriFunctions() {
     if (state.selectedMateriFolder === folderId) {
       state.selectedMateriFolder = null; // Toggle off jika diklik ulang
     } else {
@@ -5003,7 +5031,413 @@
   }
 
   // --- 2. TAMPILAN SISWA: MATERI PEMBELAJARAN ---
-  // --- 2. TAMPILAN SISWA: MATERI PEMBELAJARAN (NAVIGASI FOLDER DIUTAMAKAN) ---
+  // --- 2. TAMPILAN SISWA: MATERI PEMBELAJARAN (NAVIGASI FOLDER TERPISAH & STATISTIK DETAIL) ---
+  function renderSiswaMateriModule() {
+    const listMateri = state.materi || [];
+    const userKelas = state.user?.kelas_id;
+    const q = (state.materiSearchQuery || '').toLowerCase();
+    const filterMapel = state.materiFilterMapel || 'ALL';
+    const filterJenis = state.materiFilterJenis || 'ALL';
+    const activeFolderId = state.selectedMateriFolder;
+
+    const listFolders = state.materi_folders && state.materi_folders.length > 0
+      ? state.materi_folders
+      : JSON.parse(JSON.stringify(DEFAULT_MATERI_FOLDERS));
+
+    // Validasi folder aktif
+    const activeFolder = activeFolderId ? listFolders.find(f => f.id === activeFolderId) : null;
+
+    // Filter folder yang dapat diakses siswa (sesuai kelas atau umum)
+    const accessibleFolders = listFolders.filter(f => {
+      const matchKelas = f.kelas_id === 'ALL' || !f.kelas_id || f.kelas_id === userKelas || !userKelas;
+      const matchMapel = filterMapel === 'ALL' || f.mapel_id === 'ALL' || f.mapel_id === filterMapel;
+      const matchQ = !q || (f.nama || '').toLowerCase().includes(q) || (f.deskripsi || '').toLowerCase().includes(q);
+      return matchKelas && matchMapel && matchQ;
+    });
+
+    const mapelOptions = state.mapel_jadwal.map(j =>
+      `<option value="${j.id}" ${filterMapel === j.id ? 'selected' : ''}>${j.nama_mapel}</option>`
+    ).join('');
+
+    // =========================================================================
+    // 1. TAMPILAN UTAMA SISWA: KUMPULAN FOLDER (TANPA DAFTAR MATERI)
+    // =========================================================================
+    if (!activeFolder) {
+      return `
+        <div class="space-y-6">
+          <!-- Banner Sambutan Modul Materi Siswa -->
+          <div class="relative overflow-hidden rounded-3xl p-6 sm:p-8 text-white shadow-xl shadow-blue-500/10" style="background: linear-gradient(110deg, #1E40AF 0%, #2563EB 50%, #38BDF8 100%);">
+            <div class="relative z-10 max-w-xl space-y-2">
+              <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/20 backdrop-blur-md text-[10px] sm:text-[11px] font-black uppercase tracking-wider">
+                <span>📚</span> MODUL BELAJAR DIGITAL
+              </span>
+              <h2 class="text-xl sm:text-2xl font-black">Pusat Materi Pembelajaran Siswa</h2>
+              <p class="text-xs sm:text-sm text-blue-100 font-medium leading-relaxed">
+                Pelajari video pembelajaran, modul PDF lengkap, serta infografis rumus untuk memperdalam pemahaman sebelum ujian.
+              </p>
+            </div>
+            <div class="absolute -right-8 -bottom-8 w-52 h-52 rounded-full bg-white/10 blur-xl pointer-events-none"></div>
+          </div>
+
+          <!-- Bagian Kumpulan Folder Materi Siswa -->
+          <div class="space-y-4">
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div class="flex items-center gap-2.5">
+                <div class="w-10 h-10 rounded-2xl bg-blue-50 dark:bg-blue-950/50 text-blue-600 dark:text-blue-400 flex items-center justify-center text-xl shadow-sm">
+                  <i class="ph-fill ph-folder-open"></i>
+                </div>
+                <div>
+                  <h3 class="text-base sm:text-lg font-black text-slate-900 dark:text-white">Folder Materi Pembelajaran</h3>
+                  <p class="text-xs text-slate-400 dark:text-slate-500">Pilih folder mata pelajaran di bawah untuk melihat bahan ajar yang tersedia.</p>
+                </div>
+              </div>
+
+              <!-- Pencarian & Filter Mata Pelajaran Folder -->
+              <div class="flex items-center gap-2 w-full sm:w-auto">
+                <div class="relative flex-1 sm:w-56">
+                  <i class="ph-bold ph-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs"></i>
+                  <input type="text" value="${state.materiSearchQuery || ''}" oninput="window.app.handleMateriSearch(this.value)" placeholder="Cari folder materi..." class="w-full pl-8 pr-3 py-2 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-xs text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-sm" />
+                </div>
+                <div class="w-auto">
+                  <select onchange="window.app.handleMateriFilterMapel(this.value)" class="w-full px-3 py-2 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-xs font-bold text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-sm">
+                    <option value="ALL">Semua Mapel</option>
+                    ${mapelOptions}
+                  </select>
+                </div>
+              </div>
+            </div>
+
+            <!-- Grid Kartu Folder (Seluruh Area Kartu Dapat Diklik) -->
+            ${accessibleFolders.length === 0 ? `
+              <div class="bg-white dark:bg-[#172033] rounded-3xl p-10 border border-slate-100 dark:border-[#293548] shadow-sm text-center space-y-3">
+                <div class="w-16 h-16 rounded-3xl bg-blue-50 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400 mx-auto flex items-center justify-center text-3xl shadow-sm">
+                  <i class="ph-bold ph-folder-notch-open"></i>
+                </div>
+                <h3 class="text-base font-black text-slate-900 dark:text-white">Belum Ada Folder Materi</h3>
+                <p class="text-xs text-slate-400 dark:text-slate-500 max-w-sm mx-auto">
+                  Belum ada folder materi yang sesuai dengan pencarian atau filter mata pelajaran yang Anda pilih.
+                </p>
+              </div>
+            ` : `
+              <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                ${accessibleFolders.map(f => {
+                  const fldMaterials = listMateri.filter(m =>
+                    m.folder_id === f.id &&
+                    m.status === 'PUBLISHED' &&
+                    (m.kelas_id === 'ALL' || !m.kelas_id || m.kelas_id === userKelas || !userKelas)
+                  );
+                  const accessibleCount = fldMaterials.length;
+                  const fldVideo = fldMaterials.filter(m => m.jenis === 'VIDEO').length;
+                  const fldPdf = fldMaterials.filter(m => m.jenis === 'PDF').length;
+                  const fldImg = fldMaterials.filter(m => m.jenis === 'GAMBAR').length;
+
+                  const parts = [];
+                  if (fldVideo > 0) parts.push(`${fldVideo} Video`);
+                  if (fldPdf > 0) parts.push(`${fldPdf} PDF`);
+                  if (fldImg > 0) parts.push(`${fldImg} Gambar`);
+                  const breakdownText = parts.length > 0 ? parts.join(' • ') : 'Belum ada materi';
+
+                  return `
+                    <div onclick="window.app.selectMateriFolder('${f.id}')" role="button" tabindex="0" class="group bg-white dark:bg-[#172033] rounded-3xl p-5 border border-slate-200/80 dark:border-[#293548] hover:border-blue-400 dark:hover:border-blue-500 shadow-sm hover:shadow-md transition-all duration-200 cursor-pointer flex flex-col justify-between active:scale-[0.99]">
+                      <div>
+                        <div class="flex items-start justify-between">
+                          <div class="transform group-hover:scale-105 transition duration-200">
+                            ${renderFolderSvg(f.color || 'blue', 'w-12 h-12')}
+                          </div>
+                          <span class="px-2.5 py-1 rounded-full bg-blue-50 dark:bg-blue-950/50 text-blue-600 dark:text-blue-400 text-xs font-black border border-blue-100 dark:border-blue-900/40">
+                            ${accessibleCount} Materi
+                          </span>
+                        </div>
+                        <div class="mt-4">
+                          <h4 class="text-base font-black text-slate-900 dark:text-white line-clamp-1 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition">${f.nama}</h4>
+                          <p class="text-xs text-slate-400 dark:text-slate-500 mt-1 line-clamp-2">${f.deskripsi || 'Kumpulan bahan ajar dan modul belajar siswa.'}</p>
+                        </div>
+                        <div class="mt-3 flex items-center gap-1.5 flex-wrap">
+                          <span class="px-2 py-0.5 rounded-lg bg-blue-50 dark:bg-blue-950/50 text-blue-600 dark:text-blue-400 text-[10px] font-black border border-blue-100 dark:border-blue-900/40">
+                            ${f.mapel_badge || f.mapel_nama || 'UMUM'}
+                          </span>
+                          <span class="px-2 py-0.5 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 text-[10px] font-bold">
+                            ${f.kelas_badge || 'SEMUA KELAS'}
+                          </span>
+                          <span class="text-[11px] text-slate-400 dark:text-slate-500 font-medium ml-auto">
+                            ${breakdownText}
+                          </span>
+                        </div>
+                      </div>
+
+                      <div class="mt-5 pt-3.5 border-t border-slate-100 dark:border-slate-800/80 flex items-center justify-between text-xs font-black text-blue-600 dark:text-blue-400">
+                        <span class="group-hover:translate-x-0.5 transition pointer-events-none">Buka Folder Pembelajaran</span>
+                        <div class="w-7 h-7 rounded-full bg-blue-50 dark:bg-blue-950/60 flex items-center justify-center text-sm group-hover:bg-blue-600 group-hover:text-white transition pointer-events-none">
+                          <i class="ph-bold ph-arrow-right"></i>
+                        </div>
+                      </div>
+                    </div>
+                  `;
+                }).join('')}
+              </div>
+            `}
+          </div>
+        </div>
+      `;
+    }
+
+    // =========================================================================
+    // 2. TAMPILAN KHUSUS: HALAMAN DETAIL FOLDER SISWA (TERPISAH & TERISOLASI)
+    // =========================================================================
+    const fldAllMaterials = listMateri.filter(m =>
+      m.folder_id === activeFolder.id &&
+      m.status === 'PUBLISHED' &&
+      (m.kelas_id === 'ALL' || !m.kelas_id || m.kelas_id === userKelas || !userKelas)
+    );
+    const totalFolderMateri = fldAllMaterials.length;
+    const totalVideoFolder = fldAllMaterials.filter(m => m.jenis === 'VIDEO').length;
+    const totalPdfFolder = fldAllMaterials.filter(m => m.jenis === 'PDF').length;
+    const totalGambarFolder = fldAllMaterials.filter(m => m.jenis === 'GAMBAR').length;
+
+    // Filter pencarian dan jenis materi di folder aktif
+    const folderMaterials = fldAllMaterials.filter(m => {
+      const matchQ = (m.judul || '').toLowerCase().includes(q) || (m.deskripsi || '').toLowerCase().includes(q);
+      const matchJenis = filterJenis === 'ALL' || m.jenis === filterJenis;
+      return matchQ && matchJenis;
+    });
+
+    return `
+      <div class="space-y-6">
+        <!-- A. Area Navigasi Header Halaman Folder -->
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div class="flex items-center gap-1.5 text-xs font-bold text-slate-400 dark:text-slate-500">
+            <button type="button" onclick="window.app.clearMateriFolderSelection()" class="hover:text-blue-600 dark:hover:text-blue-400 transition flex items-center gap-1 font-bold">
+              <i class="ph-bold ph-folder"></i>
+              <span>Materi Pembelajaran</span>
+            </button>
+            <span>/</span>
+            <span class="text-blue-600 dark:text-blue-400 font-black">${activeFolder.nama}</span>
+          </div>
+
+          <button type="button" onclick="window.app.clearMateriFolderSelection()" class="self-start sm:self-auto inline-flex items-center gap-2 px-4 py-2 rounded-2xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs font-black transition active:scale-95 shadow-sm">
+            <i class="ph-bold ph-arrow-left text-base text-blue-600"></i>
+            <span>← Kembali ke Semua Folder</span>
+          </button>
+        </div>
+
+        <!-- Header Identitas Folder Aktif -->
+        <div class="bg-white dark:bg-[#172033] rounded-3xl p-5 sm:p-6 border border-slate-100 dark:border-[#293548] shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div class="flex items-start gap-4">
+            <div class="shrink-0 p-2 rounded-2xl bg-slate-50 dark:bg-slate-800/80 border border-slate-100 dark:border-slate-700 shadow-sm">
+              ${renderFolderSvg(activeFolder.color || 'blue', 'w-14 h-14 sm:w-16 sm:h-16')}
+            </div>
+            <div class="space-y-1.5">
+              <div class="flex items-center gap-2">
+                <span class="text-xs font-black text-blue-600 dark:text-blue-400 uppercase tracking-wider">📁 FOLDER PEMBELAJARAN</span>
+              </div>
+              <h2 class="text-xl sm:text-2xl font-black text-slate-900 dark:text-white leading-tight">📁 ${activeFolder.nama.toUpperCase()}</h2>
+              <p class="text-xs sm:text-sm text-slate-500 dark:text-slate-400 leading-relaxed max-w-2xl">
+                ${activeFolder.deskripsi || 'Kumpulan materi pembelajaran untuk membantu siswa memahami konsep dan mempersiapkan diri menghadapi ujian.'}
+              </p>
+              <div class="pt-1 flex items-center gap-2 flex-wrap">
+                <span class="px-3 py-1 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 text-xs font-black">
+                  ${activeFolder.kelas_badge || 'Semua Kelas'}
+                </span>
+                <span class="px-3 py-1 rounded-xl bg-blue-50 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400 text-xs font-black border border-blue-200/80 dark:border-blue-900/50">
+                  ${activeFolder.mapel_badge || activeFolder.mapel_nama || 'Mata Pelajaran'}
+                </span>
+                <span class="px-3 py-1 rounded-xl bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-400 text-xs font-black border border-emerald-200/80 dark:border-emerald-900/50">
+                  ${totalFolderMateri} Materi Tersedia
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- B. Kartu Statistik Materi Folder -->
+        <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
+          <!-- Total Materi -->
+          <div class="bg-white dark:bg-[#172033] p-4 rounded-3xl border border-slate-100 dark:border-[#293548] shadow-sm flex items-center gap-3">
+            <div class="w-10 h-10 rounded-2xl bg-blue-600 text-white flex items-center justify-center text-xl shadow-md shadow-blue-500/20 shrink-0">
+              <i class="ph-fill ph-book-open"></i>
+            </div>
+            <div>
+              <p class="text-[11px] font-bold text-slate-400 dark:text-slate-500">Total Materi</p>
+              <h4 class="text-xl font-black text-slate-900 dark:text-white leading-tight">${totalFolderMateri}</h4>
+            </div>
+          </div>
+
+          <!-- Video Belajar -->
+          <div class="bg-white dark:bg-[#172033] p-4 rounded-3xl border border-slate-100 dark:border-[#293548] shadow-sm flex items-center gap-3">
+            <div class="w-10 h-10 rounded-2xl bg-rose-600 text-white flex items-center justify-center text-xl shadow-md shadow-rose-500/20 shrink-0">
+              <i class="ph-fill ph-youtube-logo"></i>
+            </div>
+            <div>
+              <p class="text-[11px] font-bold text-slate-400 dark:text-slate-500">Video Belajar</p>
+              <h4 class="text-xl font-black text-slate-900 dark:text-white leading-tight">${totalVideoFolder}</h4>
+            </div>
+          </div>
+
+          <!-- Dokumen PDF -->
+          <div class="bg-white dark:bg-[#172033] p-4 rounded-3xl border border-slate-100 dark:border-[#293548] shadow-sm flex items-center gap-3">
+            <div class="w-10 h-10 rounded-2xl bg-red-600 text-white flex items-center justify-center text-xl shadow-md shadow-red-500/20 shrink-0">
+              <i class="ph-fill ph-file-pdf"></i>
+            </div>
+            <div>
+              <p class="text-[11px] font-bold text-slate-400 dark:text-slate-500">Dokumen PDF</p>
+              <h4 class="text-xl font-black text-slate-900 dark:text-white leading-tight">${totalPdfFolder}</h4>
+            </div>
+          </div>
+
+          <!-- Infografis & Foto -->
+          <div class="bg-white dark:bg-[#172033] p-4 rounded-3xl border border-slate-100 dark:border-[#293548] shadow-sm flex items-center gap-3">
+            <div class="w-10 h-10 rounded-2xl bg-emerald-600 text-white flex items-center justify-center text-xl shadow-md shadow-emerald-500/20 shrink-0">
+              <i class="ph-fill ph-image"></i>
+            </div>
+            <div>
+              <p class="text-[11px] font-bold text-slate-400 dark:text-slate-500">Infografis & Foto</p>
+              <h4 class="text-xl font-black text-slate-900 dark:text-white leading-tight">${totalGambarFolder}</h4>
+            </div>
+          </div>
+        </div>
+
+        <!-- C. Panel Pencarian & Filter Materi Dalam Folder -->
+        <div class="bg-white dark:bg-[#172033] rounded-2xl p-4 border border-slate-100 dark:border-[#293548] shadow-sm flex flex-col sm:flex-row items-center justify-between gap-3">
+          <div class="relative w-full sm:w-80">
+            <i class="ph-bold ph-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm"></i>
+            <input type="text" value="${state.materiSearchQuery || ''}" oninput="window.app.handleMateriSearch(this.value)" placeholder="Cari materi dalam folder ${activeFolder.nama}..." class="w-full pl-8 pr-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-xs text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500" />
+          </div>
+
+          <!-- Format Filters: Desktop Buttons / Mobile Select -->
+          <div class="hidden sm:flex items-center gap-1.5 p-1 rounded-xl bg-slate-100 dark:bg-slate-800 text-xs font-bold">
+            <button type="button" onclick="window.app.handleMateriFilterJenis('ALL')" class="px-3 py-1.5 rounded-lg transition ${filterJenis === 'ALL' ? 'bg-white dark:bg-slate-700 text-blue-600 dark:text-blue-400 shadow-sm font-black' : 'text-slate-600 dark:text-slate-300 hover:text-slate-900'}">
+              Semua Format (${totalFolderMateri})
+            </button>
+            <button type="button" onclick="window.app.handleMateriFilterJenis('VIDEO')" class="px-3 py-1.5 rounded-lg transition ${filterJenis === 'VIDEO' ? 'bg-white dark:bg-slate-700 text-rose-600 shadow-sm font-black' : 'text-slate-600 dark:text-slate-300 hover:text-slate-900'}">
+              Video (${totalVideoFolder})
+            </button>
+            <button type="button" onclick="window.app.handleMateriFilterJenis('PDF')" class="px-3 py-1.5 rounded-lg transition ${filterJenis === 'PDF' ? 'bg-white dark:bg-slate-700 text-red-600 shadow-sm font-black' : 'text-slate-600 dark:text-slate-300 hover:text-slate-900'}">
+              PDF (${totalPdfFolder})
+            </button>
+            <button type="button" onclick="window.app.handleMateriFilterJenis('GAMBAR')" class="px-3 py-1.5 rounded-lg transition ${filterJenis === 'GAMBAR' ? 'bg-white dark:bg-slate-700 text-emerald-600 shadow-sm font-black' : 'text-slate-600 dark:text-slate-300 hover:text-slate-900'}">
+              Gambar (${totalGambarFolder})
+            </button>
+          </div>
+
+          <div class="w-full sm:hidden">
+            <select onchange="window.app.handleMateriFilterJenis(this.value)" class="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-xs font-bold text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500">
+              <option value="ALL" ${filterJenis === 'ALL' ? 'selected' : ''}>Semua Format (${totalFolderMateri})</option>
+              <option value="VIDEO" ${filterJenis === 'VIDEO' ? 'selected' : ''}>Video YouTube (${totalVideoFolder})</option>
+              <option value="PDF" ${filterJenis === 'PDF' ? 'selected' : ''}>Dokumen PDF (${totalPdfFolder})</option>
+              <option value="GAMBAR" ${filterJenis === 'GAMBAR' ? 'selected' : ''}>Gambar / Infografis (${totalGambarFolder})</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- D. Daftar Materi Dalam Folder (Empty State Sesuai Instruksi User) -->
+        ${folderMaterials.length === 0 ? `
+          <div class="bg-white dark:bg-[#172033] rounded-3xl p-10 sm:p-12 border border-slate-100 dark:border-[#293548] shadow-sm text-center space-y-4 max-w-lg mx-auto">
+            <div class="w-16 h-16 rounded-3xl bg-blue-50 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400 mx-auto flex items-center justify-center text-3xl shadow-sm">
+              <i class="ph-bold ph-folder-open"></i>
+            </div>
+            <div class="space-y-1">
+              <h3 class="text-base sm:text-lg font-black text-slate-900 dark:text-white">Folder Ini Belum Memiliki Materi</h3>
+              <p class="text-xs text-slate-400 dark:text-slate-500 leading-relaxed">
+                Materi pembelajaran untuk folder ini belum tersedia. Silakan kembali dan pilih folder lainnya.
+              </p>
+            </div>
+            <div>
+              <button type="button" onclick="window.app.clearMateriFolderSelection()" class="px-5 py-2.5 rounded-2xl bg-blue-600 hover:bg-blue-700 active:scale-95 text-white text-xs font-black inline-flex items-center gap-2 shadow-md shadow-blue-500/25 transition">
+                <i class="ph-bold ph-arrow-left"></i>
+                <span>Kembali ke Semua Folder</span>
+              </button>
+            </div>
+          </div>
+        ` : `
+          <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-5">
+            ${folderMaterials.map(m => {
+              const mapelObj = state.mapel_jadwal.find(j => j.id === m.mapel_id);
+              const mapelNama = mapelObj ? mapelObj.nama_mapel : (m.mapel_id || 'Materi Umum');
+              const ytId = m.jenis === 'VIDEO' ? getYouTubeVideoId(m.url) : '';
+
+              let bannerHtml = '';
+              let badgeTypeHtml = '';
+
+              if (m.jenis === 'VIDEO') {
+                badgeTypeHtml = `<span class="px-2.5 py-1 rounded-full bg-rose-600 text-white text-[10px] font-black flex items-center gap-1 shadow-sm"><i class="ph-fill ph-youtube-logo text-xs"></i> Video</span>`;
+                bannerHtml = `
+                  <div class="relative w-full h-36 bg-slate-900 flex items-center justify-center overflow-hidden group-hover:scale-[1.02] transition duration-300">
+                    ${ytId ? `<img src="https://img.youtube.com/vi/${ytId}/mqdefault.jpg" alt="Video Thumbnail" class="w-full h-full object-cover opacity-85" />` : ''}
+                    <div class="absolute inset-0 bg-black/30 backdrop-blur-[1px]"></div>
+                    <div class="absolute w-12 h-12 rounded-full bg-rose-600 text-white flex items-center justify-center text-xl shadow-lg shadow-rose-600/40 transform group-hover:scale-110 transition">
+                      <i class="ph-fill ph-play ml-0.5"></i>
+                    </div>
+                  </div>
+                `;
+              } else if (m.jenis === 'PDF') {
+                badgeTypeHtml = `<span class="px-2.5 py-1 rounded-full bg-red-600 text-white text-[10px] font-black flex items-center gap-1 shadow-sm"><i class="ph-fill ph-file-pdf text-xs"></i> PDF</span>`;
+                bannerHtml = `
+                  <div class="relative w-full h-36 bg-gradient-to-br from-red-600 via-rose-600 to-amber-600 flex items-center justify-center overflow-hidden">
+                    <div class="flex flex-col items-center justify-center text-white space-y-1">
+                      <i class="ph-fill ph-file-pdf text-4xl drop-shadow-md"></i>
+                      <span class="text-[11px] font-black uppercase tracking-wider">DOKUMEN BELAJAR</span>
+                    </div>
+                  </div>
+                `;
+              } else {
+                badgeTypeHtml = `<span class="px-2.5 py-1 rounded-full bg-emerald-600 text-white text-[10px] font-black flex items-center gap-1 shadow-sm"><i class="ph-fill ph-image text-xs"></i> Gambar</span>`;
+                bannerHtml = `
+                  <div class="relative w-full h-36 bg-slate-100 dark:bg-slate-800 flex items-center justify-center overflow-hidden">
+                    ${m.url ? `<img src="${m.url}" alt="${m.judul}" class="w-full h-full object-cover opacity-90 group-hover:scale-105 transition duration-300" />` : `
+                      <i class="ph-fill ph-image text-4xl text-slate-300"></i>
+                    `}
+                  </div>
+                `;
+              }
+
+              return `
+                <div class="bg-white dark:bg-[#172033] rounded-3xl border border-slate-100 dark:border-[#293548] shadow-sm hover:shadow-md transition-all overflow-hidden flex flex-col justify-between group">
+                  <div>
+                    <!-- Visual Header Thumbnail -->
+                    <div class="relative">
+                      ${bannerHtml}
+                      <div class="absolute top-3 left-3">
+                        ${badgeTypeHtml}
+                      </div>
+                      <div class="absolute top-3 right-3">
+                        <span class="px-2.5 py-1 rounded-full bg-slate-900/70 backdrop-blur text-white text-[10px] font-bold">
+                          ${mapelNama}
+                        </span>
+                      </div>
+                    </div>
+
+                    <!-- Detail Konten -->
+                    <div class="p-4 sm:p-5 space-y-2">
+                      <h3 class="text-sm sm:text-base font-black text-slate-900 dark:text-white leading-snug line-clamp-2 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition">
+                        ${m.judul}
+                      </h3>
+                      <p class="text-xs text-slate-500 dark:text-slate-400 line-clamp-2 leading-relaxed">
+                        ${m.deskripsi || 'Klik tombol di bawah untuk mempelajari materi ini selengkapnya.'}
+                      </p>
+                    </div>
+                  </div>
+
+                  <!-- Footer Kartu & Tombol Aksi -->
+                  <div class="p-4 sm:p-5 pt-0 border-t border-slate-100 dark:border-slate-800/80 mt-2 flex items-center justify-between">
+                    <span class="text-[10px] font-bold text-slate-400 dark:text-slate-500 flex items-center gap-1">
+                      <i class="ph-bold ph-user"></i>
+                      <span>${m.created_by || 'Guru'}</span>
+                    </span>
+                    <button type="button" onclick="window.app.previewMateriModal('${m.id}')" class="px-3.5 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-700 active:scale-95 text-white text-xs font-black flex items-center gap-1.5 shadow-sm shadow-blue-500/20 transition">
+                      <span>Buka Materi</span>
+                      <i class="ph-bold ph-arrow-right text-xs"></i>
+                    </button>
+                  </div>
+                </div>
+              `;
+            }).join('')}
+          </div>
+        `}
+      </div>
+    `;
+  }
+
+  function renderSiswaMateriModule_PREV2() {
   function renderSiswaMateriModule() {
     const listMateri = state.materi || [];
     const userKelas = state.user?.kelas_id;
@@ -9959,7 +10393,38 @@
     }
   });
 
+  window.addEventListener('hashchange', function() {
+    if (!state.user) return;
+    const hash = window.location.hash || '';
+    const match = hash.match(/^#\/materi\/folder\/([^/]+)/);
+    if (match) {
+      if (state.selectedMateriFolder !== match[1]) {
+        state.activeMenu = 'materi';
+        state.selectedMateriFolder = match[1];
+        renderAll();
+      }
+    } else if (hash === '#/materi') {
+      if (state.selectedMateriFolder !== null) {
+        state.activeMenu = 'materi';
+        state.selectedMateriFolder = null;
+        renderAll();
+      }
+    }
+  });
+
   async function bootstrap() {
+    try {
+      const hash = window.location.hash || '';
+      const match = hash.match(/^#\/materi\/folder\/([^/]+)/);
+      if (match) {
+        state.selectedMateriFolder = match[1];
+      } else {
+        const savedFolder = sessionStorage.getItem('educbt_selected_materi_folder');
+        if (savedFolder) {
+          state.selectedMateriFolder = savedFolder;
+        }
+      }
+    } catch (e) {}
     try {
       const savedFolder = sessionStorage.getItem('educbt_selected_materi_folder');
       if (savedFolder) {
