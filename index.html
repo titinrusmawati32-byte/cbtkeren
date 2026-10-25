@@ -729,7 +729,7 @@
           </div>
 
           <!-- Tombol Masuk Biru -->
-          <button type="submit" id="btn-submit-unified" class="w-full py-3.5 bg-blue-600 hover:bg-blue-700 active:scale-[0.99] text-white font-bold text-sm rounded-2xl shadow-lg shadow-blue-500/25 transition flex items-center justify-center gap-2 cursor-pointer">
+          <button type="submit" id="btn-submit-unified" onclick="window.app && window.app.handleUnifiedLogin ? window.app.handleUnifiedLogin(event) : (window.handleUnifiedLogin ? handleUnifiedLogin(event) : true)" class="w-full py-3.5 bg-blue-600 hover:bg-blue-700 active:scale-[0.99] text-white font-bold text-sm rounded-2xl shadow-lg shadow-blue-500/25 transition flex items-center justify-center gap-2 cursor-pointer">
             <span>Masuk</span>
             <i class="ph-bold ph-arrow-right"></i>
           </button>
@@ -817,7 +817,7 @@
             </div>
 
             <!-- Tombol Masuk Biru Mobile -->
-            <button type="submit" id="btn-submit-mobile" class="w-full py-3 bg-blue-600 hover:bg-blue-700 active:scale-[0.99] text-white font-bold text-sm rounded-xl shadow-lg shadow-blue-500/25 transition flex items-center justify-center gap-2 cursor-pointer mt-1">
+            <button type="submit" id="btn-submit-mobile" onclick="window.app && window.app.handleUnifiedLogin ? window.app.handleUnifiedLogin(event) : (window.handleUnifiedLogin ? handleUnifiedLogin(event) : true)" class="w-full py-3 bg-blue-600 hover:bg-blue-700 active:scale-[0.99] text-white font-bold text-sm rounded-xl shadow-lg shadow-blue-500/25 transition flex items-center justify-center gap-2 cursor-pointer mt-1">
               <span>Masuk</span>
               <i class="ph-bold ph-arrow-right"></i>
             </button>
@@ -1657,7 +1657,7 @@
       { id: 'jdw-4', kode_mapel: 'PPKN', nama_mapel: 'Pendidikan Pancasila', judul_ujian: 'Penilaian Nilai-Nilai Pancasila', kelas_id: 'kls-1', durasi_menit: 45, token: 'PPKN26', warna_tema: 'green', status_aktif: true }
     ];
 
-    /* const _ignoreOldJadwal = [
+    const _ignoreOldJadwal = []; /*
       {
         id: 'jdw-1',
         kode_mapel: 'IPAS',
@@ -3050,6 +3050,10 @@
     }
   }
 
+  window.app = window.app || {};
+  window.app.handleUnifiedLogin = handleUnifiedLogin;
+  window.handleUnifiedLogin = handleUnifiedLogin;
+
   function togglePasswordVisibility(inputId, iconId) {
     const input = document.getElementById(inputId);
     const icon = document.getElementById(iconId);
@@ -4220,21 +4224,9 @@
       ...state.mapel_jadwal.map(j => `<option value="${j.id}" ${fld.mapel_id === j.id ? 'selected' : ''}>${j.nama_mapel} (${j.kode_mapel || 'Mapel'})</option>`)
     ].join('');
 
-    const folderList = (state.materi_folders && state.materi_folders.length) ? state.materi_folders : DEFAULT_MATERI_FOLDERS;
-    const folderOptions = [
-      `<option value="">(Pilih Folder / Otomatis sesuai Mapel)</option>`,
-      ...folderList.map(f => `<option value="${f.id}" ${(item.folder_id === f.id || state.selectedMateriFolder === f.id) ? 'selected' : ''}>📁 ${f.nama}</option>`)
-    ].join('');
-
     const kelasOptions = [
       `<option value="ALL" ${fld.kelas_id === 'ALL' ? 'selected' : ''}>Semua Kelas (Umum)</option>`,
       ...state.kelas.map(k => `<option value="${k.id}" ${fld.kelas_id === k.id ? 'selected' : ''}>${k.nama_kelas}</option>`)
-    ].join('');
-
-    const folderList = (state.materi_folders && state.materi_folders.length) ? state.materi_folders : DEFAULT_MATERI_FOLDERS;
-    const folderOptions = [
-      `<option value="">(Pilih Folder / Otomatis sesuai Mapel)</option>`,
-      ...folderList.map(f => `<option value="${f.id}" ${(item.folder_id === f.id || state.selectedMateriFolder === f.id) ? 'selected' : ''}>📁 ${f.nama}</option>`)
     ].join('');
 
     const modalBody = `
@@ -4316,7 +4308,6 @@
       mapel_nama: mapelObj ? mapelObj.nama_mapel : 'Umum',
       mapel_badge: mapelObj ? (mapelObj.kode_mapel || mapelObj.nama_mapel.substring(0, 6).toUpperCase()) : 'UMUM',
       kelas_id: kelasId,
-      folder_id: folderId,
       kelas_badge: kelasId === 'ALL' ? 'SEMUA' : (kelasObj ? kelasObj.nama_kelas : kelasId),
       color: color,
       default_sub: '0 materi • 0 video • 0 PDF',
@@ -9685,7 +9676,12 @@
     if (!e.target.closest('[id^="folder-menu-"]') && !e.target.closest('button[onclick*="toggleFolderDropdown"]')) {
       document.querySelectorAll('[id^="folder-menu-"]').forEach(m => m.classList.add('hidden'));
     }
-  });
+  }
+
+  // Paparkan fungsi login ke window & window.app lebih awal untuk keandalan interaksi
+  window.app = window.app || {};
+  window.app.handleUnifiedLogin = handleUnifiedLogin;
+  window.handleUnifiedLogin = handleUnifiedLogin;);
 
   bootstrap();
 </script>
