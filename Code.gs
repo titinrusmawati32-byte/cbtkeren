@@ -30,7 +30,8 @@ const SHEETS = {
   REKAP: 'rekap_nilai',
   PENGATURAN: 'pengaturan',
   PENGGUNA: 'pengguna',
-  MATERI: 'materi'
+  MATERI: 'materi',
+  MATERI_FOLDERS: 'materi_folders'
 };
 
 /**
@@ -789,9 +790,11 @@ function doPost(e) {
       case 'saveMateri': {
         const mat = payload.materi || payload;
         const sheet = ss.getSheetByName(SHEETS.MATERI) || getOrCreateMateriSheet(ss);
+        ensureMateriSheetColumns(sheet);
         const id = mat.id || 'mat-' + Utilities.getUuid();
         const row = [
           id,
+          mat.folder_id || '',
           mat.judul || 'Materi Pembelajaran',
           mat.deskripsi || '',
           mat.mapel_id || mat.mapel || 'Umum',
@@ -810,6 +813,34 @@ function doPost(e) {
 
       case 'deleteMateri': {
         const sheet = ss.getSheetByName(SHEETS.MATERI) || getOrCreateMateriSheet(ss);
+        deleteRowById(sheet, payload.id);
+        invalidateDataCache();
+        return jsonResponse({ status: 'success', id: payload.id });
+      }
+
+      // 11. CRUD KELOLA FOLDER MATERI PEMBELAJARAN
+      case 'saveMateriFolder': {
+        const fld = payload.folder || payload;
+        const sheet = ss.getSheetByName(SHEETS.MATERI_FOLDERS) || getOrCreateMateriFolderSheet(ss);
+        const id = fld.id || 'fld-' + Utilities.getUuid();
+        const row = [
+          id,
+          fld.name || 'Folder Materi',
+          fld.subject || 'Umum',
+          fld.grade || 'Semua Kelas',
+          fld.color || '#2477f5',
+          fld.icon || '📁',
+          fld.description || '',
+          fld.created_at || new Date().toISOString(),
+          new Date().toISOString()
+        ];
+        upsertRowById(sheet, id, row);
+        invalidateDataCache();
+        return jsonResponse({ status: 'success', id: id });
+      }
+
+      case 'deleteMateriFolder': {
+        const sheet = ss.getSheetByName(SHEETS.MATERI_FOLDERS) || getOrCreateMateriFolderSheet(ss);
         deleteRowById(sheet, payload.id);
         invalidateDataCache();
         return jsonResponse({ status: 'success', id: payload.id });
@@ -846,6 +877,8 @@ function fetchAllDatabase(userRole = 'admin') {
   let rawSoal = sheetToObjects(ss.getSheetByName(SHEETS.SOAL));
   let materiSheet = ss.getSheetByName(SHEETS.MATERI) || getOrCreateMateriSheet(ss);
   let materi = sheetToObjects(materiSheet);
+  let folderSheet = ss.getSheetByName(SHEETS.MATERI_FOLDERS) || getOrCreateMateriFolderSheet(ss);
+  let materi_folders = sheetToObjects(folderSheet);
   let siswa = [];
   let rekap_nilai = [];
   let pengguna = [];
@@ -882,7 +915,8 @@ function fetchAllDatabase(userRole = 'admin') {
     rekap_nilai: rekap_nilai,
     pengaturan: pengaturan,
     pengguna: pengguna,
-    materi: materi || []
+    materi: materi || [],
+    materi_folders: materi_folders || []
   };
 }
 
@@ -895,6 +929,20 @@ function jsonResponse(data) {
 }
 
 /**
+ * Memastikan kolom folder_id selalu ada di sheet materi tanpa merusak data lama
+ */
+function ensureMateriSheetColumns(sheet) {
+  if (!sheet) return;
+  const values = sheet.getDataRange().getValues();
+  if (values.length === 0) return;
+  const headers = values[0].map(h => String(h || '').trim().toLowerCase());
+  if (headers.indexOf('folder_id') === -1) {
+    sheet.insertColumnAfter(1);
+    sheet.getRange(1, 2).setValue('folder_id').setFontWeight('bold').setBackground('#E2E8F0');
+  }
+}
+
+/**
  * Otomatis Memeriksa atau Membuat Lembar 'materi' Lengkap dengan Header & Sampel
  */
 function getOrCreateMateriSheet(ss) {
@@ -902,7 +950,7 @@ function getOrCreateMateriSheet(ss) {
   let sheet = ss.getSheetByName(SHEETS.MATERI);
   if (!sheet) {
     sheet = ss.insertSheet(SHEETS.MATERI);
-    const headers = ['id', 'judul', 'deskripsi', 'mapel_id', 'kelas_id', 'jenis', 'url', 'status', 'created_by', 'created_at', 'updated_at'];
+    const headers = ['id', 'folder_id', 'judul', 'deskripsi', 'mapel_id', 'kelas_id', 'jenis', 'url', 'status', 'created_by', 'created_at', 'updated_at'];
     sheet.appendRow(headers);
     sheet.getRange(1, 1, 1, headers.length).setFontWeight('bold').setBackground('#E2E8F0');
     sheet.setFrozenRows(1);
@@ -910,6 +958,7 @@ function getOrCreateMateriSheet(ss) {
     // Data sampel awal agar tabel langsung siap digunakan
     sheet.appendRow([
       'mat-001',
+      'math4',
       'Konsep Dasar Trigonometri Sudut Istimewa',
       'Pemahaman komprehensif mengenai sin, cos, tan pada kuadran I-IV serta relasi sudut dan identitas trigonometri.',
       'jdw-1',
@@ -923,6 +972,7 @@ function getOrCreateMateriSheet(ss) {
     ]);
     sheet.appendRow([
       'mat-002',
+      'ipas4',
       'Modul Lengkap Biologi: Struktur dan Fungsi Sel',
       'Materi pendukung bab 1 biologi tentang organel sel, membran plasma, dan transport aktif-pasif antar sel.',
       'jdw-1',
@@ -936,6 +986,7 @@ function getOrCreateMateriSheet(ss) {
     ]);
     sheet.appendRow([
       'mat-003',
+      'ipas4',
       'Infografis Ringkasan Rumus Dinamika & Hukum Newton',
       'Peta konsep visual hukum gerak Newton I, II, III dan penerapannya pada bidang miring serta lift bergerak.',
       'jdw-2',
@@ -947,19 +998,47 @@ function getOrCreateMateriSheet(ss) {
       new Date().toISOString(),
       new Date().toISOString()
     ]);
+  } else {
+    ensureMateriSheetColumns(sheet);
+  }
+  return sheet;
+}
+
+/**
+ * Otomatis Memeriksa atau Membuat Lembar 'materi_folders' Lengkap dengan 5 Folder Simulasi Resmi
+ */
+function getOrCreateMateriFolderSheet(ss) {
+  if (!ss) ss = SpreadsheetApp.getActiveSpreadsheet();
+  let sheet = ss.getSheetByName(SHEETS.MATERI_FOLDERS);
+  if (!sheet) {
+    sheet = ss.insertSheet(SHEETS.MATERI_FOLDERS);
+    const headers = ['id', 'name', 'subject', 'grade', 'color', 'icon', 'description', 'created_at', 'updated_at'];
+    sheet.appendRow(headers);
+    sheet.getRange(1, 1, 1, headers.length).setFontWeight('bold').setBackground('#E2E8F0');
+    sheet.setFrozenRows(1);
+
+    const defaultFolders = [
+      ['ipas4', 'IPAS Kelas IV', 'IPAS', 'IV A', '#2477f5', '📁', 'Kumpulan materi IPAS untuk membantu memahami konsep sains dan lingkungan sekitar.', new Date().toISOString(), new Date().toISOString()],
+      ['math4', 'Matematika Kelas IV', 'MATEMATIKA', 'IV A', '#9255e8', '📁', 'Materi numerasi, operasi hitung, pecahan, dan pemecahan masalah.', new Date().toISOString(), new Date().toISOString()],
+      ['bindo4', 'Bahasa Indonesia', 'BAHASA INDONESIA', 'IV A', '#ff922b', '📁', 'Kumpulan bacaan, teks narasi, dan latihan memahami informasi.', new Date().toISOString(), new Date().toISOString()],
+      ['pancasila4', 'Pendidikan Pancasila', 'PANCASILA', 'IV B', '#24ae78', '📁', 'Materi nilai-nilai Pancasila dan penerapannya dalam kehidupan.', new Date().toISOString(), new Date().toISOString()],
+      ['umum', 'Materi Umum', 'UMUM', 'Semua Kelas', '#12a9ba', '📁', 'Materi tambahan yang dapat diakses oleh seluruh siswa.', new Date().toISOString(), new Date().toISOString()]
+    ];
+    defaultFolders.forEach(r => sheet.appendRow(r));
   }
   return sheet;
 }
 
 /**
  * FUNGSI 1-KLIK: Jalankan fungsi ini langsung dari editor Google Apps Script (klik 'Run' / 'Jalankan')
- * untuk membuat lembar 'materi' di Spreadsheet secara otomatis dalam 1 detik!
+ * untuk membuat lembar 'materi' & 'materi_folders' di Spreadsheet secara otomatis dalam 1 detik!
  */
 function setupMateriSheet() {
   const ss = SpreadsheetApp.getActiveSpreadsheet();
   const sheet = getOrCreateMateriSheet(ss);
-  Logger.log('Berhasil membuat/memverifikasi lembar: ' + sheet.getName());
-  return 'Sukses! Lembar ' + sheet.getName() + ' siap digunakan dengan ' + sheet.getLastRow() + ' baris data.';
+  const folderSheet = getOrCreateMateriFolderSheet(ss);
+  Logger.log('Berhasil membuat/memverifikasi lembar: ' + sheet.getName() + ' dan ' + folderSheet.getName());
+  return 'Sukses! Lembar ' + sheet.getName() + ' dan ' + folderSheet.getName() + ' siap digunakan.';
 }
 
 /**
@@ -968,9 +1047,12 @@ function setupMateriSheet() {
 function initDatabaseSheets() {
   const ss = SpreadsheetApp.getActiveSpreadsheet();
   
-  // Selalu pastikan lembar materi ada sekalipun DB_INITIALIZED sudah true
+  // Selalu pastikan lembar materi dan folder ada sekalipun DB_INITIALIZED sudah true
   if (!ss.getSheetByName(SHEETS.MATERI)) {
     getOrCreateMateriSheet(ss);
+  }
+  if (!ss.getSheetByName(SHEETS.MATERI_FOLDERS)) {
+    getOrCreateMateriFolderSheet(ss);
   }
 
   const props = PropertiesService.getScriptProperties();
@@ -1093,6 +1175,17 @@ function initDatabaseSheets() {
           new Date().toISOString(),
           new Date().toISOString()
         ]
+      ]
+    },
+    {
+      name: SHEETS.MATERI_FOLDERS,
+      headers: ['id', 'name', 'subject', 'grade', 'color', 'icon', 'description', 'created_at', 'updated_at'],
+      initial: [
+        ['ipas4', 'IPAS Kelas IV', 'IPAS', 'IV A', '#2477f5', '📁', 'Kumpulan materi IPAS untuk membantu memahami konsep sains dan lingkungan sekitar.', new Date().toISOString(), new Date().toISOString()],
+        ['math4', 'Matematika Kelas IV', 'MATEMATIKA', 'IV A', '#9255e8', '📁', 'Materi numerasi, operasi hitung, pecahan, dan pemecahan masalah.', new Date().toISOString(), new Date().toISOString()],
+        ['bindo4', 'Bahasa Indonesia', 'BAHASA INDONESIA', 'IV A', '#ff922b', '📁', 'Kumpulan bacaan, teks narasi, dan latihan memahami informasi.', new Date().toISOString(), new Date().toISOString()],
+        ['pancasila4', 'Pendidikan Pancasila', 'PANCASILA', 'IV B', '#24ae78', '📁', 'Materi nilai-nilai Pancasila dan penerapannya dalam kehidupan.', new Date().toISOString(), new Date().toISOString()],
+        ['umum', 'Materi Umum', 'UMUM', 'Semua Kelas', '#12a9ba', '📁', 'Materi tambahan yang dapat diakses oleh seluruh siswa.', new Date().toISOString(), new Date().toISOString()]
       ]
     }
   ];

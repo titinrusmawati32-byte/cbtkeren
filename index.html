@@ -2235,6 +2235,7 @@
         if (cached.materi_folders && cached.materi_folders.length > 0) {
           state.materi_folders = cached.materi_folders;
         }
+        ensureMateriFoldersExist();
         if (cached.pengaturan && Object.keys(cached.pengaturan).length > 0) {
           state.pengaturan = { ...state.pengaturan, ...cached.pengaturan };
         }
@@ -2262,6 +2263,24 @@
         state.materi = d.materi || [];
         if (d.materi_folders && d.materi_folders.length > 0) {
           state.materi_folders = d.materi_folders;
+        }
+        ensureMateriFoldersExist();
+
+        // Sinkronisasi folder lintas perangkat via Cloud Firestore (jika aktif)
+        if (window.FirebaseAdapter && window.FirebaseAdapter.getMateriFolders) {
+          window.FirebaseAdapter.getMateriFolders().then(fbFolders => {
+            if (fbFolders && fbFolders.length > 0) {
+              const curIds = new Set((state.materi_folders || []).map(f => f.id));
+              fbFolders.forEach(f => {
+                if (!curIds.has(f.id)) {
+                  state.materi_folders.push(f);
+                  curIds.add(f.id);
+                }
+              });
+              ensureMateriFoldersExist();
+              renderAll();
+            }
+          }).catch(() => {});
         }
         if (d.pengaturan && Object.keys(d.pengaturan).length > 0) {
           state.pengaturan = { ...state.pengaturan, ...d.pengaturan };
@@ -4015,6 +4034,114 @@
     renderAll();
   }
 
+  const DEFAULT_SIMULASI_FOLDERS = [
+    { id: 'ipas4', name: 'IPAS Kelas IV', icon: '📁', color: '#2477f5', subject: 'IPAS', grade: 'IV A', description: 'Kumpulan materi IPAS untuk membantu memahami konsep sains dan lingkungan sekitar.' },
+    { id: 'math4', name: 'Matematika Kelas IV', icon: '📁', color: '#9255e8', subject: 'MATEMATIKA', grade: 'IV A', description: 'Materi numerasi, operasi hitung, pecahan, dan pemecahan masalah.' },
+    { id: 'bindo4', name: 'Bahasa Indonesia', icon: '📁', color: '#ff922b', subject: 'BAHASA INDONESIA', grade: 'IV A', description: 'Kumpulan bacaan, teks narasi, dan latihan memahami informasi.' },
+    { id: 'pancasila4', name: 'Pendidikan Pancasila', icon: '📁', color: '#24ae78', subject: 'PANCASILA', grade: 'IV B', description: 'Materi nilai-nilai Pancasila dan penerapannya dalam kehidupan.' },
+    { id: 'umum', name: 'Materi Umum', icon: '📁', color: '#12a9ba', subject: 'UMUM', grade: 'Semua Kelas', description: 'Materi tambahan yang dapat diakses oleh seluruh siswa.' }
+  ];
+
+  // Sinkronisasi & Penjamin Ketersediaan Folder di Semua Perangkat
+  function ensureMateriFoldersExist() {
+    if (!state.materi_folders) state.materi_folders = [];
+
+    // 1. Jika state.materi_folders masih kosong (misal di perangkat baru), langsung inisialisasi default folder simulasi
+    if (state.materi_folders.length === 0) {
+      state.materi_folders = JSON.parse(JSON.stringify(DEFAULT_SIMULASI_FOLDERS));
+    }
+
+    const colorPalette = ['#2477f5', '#9255e8', '#ff922b', '#24ae78', '#12a9ba', '#e11d48', '#6366f1', '#d97706'];
+    const existingIds = new Set(state.materi_folders.map(f => String(f.id || '').trim().toLowerCase()));
+    const existingNames = new Set(state.materi_folders.map(f => String(f.name || '').trim().toLowerCase()));
+
+    // 2. Auto-Discovery & Auto-Creation Folder dari seluruh materi yang ada di database
+    // Ini menjamin di perangkat apapun (HP, tablet, komputer siswa, dll) FOLDER TIDAK AKAN PERNAH KOSONG!
+    (state.materi || []).forEach(m => {
+      const fIdRaw = String(m.folder_id || '').trim();
+      const fIdLower = fIdRaw.toLowerCase();
+
+      // Kasus A: Materi memiliki folder_id khusus tapi foldernya belum ada di perangkat ini
+      if (fIdRaw && !existingIds.has(fIdLower) && !existingNames.has(fIdLower)) {
+        const mapelObj = (state.mapel_jadwal || []).find(j =>
+          String(j.id).toLowerCase() === String(m.mapel_id || '').toLowerCase() ||
+          String(j.nama_mapel).toLowerCase() === String(m.mapel_id || '').toLowerCase()
+        );
+        const klsObj = (state.kelas || []).find(k =>
+          String(k.id).toLowerCase() === String(m.kelas_id || '').toLowerCase() ||
+          String(k.nama_kelas).toLowerCase() === String(m.kelas_id || '').toLowerCase()
+        );
+
+        let folderTitle = fIdRaw;
+        if (fIdRaw.startsWith('fld-') || fIdRaw.length > 15) {
+          folderTitle = mapelObj ? mapelObj.nama_mapel : (m.mapel_id ? String(m.mapel_id).toUpperCase() : 'Materi Pembelajaran');
+        }
+
+        const newFld = {
+          id: fIdRaw,
+          name: folderTitle,
+          icon: '📁',
+          color: colorPalette[state.materi_folders.length % colorPalette.length],
+          subject: (mapelObj ? mapelObj.kode_mapel || mapelObj.nama_mapel : m.mapel_id || 'UMUM').toUpperCase(),
+          grade: klsObj ? klsObj.nama_kelas : (m.kelas_id && m.kelas_id !== 'ALL' ? m.kelas_id : 'Semua Kelas'),
+          description: `Kumpulan materi pembelajaran untuk ${folderTitle}.`,
+          created_at: m.created_at || new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        };
+
+        state.materi_folders.push(newFld);
+        existingIds.add(fIdLower);
+        existingNames.add(folderTitle.toLowerCase());
+      }
+
+      // Kasus B: Materi tidak punya folder_id (misal data tersimpan dari spreadsheet lama), tautkan ke folder mapel
+      if (!fIdRaw) {
+        const mJudul = String(m.judul || '').toLowerCase();
+        const mMapelId = String(m.mapel_id || '').toLowerCase();
+        const mapelObj = (state.mapel_jadwal || []).find(j =>
+          String(j.id).toLowerCase() === mMapelId ||
+          String(j.nama_mapel).toLowerCase() === mMapelId
+        );
+        const mapelName = mapelObj ? mapelObj.nama_mapel : (m.mapel_id || 'Materi Umum');
+        const mapelNameLower = mapelName.toLowerCase();
+
+        // Cari folder yang cocok
+        const matchedFld = state.materi_folders.find(f =>
+          String(f.name || '').toLowerCase() === mapelNameLower ||
+          String(f.subject || '').toLowerCase() === mapelNameLower ||
+          mapelNameLower.includes(String(f.subject || '').toLowerCase()) ||
+          mJudul.includes(String(f.name || '').toLowerCase())
+        );
+
+        if (matchedFld) {
+          m.folder_id = matchedFld.id;
+        } else if (!existingNames.has(mapelNameLower)) {
+          const klsObj = (state.kelas || []).find(k => String(k.id).toLowerCase() === String(m.kelas_id || '').toLowerCase());
+          const generatedId = 'fld-' + (mapelObj ? mapelObj.id : mapelName.replace(/[^a-zA-Z0-9]/g, '-').toLowerCase());
+          const newFld = {
+            id: generatedId,
+            name: mapelName,
+            icon: '📁',
+            color: colorPalette[state.materi_folders.length % colorPalette.length],
+            subject: (mapelObj ? mapelObj.kode_mapel || mapelObj.nama_mapel : mapelName).toUpperCase(),
+            grade: klsObj ? klsObj.nama_kelas : 'Semua Kelas',
+            description: `Kumpulan materi pembelajaran untuk mata pelajaran ${mapelName}.`,
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString()
+          };
+          state.materi_folders.push(newFld);
+          existingIds.add(generatedId.toLowerCase());
+          existingNames.add(mapelNameLower);
+          m.folder_id = generatedId;
+        } else {
+          m.folder_id = 'umum';
+        }
+      }
+    });
+
+    saveLocalDataCache(state);
+  }
+
   // Helper cerdas untuk mengambil daftar materi dalam sebuah folder
   function getMaterialsForFolder(folder, listMateri, isSiswaMode = false) {
     if (!folder) return [];
@@ -4433,6 +4560,11 @@
         console.warn('Gagal sinkron folder ke Google Apps Script:', err);
       });
     }
+    if (window.FirebaseAdapter && window.FirebaseAdapter.saveMateriFolder) {
+      window.FirebaseAdapter.saveMateriFolder(newFolder).catch(err => {
+        console.warn('Gagal sinkron folder ke Firestore:', err);
+      });
+    }
   }
 
   function deleteMateriFolder(folderId) {
@@ -4463,10 +4595,16 @@
         console.warn('Gagal menghapus folder di GAS:', err);
       });
     }
+    if (window.FirebaseAdapter && window.FirebaseAdapter.deleteMateriFolder) {
+      window.FirebaseAdapter.deleteMateriFolder(folderId).catch(err => {
+        console.warn('Gagal menghapus folder di Firestore:', err);
+      });
+    }
   }
 
   // --- 1. TAMPILAN ADMIN: KELOLA MATERI & FOLDER PEMBELAJARAN ---
   function renderAdminMateriModule() {
+    ensureMateriFoldersExist();
     const listMateri = state.materi || [];
     const listFolders = state.materi_folders || [];
     const q = (state.materiSearchQuery || '').toLowerCase();
@@ -5046,6 +5184,7 @@
 
   // --- 2. TAMPILAN SISWA: MATERI PEMBELAJARAN SESUAI SIMULASI RESMI ---
   function renderSiswaMateriModule() {
+    ensureMateriFoldersExist();
     const listMateri = state.materi || [];
     const listFolders = state.materi_folders || [];
     const userKelasId = state.user?.kelas_id;
@@ -9768,6 +9907,7 @@
     setFolderModalJenis,
     handleFolderMatFileUpload,
     toggleFolderModalMateriSection,
+    ensureMateriFoldersExist,
     setMateriModalJenis,
     handleMateriFileUpload,
     zoomPreviewImage,
@@ -9796,6 +9936,7 @@
 
   async function bootstrap() {
     initTheme();
+    ensureMateriFoldersExist();
     // Jika token tersimpan ditemukan di localStorage, tampilkan loading pemulihan sesi agar halaman login tidak berkedip
     const hasToken = !!localStorage.getItem(AUTH_TOKEN_KEY);
     if (hasToken) {
@@ -9808,6 +9949,7 @@
       }
       applyBrandingUI();
     }
+    ensureMateriFoldersExist();
 
     function restoreFolderRoute() {
       const match = location.hash.match(/^#folder\/(.+)$/);

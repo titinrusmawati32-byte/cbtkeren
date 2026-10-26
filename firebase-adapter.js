@@ -496,6 +496,57 @@
     }
   }
 
+  /**
+   * Menyimpan / memperbarui dokumen folder materi pembelajaran di Firestore
+   */
+  async function saveMateriFolder(folder) {
+    if (!initFirebase()) return false;
+    try {
+      const docRef = _db.collection('materi_folders').doc(String(folder.id));
+      await docRef.set({
+        ...folder,
+        updated_at: new Date().toISOString(),
+        syncedAt: firebase.firestore.FieldValue.serverTimestamp()
+      }, { merge: true });
+      return true;
+    } catch (e) {
+      console.warn('FirebaseAdapter.saveMateriFolder warning:', e);
+      return false;
+    }
+  }
+
+  /**
+   * Menghapus dokumen folder materi dari Firestore
+   */
+  async function deleteMateriFolder(id) {
+    if (!initFirebase()) return false;
+    try {
+      await _db.collection('materi_folders').doc(String(id)).delete();
+      return true;
+    } catch (e) {
+      console.warn('FirebaseAdapter.deleteMateriFolder warning:', e);
+      return false;
+    }
+  }
+
+  /**
+   * Mengambil seluruh dokumen folder materi dari Firestore
+   */
+  async function getMateriFolders() {
+    if (!initFirebase()) return [];
+    try {
+      const snap = await _db.collection('materi_folders').get();
+      const list = [];
+      snap.forEach(doc => {
+        list.push(doc.data());
+      });
+      return list;
+    } catch (e) {
+      console.warn('FirebaseAdapter.getMateriFolders warning:', e);
+      return [];
+    }
+  }
+
   // Export API ke window global
   window.FirebaseAdapter = {
     init: initFirebase,
@@ -509,6 +560,9 @@
     recordExamResult: recordExamResult,
     saveMaterial: saveMaterial,
     deleteMaterial: deleteMaterial,
+    saveMateriFolder: saveMateriFolder,
+    deleteMateriFolder: deleteMateriFolder,
+    getMateriFolders: getMateriFolders,
     migrateSheetsToFirestore: migrateSheetsToFirestore
   };
 
